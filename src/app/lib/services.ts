@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
-  Wrench, Monitor, Zap, Database, Package, RefreshCw, Wifi, Gamepad2,
+  Wrench, Monitor, Zap, Database, Package, RefreshCw, Wifi, Gamepad2, Hammer,
 } from "lucide-react";
 
 export type ServicePricingTier = {
@@ -185,6 +185,84 @@ export const SERVICES: Service[] = [
     ],
     relatedSlugs: ["upgrade", "marketplace", "repair", "rental"],
     ctaLabel: "Build Your PC",
+  },
+  {
+    slug: "assembly",
+    title: "Assembly Service",
+    icon: Hammer,
+    color: "#00b4ff",
+    tag: "You Supply, We Assemble",
+    sub: "Bring your own parts — we assemble, install, configure, test, validate, and hand over a working setup.",
+    longDescription:
+      "Already bought your hardware? DESKTO assembles it for you. From a home gaming rig to a full office rollout or a rack-mounted server, our technicians handle cabinet prep, component installation, internal wiring, cable management, BIOS and RAID configuration, OS and driver setup, networking, and a full testing and validation pass. You supply the equipment; we deliver a clean, tested, ready-to-use system with photo evidence and a workmanship warranty.",
+    includedServices: [
+      "Home Setup Assembly",
+      "Office Setup Assembly",
+      "Server Setup Assembly",
+      "Component Installation",
+      "Cable Management",
+      "BIOS & RAID Configuration",
+      "OS & Driver Installation",
+      "Network Configuration",
+      "Testing & Validation",
+      "On-site or In-Shop",
+    ],
+    pricingTiers: [
+      {
+        name: "Basic",
+        price: "₹1,499",
+        period: "/home setup",
+        bullets: [
+          "Single PC assembly",
+          "Component installation & wiring",
+          "BIOS setup & boot test",
+          "Basic cable management",
+        ],
+      },
+      {
+        name: "Standard",
+        price: "₹4,999",
+        period: "/office setup",
+        highlight: true,
+        bullets: [
+          "Multi-device office rollout",
+          "Printer, router & switch setup",
+          "OS, drivers & network config",
+          "Full testing & validation report",
+        ],
+      },
+      {
+        name: "Premium",
+        price: "₹9,999+",
+        period: "/server setup",
+        bullets: [
+          "Rack & server mounting",
+          "RAID, UPS & patch panel wiring",
+          "Remote access & server roles",
+          "Workmanship warranty + evidence",
+        ],
+      },
+    ],
+    faqs: [
+      {
+        q: "Do I need to provide all the parts myself?",
+        a: "Yes — Assembly Service is for customers who already own their equipment. You provide the components, devices, or rack hardware, and DESKTO assembles, installs, configures, tests, and hands over a working setup. If you also need parts, use our Custom PC Solutions instead.",
+      },
+      {
+        q: "Can you assemble at my home or office?",
+        a: "Yes. Choose On-site Setup and our technician visits your location (travel charges may apply), or choose In-Shop Setup and bring your equipment to a DESKTO store.",
+      },
+      {
+        q: "What happens if a part is missing or damaged?",
+        a: "Our technician verifies every item against your equipment checklist before starting. Missing, damaged, or incompatible parts are recorded and shared with you for confirmation before assembly proceeds.",
+      },
+      {
+        q: "Do I get any proof of testing?",
+        a: "Every assembly includes a testing and validation pass (power, POST, BIOS detection, temperatures, storage, GPU, network, display, audio) with before/after photos and a validation checklist, plus a workmanship warranty where applicable.",
+      },
+    ],
+    relatedSlugs: ["custom-pc", "upgrade", "repair", "remote-it"],
+    ctaLabel: "Book Assembly",
   },
   {
     slug: "upgrade",

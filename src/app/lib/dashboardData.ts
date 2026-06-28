@@ -20,7 +20,7 @@ export type PCBuildStatus =
   | "approved" | "paid" | "reserved" | "technician-assigned" | "assembling"
   | "software-install" | "stress-test" | "qc" | "invoice-generated"
   | "warranty-generated" | "packed" | "shipped" | "delivered" | "review-requested" | "closed";
-export type ServiceRequestKind = "upgrade" | "software" | "rental" | "sell" | "support";
+export type ServiceRequestKind = "upgrade" | "software" | "rental" | "sell" | "support" | "assembly";
 export type ServiceRequestStatus =
   | "submitted" | "received" | "admin-approved" | "rejected" | "technician-assigned"
   | "inspection" | "diagnosis" | "compatibility-verified" | "documents-verified"
@@ -321,6 +321,9 @@ export interface ServiceRequest {
   serialNumber?: string;
   companyName?: string;
   priority?: string;
+  address?: string;
+  assemblyType?: string;
+  equipmentChecklist?: { label: string; provided: boolean }[];
   uploads?: string[];
   technicianId?: string;
   status: ServiceRequestStatus;
@@ -1293,6 +1296,37 @@ export const SUPPORT_TIMELINE_LABELS = [
   "Ticket Closed",
 ];
 
+export const ASSEMBLY_TIMELINE_LABELS = [
+  "Assembly Request Submitted",
+  "Request Received",
+  "Equipment Validated",
+  "Quotation Sent",
+  "Customer Approved",
+  "Payment Successful",
+  "Staff Assigned",
+  "Equipment Verified",
+  "Assembly Started",
+  "Configuration",
+  "Testing & Validation",
+  "Assembly Completed",
+  "Invoice Generated",
+  "Warranty Generated",
+  "Ready for Delivery",
+  "Delivered",
+  "Review Requested",
+];
+
+const ASSEMBLY_LABEL_REMAP: Record<string, string> = {
+  "Upgrade Request Submitted": "Assembly Request Submitted",
+  "Admin Approved": "Equipment Validated",
+  "Technician Assigned": "Staff Assigned",
+  "System Inspection": "Equipment Verified",
+  "Upgrade Started": "Assembly Started",
+  "Performance Optimization": "Configuration",
+  "Quality Testing": "Testing & Validation",
+  "Service Completed": "Assembly Completed",
+};
+
 const REPAIR_STATUS_LABEL: Record<RepairStatus, string> = {
   submitted: "Request Submitted",
   received: "Request Received",
@@ -1401,7 +1435,7 @@ function pcBuildTimelineThrough(status: PCBuildStatus, startAt = Date.now()) {
 }
 
 function serviceTimelineThrough(kind: ServiceRequestKind, status: ServiceRequestStatus, startAt = Date.now()) {
-  const labels = kind === "upgrade" ? UPGRADE_TIMELINE_LABELS : kind === "software" ? SOFTWARE_TIMELINE_LABELS : kind === "rental" ? RENTAL_TIMELINE_LABELS : kind === "sell" ? SELL_TIMELINE_LABELS : SUPPORT_TIMELINE_LABELS;
+  const labels = kind === "upgrade" ? UPGRADE_TIMELINE_LABELS : kind === "software" ? SOFTWARE_TIMELINE_LABELS : kind === "rental" ? RENTAL_TIMELINE_LABELS : kind === "sell" ? SELL_TIMELINE_LABELS : kind === "assembly" ? ASSEMBLY_TIMELINE_LABELS : SUPPORT_TIMELINE_LABELS;
   const defaultLabel = labels[0];
   const rawLabel = SERVICE_STATUS_LABEL[status] || defaultLabel;
   const remap: Record<ServiceRequestKind, Record<string, string>> = {
@@ -1410,6 +1444,7 @@ function serviceTimelineThrough(kind: ServiceRequestKind, status: ServiceRequest
     rental: { "Customer Approved": "Rental Approved", "Components Reserved": "Product Reserved", "Quality Testing": "Inspection Completed", "Invoice Generated": "Final Invoice Generated", "Review Requested": "Review Requested" },
     sell: { "Upgrade Request Submitted": "Sell Request Submitted", "Request Received": "Admin Review", "Technician Assigned": "Inspection Scheduled", "System Inspection": "Product Inspected", "Customer Approved": "Offer Accepted", "Payment Successful": "Payment Completed", "Review Requested": "Request Closed" },
     support: { "Upgrade Request Submitted": "Ticket Submitted", "Technician Assigned": "Ticket Assigned", "Customer Approved": "Issue Resolved", "Payment Successful": "Payment Completed", "Review Requested": "Ticket Closed" },
+    assembly: ASSEMBLY_LABEL_REMAP,
   };
   const activeLabel = remap[kind][rawLabel] || rawLabel;
   const activeIndex = Math.max(0, labels.indexOf(activeLabel));
@@ -1946,7 +1981,7 @@ function migrateStore(store: DashboardStore): DashboardStore {
     changed = true;
     return {
       ...request,
-      title: request.title || (request.kind === "upgrade" ? "Upgrade & Optimization" : "Software & Data Service"),
+      title: request.title || (request.kind === "upgrade" ? "Upgrade & Optimization" : request.kind === "assembly" ? "Assembly Service" : "Software & Data Service"),
       checklist: request.checklist || defaultServiceChecklist(request.kind),
       qaChecks: request.qaChecks || defaultServiceQa(request.kind),
       timeline: serviceTimelineThrough(request.kind, request.status || "submitted", request.createdAt || Date.now()),
@@ -2046,7 +2081,7 @@ function mergePCBuildTimeline(build: PCBuild, status: PCBuildStatus) {
 
 function mergeServiceTimeline(request: ServiceRequest, status: ServiceRequestStatus) {
   const existing = request.timeline?.length ? request.timeline : serviceTimelineThrough(request.kind, "submitted", request.createdAt);
-  const labels = request.kind === "upgrade" ? UPGRADE_TIMELINE_LABELS : request.kind === "software" ? SOFTWARE_TIMELINE_LABELS : request.kind === "rental" ? RENTAL_TIMELINE_LABELS : request.kind === "sell" ? SELL_TIMELINE_LABELS : SUPPORT_TIMELINE_LABELS;
+  const labels = request.kind === "upgrade" ? UPGRADE_TIMELINE_LABELS : request.kind === "software" ? SOFTWARE_TIMELINE_LABELS : request.kind === "rental" ? RENTAL_TIMELINE_LABELS : request.kind === "sell" ? SELL_TIMELINE_LABELS : request.kind === "assembly" ? ASSEMBLY_TIMELINE_LABELS : SUPPORT_TIMELINE_LABELS;
   const rawLabel = SERVICE_STATUS_LABEL[status] || labels[0];
   const remap: Record<ServiceRequestKind, Record<string, string>> = {
     upgrade: {},
@@ -2054,6 +2089,7 @@ function mergeServiceTimeline(request: ServiceRequest, status: ServiceRequestSta
     rental: { "Customer Approved": "Rental Approved", "Components Reserved": "Product Reserved", "Quality Testing": "Inspection Completed", "Invoice Generated": "Final Invoice Generated" },
     sell: { "Upgrade Request Submitted": "Sell Request Submitted", "Request Received": "Admin Review", "Technician Assigned": "Inspection Scheduled", "System Inspection": "Product Inspected", "Customer Approved": "Offer Accepted", "Payment Successful": "Payment Completed", "Review Requested": "Request Closed" },
     support: { "Upgrade Request Submitted": "Ticket Submitted", "Technician Assigned": "Ticket Assigned", "Customer Approved": "Issue Resolved", "Payment Successful": "Payment Completed", "Review Requested": "Ticket Closed" },
+    assembly: ASSEMBLY_LABEL_REMAP,
   };
   const targetLabel = remap[request.kind][rawLabel] || rawLabel;
   const targetIndex = Math.max(0, labels.indexOf(targetLabel));
@@ -2073,7 +2109,9 @@ function defaultServiceChecklist(kind: ServiceRequestKind) {
         ? ["Verify Identity Proof", "Verify Address Proof", "Generate Rental Agreement", "Reserve Product", "Assign Serial Number", "Inspect Product", "Clean Product", "Install Required Software", "Package Product", "Dispatch Product", "Return Inspection", "Refund Deposit"]
         : kind === "sell"
           ? ["Verify Photos & Bill", "Schedule Inspection", "Verify Serial Number", "Check Physical Condition", "Run Hardware Test", "Check Battery/Display/Ports", "Upload Inspection Report", "Prepare for Resale", "Add to Inventory", "Publish Listing"]
-          : ["Review Issue", "Classify Severity", "Prepare Remote Software", "Generate Session Link", "Create Restore Point", "Run Diagnostics", "Resolve Issue", "Final Health Check", "Upload Work Summary", "Close Ticket"];
+          : kind === "assembly"
+            ? ["Verify Provided Equipment", "Record Missing / Damaged Items", "Cabinet Preparation", "Motherboard Installation", "CPU & Cooler Installation", "RAM Installation", "SSD / HDD Installation", "GPU Installation", "PSU Installation", "Internal Wiring", "Cable Management", "Peripheral / Device Setup", "BIOS Configuration", "Boot Order & RAID Setup", "Driver Installation", "OS & Software Installation", "Network Configuration", "Capture Before/After Photos"]
+            : ["Review Issue", "Classify Severity", "Prepare Remote Software", "Generate Session Link", "Create Restore Point", "Run Diagnostics", "Resolve Issue", "Final Health Check", "Upload Work Summary", "Close Ticket"];
   return labels.map(label => ({ label, done: false }));
 }
 
@@ -2086,7 +2124,9 @@ function defaultServiceQa(kind: ServiceRequestKind) {
         ? ["Document Verification", "Product Availability", "Hardware Test", "Accessories Check", "Delivery Confirmation", "Return Condition", "Damage Check", "Refund Approval"]
         : kind === "sell"
           ? ["Serial Verified", "Physical Condition", "Hardware Test", "Battery/Display/Ports", "Cleaning Notes", "Inventory Ready", "Certified Used", "Resale Published"]
-          : ["Identity Verification", "Remote Access Granted", "Issue Resolved", "Customer Confirmation", "Service Report", "Invoice", "Payment", "Feedback"];
+          : kind === "assembly"
+            ? ["Power Test", "POST Test", "BIOS Detection", "CPU Temperature", "RAM Detection", "SSD / HDD Detection", "GPU Detection", "Fan Test", "USB Ports", "LAN / Wi-Fi", "Display Test", "Audio Test", "Network Connectivity", "Quality Control Approval"]
+            : ["Identity Verification", "Remote Access Granted", "Issue Resolved", "Customer Confirmation", "Service Report", "Invoice", "Payment", "Feedback"];
   return labels.map(label => ({ label, done: false }));
 }
 
@@ -2320,7 +2360,7 @@ export function useDashboardData() {
     const status = input.status || "submitted";
     const request: ServiceRequest = {
       ...input,
-      id: rid(input.kind === "upgrade" ? "upg" : "sft"),
+      id: rid(input.kind === "upgrade" ? "upg" : input.kind === "assembly" ? "asm" : "sft"),
       status,
       checklist: input.checklist || defaultServiceChecklist(input.kind),
       qaChecks: input.qaChecks || defaultServiceQa(input.kind),
@@ -2336,7 +2376,7 @@ export function useDashboardData() {
           {
             id: rid("ntf"),
             customerId: request.customerId,
-            title: `${request.kind === "upgrade" ? "Upgrade" : "Software"} request submitted`,
+            title: `${request.kind === "upgrade" ? "Upgrade" : request.kind === "assembly" ? "Assembly" : "Software"} request submitted`,
             detail: `${request.title} request ${request.id.slice(-8).toUpperCase()} was created.`,
             type: "system",
             read: false,
@@ -2376,7 +2416,7 @@ export function useDashboardData() {
           {
             id: rid("ntf"),
             staffId: assignedStaff.id,
-            title: `${before?.kind === "upgrade" ? "Upgrade" : before?.kind === "software" ? "Software" : before?.kind === "rental" ? "Rental" : before?.kind === "sell" ? "Sell Used" : "Support"} assigned`,
+            title: `${before?.kind === "upgrade" ? "Upgrade" : before?.kind === "software" ? "Software" : before?.kind === "rental" ? "Rental" : before?.kind === "sell" ? "Sell Used" : before?.kind === "assembly" ? "Assembly" : "Support"} assigned`,
             detail: `${before?.title || "Service request"} ${requestId.slice(-8).toUpperCase()} assigned by admin.`,
             type: "system" as const,
             read: false,

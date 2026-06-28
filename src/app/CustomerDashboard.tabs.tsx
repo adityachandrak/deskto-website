@@ -3,7 +3,7 @@ import {
   ShoppingBag, Wrench, CalendarDays, Headphones, Gift, Bell, LogOut as LogOutIcon,
   Package, Truck, ShieldCheck, Heart, Plus, X, ArrowRight, CheckCircle, Clock,
   ShoppingCart, MapPin, Star, Upload, Trash2, Edit, FileText, Download, AlertCircle,
-  Calendar, Award, MessageSquare, Zap, Database,
+  Calendar, Award, MessageSquare, Zap, Database, Hammer,
 } from "lucide-react";
 import { KPICard } from "./components/dashboard/KPICard";
 import { StatusBadge } from "./components/dashboard/StatusBadge";
@@ -598,8 +598,8 @@ export function CustomerPCBuilds({ user, store, patchPCBuild }: { user: AuthUser
 
 function CustomerServiceRequests({ user, store, kind, patchServiceRequest }: { user: AuthUser; store: DashboardStore; kind: ServiceRequest["kind"]; patchServiceRequest: (id: string, patch: Partial<ServiceRequest>) => void }) {
   const requests = (store.serviceRequests || []).filter(r => r.customerId === user.id && r.kind === kind);
-  const icon = kind === "upgrade" ? <Zap size={24} /> : kind === "software" ? <Database size={24} /> : kind === "rental" ? <CalendarDays size={24} /> : kind === "sell" ? <Truck size={24} /> : <Headphones size={24} />;
-  const title = kind === "upgrade" ? "Upgrade & Optimization" : kind === "software" ? "Software & Data Services" : kind === "rental" ? "Rental Solutions" : kind === "sell" ? "Sell Used Products" : "Remote & Business IT Support";
+  const icon = kind === "upgrade" ? <Zap size={24} /> : kind === "software" ? <Database size={24} /> : kind === "rental" ? <CalendarDays size={24} /> : kind === "sell" ? <Truck size={24} /> : kind === "assembly" ? <Hammer size={24} /> : <Headphones size={24} />;
+  const title = kind === "upgrade" ? "Upgrade & Optimization" : kind === "software" ? "Software & Data Services" : kind === "rental" ? "Rental Solutions" : kind === "sell" ? "Sell Used Products" : kind === "assembly" ? "Assembly Service" : "Remote & Business IT Support";
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
       {requests.length === 0 ? <EmptyState icon={icon} title={`No ${title.toLowerCase()} requests`} hint={`Open ${title} from Services to submit a new request.`} /> : (
@@ -613,6 +613,18 @@ function CustomerServiceRequests({ user, store, kind, patchServiceRequest }: { u
               <Stat label={kind === "sell" ? "Offer" : "Quote"} value={r.quotation ? inr(r.quotation) : r.expectedPrice ? `Expected ${inr(r.expectedPrice)}` : "Pending"} highlight={Boolean(r.quotation)} />
             </div>
             <p style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 13, color: "#ccc", lineHeight: 1.7, margin: "0 0 16px" }}>{r.requirements}</p>
+            {kind === "assembly" && !!r.equipmentChecklist?.length && (
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, color: "#888", letterSpacing: 1, textTransform: "uppercase", marginBottom: 8 }}>Equipment Checklist {r.address ? `· ${r.address}` : ""}</div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 8 }}>
+                  {r.equipmentChecklist.map(item => (
+                    <div key={item.label} style={{ background: "rgba(255,255,255,0.03)", borderRadius: 8, padding: 10, fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, color: item.provided ? "#ddd" : "#777", display: "flex", alignItems: "center", gap: 6 }}>
+                      <CheckCircle size={12} color={item.provided ? "#00cc66" : "#555"} /> {item.label}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             {r.quotation && ["quotation", "offer-sent", "approved", "accepted"].includes(r.status) && (
               <SectionCard title={kind === "sell" ? "Price Offer" : "Quotation"}>
                 <div style={{ display: "grid", gap: 8, marginBottom: 12 }}>
@@ -689,28 +701,8 @@ export function CustomerSupportRequests(props: { user: AuthUser; store: Dashboar
 
 // ─── Assembly ─────────────────────────────────────────────────────────────
 
-export function CustomerAssembly({ user, store }: { user: AuthUser; store: DashboardStore }) {
-  const items = store.assemblies.filter(a => a.customerId === user.id);
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-      {items.length === 0 ? <EmptyState icon={<Package size={24} />} title="No assembly requests" /> : (
-        items.map(a => (
-          <SectionCard key={a.id} title={a.productName} subtitle={`Assembly #${a.id.slice(-8).toUpperCase()}`} action={<StatusBadge status={a.status} />}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10 }}>
-              {a.components.map(c => (
-                <div key={c} style={{ background: "rgba(255,255,255,0.03)", borderRadius: 8, padding: 10, fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, color: "#ddd", display: "flex", alignItems: "center", gap: 6 }}>
-                  <CheckCircle size={12} color="#00cc66" /> {c}
-                </div>
-              ))}
-            </div>
-            <div style={{ marginTop: 14 }}>
-              <button className="glass-pill glass-pill-primary">Invoice</button>
-            </div>
-          </SectionCard>
-        ))
-      )}
-    </div>
-  );
+export function CustomerAssembly(props: { user: AuthUser; store: DashboardStore; patchServiceRequest: (id: string, patch: Partial<ServiceRequest>) => void }) {
+  return <CustomerServiceRequests {...props} kind="assembly" />;
 }
 
 // ─── Remote Support ───────────────────────────────────────────────────────

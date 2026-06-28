@@ -82,6 +82,7 @@ export const StaffSoftwareServices = (props: any) => <StaffServiceQueue title="S
 export const StaffRentalWorkflow = (props: any) => <StaffServiceQueue title="Rental Queue" kind="rental" {...props} />;
 export const StaffSellRequests = (props: any) => <StaffServiceQueue title="Sell Used Queue" kind="sell" {...props} />;
 export const StaffSupportWorkflow = (props: any) => <StaffServiceQueue title="Remote Support Queue" kind="support" {...props} />;
+export const StaffAssembly = (props: any) => <StaffServiceQueue title="Assembly Queue" kind="assembly" {...props} />;
 
 export function StaffPCBuilds({ staff, store, patchPCBuild }: { staff: StaffMember; store: DashboardStore; patchPCBuild: (id: string, patch: Partial<PCBuild>) => void }) {
   const rows = store.pcBuilds.filter(build => staffOwns(staff, build.technicianId));
@@ -108,7 +109,6 @@ export function StaffGamingHub({ store, patchGamingHubItem }: { staff: StaffMemb
   </QueueCard>;
 }
 
-export const StaffAssembly = ({ store }: { staff: StaffMember; store: DashboardStore }) => <QueueCard title="Assembly Jobs"><EmptyState title={`${store.assemblies.length} assembly jobs in system`} /></QueueCard>;
 export const StaffRemoteSupport = StaffSupportWorkflow;
 export const StaffDeliveries = ({ store }: { staff: StaffMember; store: DashboardStore }) => <QueueCard title="Deliveries"><EmptyState title={`${store.deliveries.length} delivery tasks in system`} /></QueueCard>;
 export const StaffInventoryRequests = ({ store }: { staff: StaffMember; store: DashboardStore; submitInventoryRequest: any }) => <QueueCard title="Inventory Requests"><EmptyState title={`${store.inventoryRequests.length} inventory requests in system`} /></QueueCard>;

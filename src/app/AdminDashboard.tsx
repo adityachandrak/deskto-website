@@ -10,12 +10,12 @@ import type { AuthUser } from "./lib/currentUser";
 import type { NavGroup } from "./components/dashboard/DashboardSidebar";
 import {
   AdminOverview, AdminProducts, AdminCategories, AdminBrands, AdminInventory,
-  AdminOrders, AdminRepairs, AdminRentals, AdminCustomPC, AdminAssembly,
+  AdminOrders, AdminRepairs, AdminRentals, AdminCustomPC,
   AdminRemoteSupport, AdminMarketplace, AdminCRM, AdminCustomers, AdminStaff,
   AdminSuppliers, AdminPurchaseOrders, AdminCoupons, AdminOffers, AdminReports,
   AdminNotifications, AdminSettings, AdminAuditLogs, AdminBackup,
   AdminUpgrades, AdminSoftwareServices, AdminRentalWorkflow, AdminSellRequests, AdminSupportWorkflow,
-  AdminGamingHub, AdminCustomBuilder,
+  AdminAssemblyService, AdminGamingHub, AdminCustomBuilder,
 } from "./AdminDashboard.tabs";
 
 interface Props { user: AuthUser; initialTab?: string | null }
@@ -165,7 +165,7 @@ export default function AdminDashboard({ user, initialTab }: Props) {
       case "software":          return <AdminSoftwareServices store={store} patchServiceRequest={patchServiceRequest} />;
       case "rentals":           return <AdminRentalWorkflow store={store} patchServiceRequest={patchServiceRequest} />;
       case "builds":            return <AdminCustomPC store={store} patchPCBuild={patchPCBuild} />;
-      case "assembly":          return <AdminAssembly store={store} />;
+      case "assembly":          return <AdminAssemblyService store={store} patchServiceRequest={patchServiceRequest} />;
       case "support":           return <AdminSupportWorkflow store={store} patchServiceRequest={patchServiceRequest} />;
       case "marketplace":       return <AdminSellRequests store={store} patchServiceRequest={patchServiceRequest} />;
       case "crm":               return <AdminCRM store={store} addCRMNote={addCRMNote} />;

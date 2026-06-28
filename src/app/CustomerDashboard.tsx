@@ -76,7 +76,7 @@ export default function CustomerDashboard({ user }: Props) {
       case "rentals":        return <CustomerRentalRequests user={user} store={store} patchServiceRequest={patchServiceRequest} />;
       case "sell":           return <CustomerSellRequests user={user} store={store} patchServiceRequest={patchServiceRequest} />;
       case "builds":         return <CustomerPCBuilds user={user} store={store} patchPCBuild={patchPCBuild} />;
-      case "assembly":       return <CustomerAssembly user={user} store={store} />;
+      case "assembly":       return <CustomerAssembly user={user} store={store} patchServiceRequest={patchServiceRequest} />;
       case "support":        return <CustomerSupportRequests user={user} store={store} patchServiceRequest={patchServiceRequest} />;
       case "wishlist":       return <CustomerWishlist />;
       case "cart":           return <CustomerCart />;

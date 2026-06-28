@@ -83,7 +83,7 @@ export default function StaffDashboard({ user }: Props) {
       case "rentals":        return <StaffRentalWorkflow staff={myStaff} store={store} patchServiceRequest={patchServiceRequest} />;
       case "sell":           return <StaffSellRequests staff={myStaff} store={store} patchServiceRequest={patchServiceRequest} />;
       case "builds":         return <StaffPCBuilds staff={myStaff} store={store} patchPCBuild={patchPCBuild} />;
-      case "assembly":       return <StaffAssembly staff={myStaff} store={store} />;
+      case "assembly":       return <StaffAssembly staff={myStaff} store={store} patchServiceRequest={patchServiceRequest} />;
       case "support":        return <StaffSupportWorkflow staff={myStaff} store={store} patchServiceRequest={patchServiceRequest} />;
       case "deliveries":     return <StaffDeliveries staff={myStaff} store={store} />;
       case "gaming":         return <StaffGamingHub staff={myStaff} store={store} patchGamingHubItem={data.patchGamingHubItem} />;

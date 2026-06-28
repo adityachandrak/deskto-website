@@ -1299,7 +1299,7 @@ function AdminServiceManagement({ store, kind, patchServiceRequest }: { store: D
   const rows = (store.serviceRequests || []).filter(r => r.kind === kind);
   const technicianOptions = getAllStaffOptions(store);
   const technicianName = (id?: string) => technicianOptions.find(s => s.id === id)?.name || store.staff.find(s => s.id === id)?.name || "Unassigned";
-  const title = kind === "upgrade" ? "Upgrade Management" : kind === "software" ? "Software & Data Management" : kind === "rental" ? "Rental Management" : kind === "sell" ? "Second-Hand Sell Requests" : "Support Dashboard";
+  const title = kind === "upgrade" ? "Upgrade Management" : kind === "software" ? "Software & Data Management" : kind === "rental" ? "Rental Management" : kind === "sell" ? "Second-Hand Sell Requests" : kind === "assembly" ? "Assembly Management" : "Support Dashboard";
   const subtitle = kind === "upgrade"
     ? "Review upgrade requests, verify compatibility, assign technicians, quote, reserve parts, and track QA"
     : kind === "software"
@@ -1308,7 +1308,9 @@ function AdminServiceManagement({ store, kind, patchServiceRequest }: { store: D
         ? "Verify documents, approve rentals, assign products, generate agreements, track deposits, delivery, returns, refunds"
         : kind === "sell"
           ? "Review product photos, assign inspection, generate price offers, approve payment, certify inventory, publish for resale"
-          : "Classify support tickets, assign technicians, monitor sessions, proposals, invoices, SLA, AMC, and feedback";
+          : kind === "assembly"
+            ? "Validate customer-provided equipment, assign staff, quote assembly & installation, and track assembly, testing, invoice, and warranty"
+            : "Classify support tickets, assign technicians, monitor sessions, proposals, invoices, SLA, AMC, and feedback";
 
   return (
     <SectionCard title={title} subtitle={subtitle}>
@@ -1367,7 +1369,9 @@ function ServiceQuoteEditor({ request, kind, patchServiceRequest }: { request: S
           ? [{ label: "Rental Charges", cost: 0 }, { label: "Security Deposit", cost: 0 }, { label: "Delivery Charges", cost: 0 }, { label: "GST", cost: 0 }]
           : kind === "sell"
             ? [{ label: "Final Offered Price", cost: request.expectedPrice || 0 }]
-            : [{ label: "Support Charges", cost: 0 }, { label: "AMC / SLA Charges", cost: 0 }, { label: "GST", cost: 0 }];
+            : kind === "assembly"
+              ? [{ label: "Assembly Charges", cost: 0 }, { label: "Installation Charges", cost: 0 }, { label: "Cable Management", cost: 0 }, { label: "Configuration Charges", cost: 0 }, { label: "Travel Charges", cost: 0 }, { label: "GST", cost: 0 }]
+              : [{ label: "Support Charges", cost: 0 }, { label: "AMC / SLA Charges", cost: 0 }, { label: "GST", cost: 0 }];
   const [items, setItems] = useState(defaults);
   const [note, setNote] = useState(request.quotationNote || "Includes service, documentation, testing, and customer notification.");
   const total = items.reduce((sum, item) => sum + Number(item.cost || 0), 0);
@@ -1391,9 +1395,9 @@ function ServiceQuoteEditor({ request, kind, patchServiceRequest }: { request: S
             quotationItems: items.filter(item => item.label.trim()),
             quotation: total,
             quotationNote: note,
-            diagnosisReport: request.diagnosisReport || (kind === "sell" ? "Product inspection reviewed and price offer prepared." : kind === "rental" ? "Documents and availability reviewed. Rental quote prepared." : kind === "support" ? "Support scope reviewed and quotation/proposal prepared." : kind === "upgrade" ? "System inspected, benchmarked, and upgrade path identified." : "Software diagnosis completed and service scope prepared."),
-            compatibilityReport: request.compatibilityReport || (kind === "rental" ? "Product availability, deposit, agreement, and delivery requirements checked." : kind === "sell" ? "Photos, bill, serial number, and condition reviewed." : kind === "support" ? "Issue severity, support method, and resolution path checked." : kind === "upgrade" ? "Compatibility, BIOS support, thermals, clearance, and power draw verified." : "OS, storage health, drivers, malware state, and data availability checked."),
-            recommendation: request.recommendation || (kind === "sell" ? "Offer sent to customer for approval." : kind === "rental" ? "Proceed with agreement, payment, product reservation, and delivery." : kind === "support" ? "Proceed with support session/proposal and resolution workflow." : kind === "upgrade" ? "Recommended upgrade package prepared." : "Recommended software/data service plan prepared."),
+            diagnosisReport: request.diagnosisReport || (kind === "sell" ? "Product inspection reviewed and price offer prepared." : kind === "rental" ? "Documents and availability reviewed. Rental quote prepared." : kind === "support" ? "Support scope reviewed and quotation/proposal prepared." : kind === "upgrade" ? "System inspected, benchmarked, and upgrade path identified." : kind === "assembly" ? "Customer-provided equipment reviewed and assembly scope prepared." : "Software diagnosis completed and service scope prepared."),
+            compatibilityReport: request.compatibilityReport || (kind === "rental" ? "Product availability, deposit, agreement, and delivery requirements checked." : kind === "sell" ? "Photos, bill, serial number, and condition reviewed." : kind === "support" ? "Issue severity, support method, and resolution path checked." : kind === "upgrade" ? "Compatibility, BIOS support, thermals, clearance, and power draw verified." : kind === "assembly" ? "Equipment checklist, component compatibility, and on-site/in-shop requirements checked." : "OS, storage health, drivers, malware state, and data availability checked."),
+            recommendation: request.recommendation || (kind === "sell" ? "Offer sent to customer for approval." : kind === "rental" ? "Proceed with agreement, payment, product reservation, and delivery." : kind === "support" ? "Proceed with support session/proposal and resolution workflow." : kind === "upgrade" ? "Recommended upgrade package prepared." : kind === "assembly" ? "Proceed with assembly, configuration, testing, and validation." : "Recommended software/data service plan prepared."),
           });
           toast.success(kind === "sell" ? "Price offer sent to customer" : "Itemized quotation sent to customer");
         }}>{kind === "sell" ? "Send Offer" : "Send Quote"}</button>
@@ -1420,6 +1424,10 @@ export function AdminSellRequests(props: { store: DashboardStore; patchServiceRe
 
 export function AdminSupportWorkflow(props: { store: DashboardStore; patchServiceRequest: (id: string, patch: Partial<ServiceRequest>) => void }) {
   return <AdminServiceManagement {...props} kind="support" />;
+}
+
+export function AdminAssemblyService(props: { store: DashboardStore; patchServiceRequest: (id: string, patch: Partial<ServiceRequest>) => void }) {
+  return <AdminServiceManagement {...props} kind="assembly" />;
 }
 
 // ─── Rentals ──────────────────────────────────────────────────────────────

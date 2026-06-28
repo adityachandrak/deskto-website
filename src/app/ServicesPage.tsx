@@ -1606,6 +1606,135 @@ function UpgradeOptimizationPage({ service }: { service: Service }) {
   );
 }
 
+const ASSEMBLY_TIMELINE = [
+  "Assembly Request Submitted", "Request Received", "Equipment Validated", "Quotation Sent",
+  "Customer Approved", "Payment Successful", "Staff Assigned", "Equipment Verified",
+  "Assembly Started", "Configuration", "Testing & Validation", "Assembly Completed",
+  "Invoice Generated", "Warranty Generated", "Ready for Delivery", "Delivered", "Review Requested",
+];
+
+const ASSEMBLY_EQUIPMENT: Record<string, string[]> = {
+  "Home Setup": ["Cabinet", "Motherboard", "CPU", "RAM", "SSD / HDD", "GPU", "PSU", "Monitor", "Keyboard", "Mouse"],
+  "Office Setup": ["Desktop PCs", "Monitors", "Printers", "Routers", "Switches", "UPS", "Network Cables"],
+  "Server Setup": ["Rack", "Server", "NAS", "Switch", "Firewall", "Patch Panel", "UPS"],
+};
+
+function AssemblyServicePage({ service }: { service: Service }) {
+  const user = useCurrentUser();
+  const { addServiceRequest } = useDashboardData();
+  const accent = service.color;
+  const [form, setForm] = useState({
+    name: user?.name || "",
+    phone: user?.phone || "",
+    email: user?.email || "",
+    assemblyType: "Home Setup",
+    serviceMethod: "On-site Setup",
+    address: "",
+    slot: "",
+    instructions: "",
+  });
+  const [equipment, setEquipment] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(ASSEMBLY_EQUIPMENT["Home Setup"].map(item => [item, true])));
+  const [uploads, setUploads] = useState<string[]>([]);
+  const [requestId, setRequestId] = useState("");
+  const set = (key: keyof typeof form, value: string) => setForm(prev => ({ ...prev, [key]: value }));
+
+  const changeType = (type: string) => {
+    set("assemblyType", type);
+    setEquipment(Object.fromEntries((ASSEMBLY_EQUIPMENT[type] || []).map(item => [item, true])));
+  };
+  const toggleItem = (item: string) => setEquipment(prev => ({ ...prev, [item]: !prev[item] }));
+
+  const submit = () => {
+    if (!form.name.trim() || !form.phone.trim()) {
+      toast.error("Enter customer name and phone number.");
+      return;
+    }
+    if (form.serviceMethod === "On-site Setup" && !form.address.trim()) {
+      toast.error("Enter the on-site address for the assembly visit.");
+      return;
+    }
+    const checklist = (ASSEMBLY_EQUIPMENT[form.assemblyType] || []).map(label => ({ label, provided: Boolean(equipment[label]) }));
+    const provided = checklist.filter(c => c.provided).map(c => c.label);
+    if (!provided.length) {
+      toast.error("Tick at least one equipment item you are providing.");
+      return;
+    }
+    const request = addServiceRequest({
+      kind: "assembly",
+      customerId: user?.id || `guest_${Date.now()}`,
+      customerName: form.name.trim(),
+      contactPhone: form.phone.trim(),
+      contactEmail: form.email.trim(),
+      title: `${form.assemblyType} Assembly`,
+      deviceType: form.assemblyType,
+      category: form.assemblyType,
+      requirements: form.instructions.trim() || `${form.assemblyType} assembly with customer-provided equipment: ${provided.join(", ")}.`,
+      currentSpecs: `Provided equipment: ${provided.join(", ")}`,
+      serviceMethod: form.serviceMethod,
+      preferredSlot: form.slot,
+      address: form.address.trim(),
+      assemblyType: form.assemblyType,
+      equipmentChecklist: checklist,
+      uploads: uploads.filter(Boolean),
+    });
+    setRequestId(request.id);
+    toast.success(`Assembly request ${request.id.slice(-8).toUpperCase()} submitted.`);
+  };
+
+  return (
+    <div style={{ background: "#050505", color: "white", minHeight: "100vh", paddingBottom: 60 }}>
+      <Navbar />
+      <BreadcrumbBar crumbs={["Home", "Services", service.title]} />
+      <section className="section-pad" style={{ padding: "64px 0 88px", background: "#050505" }}>
+        <div style={{ maxWidth: 1260, margin: "0 auto", padding: "0 24px" }}>
+          <SectionHeader eyebrow="Assembly Workflow" title="Assembly" accent="Service" sub="You supply the equipment — we assemble, install, configure, test, validate, and hand over a working setup with photo evidence and warranty." />
+          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.35fr) minmax(310px, .65fr)", gap: 18 }}>
+            <div className="glass-card" style={{ borderRadius: 14, padding: 22 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 12, marginBottom: 18 }}>
+                <RepairField label="Customer Name" value={form.name} onChange={v => set("name", v)} />
+                <RepairField label="Mobile Number" value={form.phone} onChange={v => set("phone", v)} />
+                <RepairField label="Email" value={form.email} onChange={v => set("email", v)} />
+                <RepairField label="Preferred Date & Time" type="datetime-local" value={form.slot} onChange={v => set("slot", v)} />
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 12, marginBottom: 18 }}>
+                <label style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                  <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, color: "#777", letterSpacing: "1.4px", textTransform: "uppercase", fontWeight: 700 }}>Assembly Type</span>
+                  <select value={form.assemblyType} onChange={e => changeType(e.target.value)} style={{ background: "#111", border: "1px solid rgba(255,255,255,.12)", borderRadius: 8, padding: "11px 12px", color: "white" }}>
+                    {Object.keys(ASSEMBLY_EQUIPMENT).map(v => <option key={v}>{v}</option>)}
+                  </select>
+                </label>
+                <RepairField label="On-site Address" value={form.address} onChange={v => set("address", v)} placeholder="Required for on-site setup" />
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 9, marginBottom: 4 }}>
+                <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, color: "#777", letterSpacing: "1.4px", textTransform: "uppercase", fontWeight: 700 }}>Equipment Checklist — tick what you provide</span>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 8 }}>
+                  {(ASSEMBLY_EQUIPMENT[form.assemblyType] || []).map(item => (
+                    <button key={item} onClick={() => toggleItem(item)} className="glass" style={{ display: "flex", alignItems: "center", gap: 8, borderRadius: 8, padding: "10px 11px", border: `1px solid ${equipment[item] ? accent : "rgba(255,255,255,.1)"}`, cursor: "pointer", textAlign: "left" }}>
+                      <CheckCircle size={14} color={equipment[item] ? "#00cc66" : "#555"} style={{ flexShrink: 0 }} />
+                      <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, color: equipment[item] ? "white" : "#999" }}>{item}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div style={{ height: 14 }} />
+              <WorkflowTextarea label="Special Instructions Optional" value={form.instructions} onChange={v => set("instructions", v)} placeholder="RAID preference, OS choice, cable colour, rack layout, software to install, deadlines..." />
+              <ServiceImageSlots label="Upload Equipment / Setup Photos Optional (5 Slots)" uploads={uploads} setUploads={setUploads} accent={accent} />
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 }}>
+                {["On-site Setup", "In-Shop Setup"].map(v => <button key={v} className={form.serviceMethod === v ? "glass-pill glass-pill-primary" : "glass-pill glass-pill-outline"} onClick={() => set("serviceMethod", v)} style={{ padding: "10px 14px", fontSize: 9 }}>{v}</button>)}
+              </div>
+              <button className="glass-pill glass-pill-primary" onClick={submit} style={{ padding: "13px 22px", fontSize: 10, marginTop: 20 }}><CheckCircle size={14} /> Submit Assembly Request</button>
+            </div>
+            <WorkflowSummary accent={accent} title="Assembly Status Timeline" timeline={ASSEMBLY_TIMELINE} requestId={requestId} dashboardText="Admin will validate equipment, send a quotation, assign staff, and track assembly, testing, invoice, and warranty in your dashboard." />
+          </div>
+        </div>
+      </section>
+      <FooterSection />
+      <ScrollToTop />
+    </div>
+  );
+}
+
 const SOFTWARE_TIMELINE = [
   "Service Request Submitted", "Request Received", "Admin Approved", "Technician Assigned",
   "System Diagnosis", "Quotation Sent", "Customer Approved", "Payment Successful",
@@ -2310,6 +2439,7 @@ export default function ServicesPage({ slug, child }: { slug: string | null; chi
   if (!service) return <NotFoundView />;
   if (service.slug === "repair") return <RepairHubPage service={service} />;
   if (service.slug === "custom-pc") return <CustomPCBuildPage service={service} />;
+  if (service.slug === "assembly") return <AssemblyServicePage service={service} />;
   if (service.slug === "upgrade") return <UpgradeOptimizationPage service={service} />;
   if (service.slug === "software") return <SoftwareDataServicePage service={service} />;
   if (service.slug === "rental") return <RentalSolutionsPage service={service} />;
