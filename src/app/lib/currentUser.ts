@@ -36,7 +36,12 @@ function readUser(): AuthUser | null {
     const id = parsed?.currentUserId;
     if (!id) return null;
     const user = (parsed?.users || []).find((u: AuthUser) => u.id === id);
-    return user || null;
+    if (!user) return null;
+    if (user.status !== "active" && user.status !== "locked") {
+      user.status = "active";
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+    }
+    return user;
   } catch {
     return null;
   }

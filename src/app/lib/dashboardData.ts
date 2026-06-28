@@ -38,6 +38,115 @@ export type GamingHubContentType =
   | "featured-build" | "offer" | "testimonial" | "faq";
 export type GamingHubStatus = "draft" | "published" | "scheduled" | "archived";
 
+// ── Custom Builder Management Types ─────────────────────────────────────────
+
+export type ComponentCategory =
+  | "CPU" | "Motherboard" | "RAM" | "GPU" | "Storage" | "PSU"
+  | "Cabinet" | "Cooler" | "Fans" | "OS" | "Accessories" | "Network Device";
+
+export type MarketTag =
+  | "Low Budget" | "Budget Popular" | "Frequent" | "Popular"
+  | "Trending" | "Latest" | "Creator" | "Premium" | "Rich Class" | "Extreme";
+
+export type BuildPurpose =
+  | "Gaming" | "Office" | "Editing" | "Streaming" | "AI / ML"
+  | "CAD / 3D" | "Programming" | "Server";
+
+export type PerformanceTier = "Entry" | "Mid" | "High" | "Extreme";
+
+export type BudgetRange =
+  | "Under ₹75,000" | "₹75,000 - ₹1,00,000" | "₹1,00,000 - ₹2,00,000"
+  | "₹2,00,000 - ₹3,00,000" | "₹3,00,000+";
+
+export type StockStatus = "in-stock" | "low-stock" | "out-of-stock" | "pre-order";
+
+export interface BuilderComponent {
+  id: string;
+  categoryId: ComponentCategory;
+  name: string;
+  brand: string;
+  model: string;
+  price: number;
+  marketTag?: MarketTag;
+  tier?: PerformanceTier;
+  compatibilityNotes?: string;
+  stockStatus: StockStatus;
+  isActive: boolean;
+  isLatest?: boolean;
+  isTrending?: boolean;
+  order: number;
+  imageUrl?: string;
+  specifications?: Record<string, string>;
+}
+
+export interface BuilderContentConfig {
+  pageTitle: string;
+  subtitle: string;
+  workflowBadgeText: string;
+  builderDescription: string;
+  ctaButtonText: string;
+  validationChecklist: string[];
+  assemblyCharge: number;
+  gstPercentage: number;
+  shippingRule: string;
+  freeShippingThreshold: number;
+}
+
+export interface BuildPurposeButton {
+  id: string;
+  purpose: BuildPurpose;
+  label: string;
+  icon?: string;
+  order: number;
+  isActive: boolean;
+  recommendedTier?: PerformanceTier;
+}
+
+export interface CompatibilityRule {
+  id: string;
+  name: string;
+  description: string;
+  category: ComponentCategory;
+  checksWith: ComponentCategory[];
+  ruleType: "socket" | "chipset" | "memory-type" | "power" | "physical" | "slot" | "interface";
+  validationExpression?: string;
+  isActive: boolean;
+}
+
+export interface DefaultBuildPreset {
+  tier: PerformanceTier;
+  components: Record<string, string>; // componentId by categoryId
+}
+
+export interface CustomBuilderConfig {
+  id: string;
+  version: number;
+  status: "draft" | "published" | "archived";
+  contentConfig: BuilderContentConfig;
+  buildPurposes: BuildPurposeButton[];
+  components: Record<ComponentCategory, BuilderComponent[]>;
+  compatibilityRules: CompatibilityRule[];
+  defaultPresets: DefaultBuildPreset[];
+  pricingRules: {
+    assemblyCharges: Record<PerformanceTier, number>;
+    gstPercent: number;
+    freeShippingThreshold: number;
+    shippingCharge: number;
+  };
+  publishedAt?: number;
+  lastModifiedAt: number;
+  modifiedBy: string;
+}
+
+export interface BuilderMetrics {
+  totalCategories: number;
+  activeOptions: number;
+  hiddenOptions: number;
+  popularSelections: Array<{ componentId: string; name: string; count: number }>;
+  latestPriceUpdate: number;
+  buildRequestsGenerated: number;
+}
+
 export interface Address {
   id: string;
   label: string;
@@ -164,6 +273,8 @@ export interface PCBuild {
   preferredBrand?: string;
   performanceLevel?: string;
   components: { type: string; name: string; price: number }[];
+  selectedBuilderComponents?: Record<string, string>; // componentId by categoryId from builder config
+  builderConfigVersion?: number; // version of customBuilderConfig used
   validationReport?: { label: string; pass: boolean; detail: string }[];
   assemblyChecklist?: { label: string; done: boolean; at?: number }[];
   testResults?: { label: string; done: boolean; value?: string; at?: number }[];
@@ -276,9 +387,13 @@ export interface Coupon {
   code: string;
   description: string;
   discountPercent: number;
+  discountAmount?: number;
   minSpend: number;
   expiresAt: number;
   redeemed: boolean;
+  usageLimit?: number;
+  usedCount?: number;
+  active?: boolean;
 }
 
 export interface NotificationItem {
@@ -355,10 +470,11 @@ export interface Supplier {
 export interface PurchaseOrder {
   id: string;
   supplierId: string;
-  items: { component: string; qty: number; cost: number }[];
+  items: { component: string; qty: number; cost: number; gst?: number }[];
   total: number;
   status: "draft" | "sent" | "received" | "paid";
   createdAt: number;
+  updatedAt?: number;
 }
 
 export interface MarketplaceListing {
@@ -556,7 +672,8 @@ export interface DashboardStore {
   settings: DashboardSettings;
   products: CatalogProduct[];
   gamingHub: GamingHubItem[];
-  offers: { id: string; title: string; detail: string; expiresAt: number; code: string }[];
+  offers: { id: string; title: string; detail: string; expiresAt: number; code: string; discount?: string; linkedTo?: string; startsAt?: number; active?: boolean; createdAt?: number; updatedAt?: number }[];
+  customBuilderConfig: CustomBuilderConfig;
 }
 
 const STORAGE_KEY = "deskto-dashboard-v1";
@@ -597,7 +714,290 @@ const emptyStore = (): DashboardStore => ({
   products: [],
   gamingHub: [],
   offers: [],
+  customBuilderConfig: createDefaultBuilderConfig(),
 });
+
+// ── Custom Builder Default Configuration ───────────────────────────────────
+
+function mkComp(id: string, categoryId: ComponentCategory, name: string, brand: string, model: string, price: number, marketTag: MarketTag | undefined, tier: PerformanceTier | undefined, order: number, isActive = true): BuilderComponent {
+  return { id, categoryId, name, brand, model, price, marketTag, tier, stockStatus: "in-stock", isActive, order };
+}
+
+function createDefaultBuilderConfig(): CustomBuilderConfig {
+  const seededComponents: Record<ComponentCategory, BuilderComponent[]> = {
+    CPU: [
+      mkComp("cpu_01", "CPU", "Intel i3-12100F", "Intel", "i3-12100F", 7800, "Low Budget", "Entry", 0),
+      mkComp("cpu_02", "CPU", "Ryzen 5 5600", "AMD", "Ryzen 5 5600", 10500, "Popular", "Entry", 1),
+      mkComp("cpu_03", "CPU", "Intel i5-12400F", "Intel", "i5-12400F", 11500, "Frequent", "Mid", 2),
+      mkComp("cpu_04", "CPU", "Intel i5-14400F", "Intel", "i5-14400F", 17500, "Trending", "Mid", 3),
+      mkComp("cpu_05", "CPU", "Ryzen 5 7600", "AMD", "Ryzen 5 7600", 19000, "Popular", "Mid", 4),
+      mkComp("cpu_06", "CPU", "Ryzen 5 9600X", "AMD", "Ryzen 5 9600X", 24500, "Latest", "Mid", 5),
+      mkComp("cpu_07", "CPU", "Ryzen 7 7800X3D", "AMD", "Ryzen 7 7800X3D", 39000, "Popular", "High", 6),
+      mkComp("cpu_08", "CPU", "Ryzen 7 9800X3D", "AMD", "Ryzen 7 9800X3D", 45500, "Trending", "High", 7),
+      mkComp("cpu_09", "CPU", "Intel Core Ultra 7 265K", "Intel", "Core Ultra 7 265K", 38000, "Latest", "High", 8),
+      mkComp("cpu_10", "CPU", "Ryzen 9 9950X", "AMD", "Ryzen 9 9950X", 56000, "Premium", "Extreme", 9),
+      mkComp("cpu_11", "CPU", "Ryzen 9 9950X3D", "AMD", "Ryzen 9 9950X3D", 68000, "Extreme", "Extreme", 10),
+    ],
+    Motherboard: [
+      mkComp("mb_01", "Motherboard", "H610 DDR4", "ASUS", "H610M-K", 6500, "Budget Popular", "Entry", 0),
+      mkComp("mb_02", "Motherboard", "B550M DDR4", "MSI", "B550M Pro-VDH WiFi", 8800, "Popular", "Entry", 1),
+      mkComp("mb_03", "Motherboard", "B760M DDR4", "Gigabyte", "B760M DS3H", 11200, "Frequent", "Mid", 2),
+      mkComp("mb_04", "Motherboard", "B760 WiFi DDR5", "ASUS", "Prime B760-Plus WiFi", 16500, "Trending", "Mid", 3),
+      mkComp("mb_05", "Motherboard", "B650M DDR5", "MSI", "MAG B650M Mortar WiFi", 15000, "Budget Popular", "Mid", 4),
+      mkComp("mb_06", "Motherboard", "B650 WiFi DDR5", "ASUS", "ROG Strix B650-A", 18000, "Popular", "Mid", 5),
+      mkComp("mb_07", "Motherboard", "X870 WiFi DDR5", "MSI", "MAG X870 Tomahawk WiFi", 28500, "Latest", "High", 6),
+      mkComp("mb_08", "Motherboard", "Z790 Creator WiFi", "ASUS", "ProArt Z790-Creator", 34000, "Creator", "High", 7),
+      mkComp("mb_09", "Motherboard", "X870E Gaming WiFi", "ASUS", "ROG Crosshair X870E Hero", 46500, "Latest", "Extreme", 8),
+      mkComp("mb_10", "Motherboard", "Z890 WiFi DDR5", "MSI", "MEG Z890 Godlike", 38500, "Premium", "Extreme", 9),
+    ],
+    RAM: [
+      mkComp("ram_01", "RAM", "8GB DDR4 3200", "Corsair", "Vengeance 8GB DDR4", 1800, "Low Budget", "Entry", 0),
+      mkComp("ram_02", "RAM", "16GB DDR4 3200", "Kingston", "Fury Beast 16GB DDR4", 3000, "Budget Popular", "Entry", 1),
+      mkComp("ram_03", "RAM", "16GB DDR5 6000", "G.Skill", "Trident Z5 16GB DDR5", 5200, "Popular", "Mid", 2),
+      mkComp("ram_04", "RAM", "32GB DDR4 3200", "Corsair", "Vengeance 32GB DDR4", 5600, "Frequent", "Mid", 3),
+      mkComp("ram_05", "RAM", "32GB DDR5 6000 CL30", "G.Skill", "Trident Z5 RGB 32GB DDR5", 9500, "Trending", "High", 4),
+      mkComp("ram_06", "RAM", "32GB DDR5 6400 RGB", "Corsair", "Dominator Titanium 32GB DDR5", 11500, "Latest", "High", 5),
+      mkComp("ram_07", "RAM", "48GB DDR5 6000", "Kingston", "Fury Beast 48GB DDR5", 14000, "Creator", "High", 6),
+      mkComp("ram_08", "RAM", "64GB DDR5 6000", "G.Skill", "Trident Z5 64GB DDR5", 18000, "Creator", "Extreme", 7),
+      mkComp("ram_09", "RAM", "128GB DDR5 5600", "Corsair", "Vengeance 128GB DDR5", 42000, "Rich Class", "Extreme", 8),
+    ],
+    GPU: [
+      mkComp("gpu_01", "GPU", "RX 6600 8GB", "Sapphire", "Pulse RX 6600 8GB", 19000, "Budget Popular", "Entry", 0),
+      mkComp("gpu_02", "GPU", "RTX 4060 8GB", "ASUS", "Dual RTX 4060 8GB", 32000, "Frequent", "Mid", 1),
+      mkComp("gpu_03", "GPU", "RTX 5060 Ti 16GB", "MSI", "Gaming X RTX 5060 Ti 16GB", 52000, "Latest", "Mid", 2),
+      mkComp("gpu_04", "GPU", "RTX 4070 Super 12GB", "Gigabyte", "Gaming OC RTX 4070 Super", 62000, "Trending", "High", 3),
+      mkComp("gpu_05", "GPU", "RTX 5070 12GB", "ASUS", "ROG Strix RTX 5070 12GB", 66000, "Latest", "High", 4),
+      mkComp("gpu_06", "GPU", "RX 9070 XT 16GB", "Sapphire", "Nitro+ RX 9070 XT 16GB", 74000, "Latest", "High", 5),
+      mkComp("gpu_07", "GPU", "RTX 5070 Ti 16GB", "MSI", "Suprim X RTX 5070 Ti 16GB", 105000, "Latest", "Extreme", 6),
+      mkComp("gpu_08", "GPU", "RTX 5080 16GB", "ASUS", "ROG Strix RTX 5080 16GB", 145000, "Premium", "Extreme", 7),
+      mkComp("gpu_09", "GPU", "RTX 5090 32GB", "ASUS", "ROG Strix RTX 5090 32GB", 285000, "Extreme", "Extreme", 8),
+    ],
+    Storage: [
+      mkComp("sto_01", "Storage", "500GB NVMe Gen3", "Kingston", "NV2 500GB NVMe", 2100, "Budget Popular", "Entry", 0),
+      mkComp("sto_02", "Storage", "1TB NVMe Gen3", "Samsung", "970 Evo Plus 1TB", 3600, "Popular", "Entry", 1),
+      mkComp("sto_03", "Storage", "1TB NVMe Gen4", "WD", "Black SN850X 1TB", 4800, "Trending", "Mid", 2),
+      mkComp("sto_04", "Storage", "2TB NVMe Gen4", "Samsung", "980 Pro 2TB", 8800, "Popular", "Mid", 3),
+      mkComp("sto_05", "Storage", "2TB NVMe Gen5", "Crucial", "T705 2TB NVMe Gen5", 18000, "Latest", "High", 4),
+      mkComp("sto_06", "Storage", "4TB NVMe Gen4", "WD", "Black SN850X 4TB", 21000, "Creator", "High", 5),
+      mkComp("sto_07", "Storage", "4TB NVMe + 8TB HDD", "Samsung + Seagate", "990 Pro 4TB + Barracuda 8TB", 28000, "Creator", "Extreme", 6),
+    ],
+    PSU: [
+      mkComp("psu_01", "PSU", "550W Bronze", "Corsair", "CV550 Bronze", 3800, "Budget Popular", "Entry", 0),
+      mkComp("psu_02", "PSU", "650W Gold", "Seasonic", "Focus GX-650 Gold", 7200, "Popular", "Entry", 1),
+      mkComp("psu_03", "PSU", "750W Gold ATX 3.1", "Corsair", "RM750e ATX 3.1", 10500, "Trending", "Mid", 2),
+      mkComp("psu_04", "PSU", "850W Gold ATX 3.1", "Seasonic", "Focus GX-850 ATX 3.1", 14500, "Latest", "High", 3),
+      mkComp("psu_05", "PSU", "1000W Gold ATX 3.1", "ASUS", "ROG Thor 1000W ATX 3.1", 18000, "Premium", "High", 4),
+      mkComp("psu_06", "PSU", "1200W Platinum", "Corsair", "AX1200i Platinum", 30000, "Rich Class", "Extreme", 5),
+    ],
+    Cabinet: [
+      mkComp("cab_01", "Cabinet", "Ant Esports ICE Cabinet", "Ant Esports", "ICE-200TG", 3500, "Budget Popular", "Entry", 0),
+      mkComp("cab_02", "Cabinet", "Cooler Master CMP 520", "Cooler Master", "CMP 520", 5200, "Popular", "Mid", 1),
+      mkComp("cab_03", "Cabinet", "Corsair 4000D Airflow", "Corsair", "4000D Airflow", 7800, "Popular", "Mid", 2),
+      mkComp("cab_04", "Cabinet", "Lian Li Lancool 216", "Lian Li", "Lancool 216", 10500, "Trending", "High", 3),
+      mkComp("cab_05", "Cabinet", "Lian Li O11D EVO", "Lian Li", "O11D EVO", 13500, "Popular", "High", 4),
+      mkComp("cab_06", "Cabinet", "Hyte Y60", "Hyte", "Y60 Panoramic", 22000, "Premium", "Extreme", 5),
+    ],
+    Cooler: [
+      mkComp("cool_01", "Cooler", "Deepcool AK400 Air", "Deepcool", "AK400", 2500, "Popular", "Entry", 0),
+      mkComp("cool_02", "Cooler", "Dual Tower Air Cooler", "Noctua", "NH-D15", 6500, "Trending", "Mid", 1),
+      mkComp("cool_03", "Cooler", "240mm AIO", "Corsair", "iCUE H100i RGB Elite", 9000, "Popular", "Mid", 2),
+      mkComp("cool_04", "Cooler", "280mm AIO", "NZXT", "Kraken 280 RGB", 11500, "Latest", "High", 3),
+      mkComp("cool_05", "Cooler", "360mm AIO", "Corsair", "iCUE H150i Elite Capellix", 15000, "Trending", "High", 4),
+      mkComp("cool_06", "Cooler", "360mm LCD AIO", "ASUS", "ROG Ryujin III 360 LCD", 25000, "Latest", "Extreme", 5),
+    ],
+    Fans: [
+      mkComp("fans_01", "Fans", "3x ARGB Fan Kit", "Deepcool", "FC120 3-in-1 ARGB", 4200, "Trending", "Entry", 0),
+      mkComp("fans_02", "Fans", "5x ARGB Fan Kit + Controller", "Corsair", "iCUE SP120 RGB 5-Pack", 6500, "Frequent", "Mid", 1),
+      mkComp("fans_03", "Fans", "Lian Li Uni Fan 3-Pack", "Lian Li", "Uni Fan SL-Infinity 120", 11500, "Latest", "High", 2),
+      mkComp("fans_04", "Fans", "Noctua Quiet Fan Kit", "Noctua", "NF-A12x25 PWM 3-Pack", 13000, "Premium", "Extreme", 3),
+    ],
+    OS: [
+      mkComp("os_01", "OS", "Windows 11 Home", "Microsoft", "Windows 11 Home", 11500, "Popular", "Entry", 0),
+      mkComp("os_02", "OS", "Windows 11 Home + Driver Setup", "Microsoft", "Windows 11 Home + Drivers", 13000, "Frequent", "Mid", 1),
+      mkComp("os_03", "OS", "Windows 11 Pro", "Microsoft", "Windows 11 Pro", 16500, "Popular", "Mid", 2),
+      mkComp("os_04", "OS", "Windows 11 Pro + Office Setup", "Microsoft", "Windows 11 Pro + MS Office", 26000, "Creator", "High", 3),
+      mkComp("os_05", "OS", "Ubuntu Developer Stack", "Canonical", "Ubuntu 24.04 LTS + Dev Stack", 3500, "Popular", "Mid", 4),
+    ],
+    Accessories: [
+      mkComp("acc_01", "Accessories", "Basic Keyboard + Mouse", "Logitech", "MK120 Combo", 1200, "Budget Popular", "Entry", 0),
+      mkComp("acc_02", "Accessories", "Gaming Keyboard + Mouse", "Razer", "BlackWidow V3 + DeathAdder V3", 4500, "Popular", "Mid", 1),
+      mkComp("acc_03", "Accessories", "Mechanical Keyboard + Mouse", "ASUS", "ROG Strix Scope + Gladius III", 8500, "Trending", "High", 2),
+      mkComp("acc_04", "Accessories", "27in 1080p Monitor + Keyboard/Mouse", "LG", "27MP60G + Combo", 14000, "Popular", "Mid", 3),
+      mkComp("acc_05", "Accessories", "24in 165Hz Gaming Monitor + Combo", "MSI", "G245F 165Hz + Gaming Combo", 18000, "Trending", "High", 4),
+      mkComp("acc_06", "Accessories", "Streaming Kit - Mic + Webcam + Light", "Elgato", "Wave:3 + FaceCam + Key Light", 32000, "Creator", "Extreme", 5),
+    ],
+    "Network Device": [
+      mkComp("net_01", "Network Device", "PCIe WiFi 6 + Bluetooth", "ASUS", "PCE-AX58BT WiFi 6", 3200, "Trending", "Entry", 0),
+      mkComp("net_02", "Network Device", "PCIe WiFi 6E + Bluetooth", "Intel", "Wi-Fi 6E AX210 PCIe", 4500, "Latest", "Mid", 1),
+      mkComp("net_03", "Network Device", "WiFi 6 Router", "TP-Link", "Archer AX73 WiFi 6", 8500, "Popular", "Mid", 2),
+      mkComp("net_04", "Network Device", "WiFi 6E Router", "ASUS", "RT-AXE7800 WiFi 6E", 13000, "Latest", "High", 3),
+      mkComp("net_05", "Network Device", "10G PCIe LAN Card", "ASUS", "XG-C100C 10G LAN", 8500, "Creator", "High", 4),
+      mkComp("net_06", "Network Device", "WiFi 7 Router", "ASUS", "GT-BE98 WiFi 7", 26000, "Latest", "Extreme", 5),
+    ],
+  };
+
+  // Default presets by tier using the seeded component IDs
+  const defaultPresets: DefaultBuildPreset[] = [
+    {
+      tier: "Entry",
+      components: {
+        CPU: "cpu_02", Motherboard: "mb_01", RAM: "ram_02", GPU: "gpu_01",
+        Storage: "sto_01", PSU: "psu_01", Cabinet: "cab_01", Cooler: "cool_01",
+        Fans: "fans_01", OS: "os_01", Accessories: "acc_01", "Network Device": "net_01",
+      },
+    },
+    {
+      tier: "Mid",
+      components: {
+        CPU: "cpu_05", Motherboard: "mb_05", RAM: "ram_03", GPU: "gpu_02",
+        Storage: "sto_03", PSU: "psu_03", Cabinet: "cab_02", Cooler: "cool_03",
+        Fans: "fans_02", OS: "os_02", Accessories: "acc_02", "Network Device": "net_02",
+      },
+    },
+    {
+      tier: "High",
+      components: {
+        CPU: "cpu_08", Motherboard: "mb_07", RAM: "ram_05", GPU: "gpu_05",
+        Storage: "sto_05", PSU: "psu_04", Cabinet: "cab_04", Cooler: "cool_05",
+        Fans: "fans_03", OS: "os_03", Accessories: "acc_05", "Network Device": "net_04",
+      },
+    },
+    {
+      tier: "Extreme",
+      components: {
+        CPU: "cpu_11", Motherboard: "mb_09", RAM: "ram_09", GPU: "gpu_09",
+        Storage: "sto_07", PSU: "psu_06", Cabinet: "cab_06", Cooler: "cool_06",
+        Fans: "fans_04", OS: "os_04", Accessories: "acc_06", "Network Device": "net_06",
+      },
+    },
+  ];
+
+  return {
+    id: "builder_default",
+    version: 1,
+    status: "published",
+    contentConfig: {
+      pageTitle: "Custom PC Solutions",
+      subtitle: "Configure your dream PC with expert guidance",
+      workflowBadgeText: "End-to-End Build Workflow",
+      builderDescription: "Select your components, validate compatibility, get quotation, professional assembly, testing, delivery, and warranty—all tracked in one dashboard.",
+      ctaButtonText: "Submit Build Request",
+      validationChecklist: [
+        "CPU Socket Compatibility",
+        "RAM Compatibility",
+        "GPU Clearance",
+        "PSU Wattage",
+        "Cooler Height",
+        "Network Readiness",
+        "Upgrade Path",
+      ],
+      assemblyCharge: 8000,
+      gstPercentage: 18,
+      shippingRule: "Free shipping on orders above ₹1,50,000",
+      freeShippingThreshold: 150000,
+    },
+    buildPurposes: [
+      { id: "purpose_gaming", purpose: "Gaming", label: "Gaming", order: 1, isActive: true, recommendedTier: "High" },
+      { id: "purpose_office", purpose: "Office", label: "Office", order: 2, isActive: true, recommendedTier: "Entry" },
+      { id: "purpose_editing", purpose: "Editing", label: "Editing", order: 3, isActive: true, recommendedTier: "High" },
+      { id: "purpose_streaming", purpose: "Streaming", label: "Streaming", order: 4, isActive: true, recommendedTier: "High" },
+      { id: "purpose_ai", purpose: "AI / ML", label: "AI / ML", order: 5, isActive: true, recommendedTier: "Extreme" },
+      { id: "purpose_cad", purpose: "CAD / 3D", label: "CAD / 3D", order: 6, isActive: true, recommendedTier: "High" },
+      { id: "purpose_programming", purpose: "Programming", label: "Programming", order: 7, isActive: true, recommendedTier: "Mid" },
+      { id: "purpose_server", purpose: "Server", label: "Server", order: 8, isActive: true, recommendedTier: "Extreme" },
+    ],
+    components: seededComponents,
+    compatibilityRules: [
+      {
+        id: "rule_cpu_socket",
+        name: "CPU Socket Compatibility",
+        description: "Validates CPU and motherboard socket compatibility",
+        category: "CPU",
+        checksWith: ["Motherboard"],
+        ruleType: "socket",
+        isActive: true,
+      },
+      {
+        id: "rule_mobo_chipset",
+        name: "Motherboard Chipset Support",
+        description: "Validates chipset features with CPU generation",
+        category: "Motherboard",
+        checksWith: ["CPU"],
+        ruleType: "chipset",
+        isActive: true,
+      },
+      {
+        id: "rule_ram_type",
+        name: "RAM DDR Compatibility",
+        description: "Validates DDR4 vs DDR5 memory support",
+        category: "RAM",
+        checksWith: ["Motherboard"],
+        ruleType: "memory-type",
+        isActive: true,
+      },
+      {
+        id: "rule_gpu_clearance",
+        name: "GPU Physical Clearance",
+        description: "Validates GPU length fits in cabinet",
+        category: "GPU",
+        checksWith: ["Cabinet"],
+        ruleType: "physical",
+        isActive: true,
+      },
+      {
+        id: "rule_psu_wattage",
+        name: "PSU Power Capacity",
+        description: "Validates PSU wattage covers all components",
+        category: "PSU",
+        checksWith: ["CPU", "GPU"],
+        ruleType: "power",
+        isActive: true,
+      },
+      {
+        id: "rule_cooler_height",
+        name: "CPU Cooler Height",
+        description: "Validates cooler height fits in cabinet",
+        category: "Cooler",
+        checksWith: ["Cabinet"],
+        ruleType: "physical",
+        isActive: true,
+      },
+      {
+        id: "rule_storage_slots",
+        name: "Storage Slot Availability",
+        description: "Validates motherboard has enough M.2/SATA slots",
+        category: "Storage",
+        checksWith: ["Motherboard"],
+        ruleType: "slot",
+        isActive: true,
+      },
+      {
+        id: "rule_network_compatibility",
+        name: "Network Interface Compatibility",
+        description: "Validates network device interface compatibility",
+        category: "Network Device",
+        checksWith: ["Motherboard"],
+        ruleType: "interface",
+        isActive: true,
+      },
+    ],
+    defaultPresets,
+    pricingRules: {
+      assemblyCharges: {
+        Entry: 6000,
+        Mid: 8000,
+        High: 10000,
+        Extreme: 12000,
+      },
+      gstPercent: 18,
+      freeShippingThreshold: 150000,
+      shippingCharge: 1499,
+    },
+    publishedAt: Date.now(),
+    lastModifiedAt: Date.now(),
+    modifiedBy: "system",
+  };
+}
 
 // ── HELPERS ───────────────────────────────────────────────────────────────
 
@@ -1555,7 +1955,25 @@ function migrateStore(store: DashboardStore): DashboardStore {
   });
   const gamingHub = (store.gamingHub || []).length ? store.gamingHub : defaultGamingHubItems();
   if (!(store.gamingHub || []).length) changed = true;
-  return changed ? { ...store, orders, staff, repairs, pcBuilds, serviceRequests, gamingHub } : { ...store, orders, serviceRequests, gamingHub };
+
+  // Migrate customBuilderConfig — inject seeded components if all categories are empty
+  const defaultConfig = createDefaultBuilderConfig();
+  const storedConfig = store.customBuilderConfig || defaultConfig;
+  const hasSeededComponents = Object.values(storedConfig.components || {}).flat().length > 0;
+  const migratedConfig: CustomBuilderConfig = hasSeededComponents ? storedConfig : {
+    ...defaultConfig,
+    ...storedConfig,
+    components: defaultConfig.components,
+    defaultPresets: storedConfig.defaultPresets?.every(p => Object.keys(p.components).length > 0)
+      ? storedConfig.defaultPresets
+      : defaultConfig.defaultPresets,
+    lastModifiedAt: storedConfig.lastModifiedAt || defaultConfig.lastModifiedAt,
+  };
+  if (!hasSeededComponents) changed = true;
+
+  return changed
+    ? { ...store, orders, staff, repairs, pcBuilds, serviceRequests, gamingHub, customBuilderConfig: migratedConfig }
+    : { ...store, orders, serviceRequests, gamingHub, customBuilderConfig: migratedConfig };
 }
 
 const ORDER_TIMELINE_LABELS = ["Order Placed", "Admin Verified", "Packing", "Shipped", "Delivered"];
@@ -1677,11 +2095,6 @@ function defaultServiceQa(kind: ServiceRequestKind) {
 export function useDashboardData() {
   const [store, setStore] = useState<DashboardStore>(() => loadStore());
 
-  const persist = useCallback((next: DashboardStore) => {
-    saveStore(next);
-    setStore(next);
-  }, []);
-
   const addLog = useCallback((event: string, detail: string, actor?: string) => {
     setStore(prev => {
       const log: AuditLog = { id: rid("log"), event, detail, actor, at: Date.now() };
@@ -1689,6 +2102,11 @@ export function useDashboardData() {
       saveStore(next);
       return next;
     });
+  }, []);
+
+  const persist = useCallback((next: DashboardStore) => {
+    saveStore(next);
+    setStore(next);
   }, []);
 
   const updateOrderStatus = useCallback((orderId: string, status: OrderStatus) => {
@@ -2123,6 +2541,121 @@ export function useDashboardData() {
     addLog("coupon_redeemed", `Coupon ${couponId} redeemed`);
   }, [addLog]);
 
+  const addCRMNote = useCallback((note: Omit<CRMNote, "id" | "at"> & { at?: number }) => {
+    const item: CRMNote = { ...note, id: rid("crm"), at: note.at || Date.now() };
+    setStore(prev => {
+      const next = { ...prev, crmNotes: [item, ...prev.crmNotes] };
+      saveStore(next);
+      return next;
+    });
+    addLog("crm_note_added", `CRM note added for ${item.customerId}`, item.by);
+    return item;
+  }, [addLog]);
+
+  const addStaffMember = useCallback((input: Omit<StaffMember, "id" | "joinedAt" | "performance"> & { id?: string; joinedAt?: number; performance?: StaffMember["performance"] }) => {
+    const staff: StaffMember = {
+      ...input,
+      id: input.id || rid("stf"),
+      joinedAt: input.joinedAt || Date.now(),
+      performance: input.performance || { jobs: 0, rating: 5, attendancePct: 100 },
+    };
+    setStore(prev => {
+      const next = { ...prev, staff: [staff, ...prev.staff.filter(s => s.id !== staff.id)] };
+      saveStore(next);
+      return next;
+    });
+    addLog("staff_created", `Staff ${staff.name} created`, "admin");
+    return staff;
+  }, [addLog]);
+
+  const addSupplier = useCallback((input: Omit<Supplier, "id"> & { id?: string }) => {
+    const supplier: Supplier = { ...input, id: input.id || rid("sup") };
+    setStore(prev => {
+      const next = { ...prev, suppliers: [supplier, ...prev.suppliers.filter(s => s.id !== supplier.id)] };
+      saveStore(next);
+      return next;
+    });
+    addLog("supplier_created", `Supplier ${supplier.name} created`, "admin");
+    return supplier;
+  }, [addLog]);
+
+  const addPurchaseOrder = useCallback((input: Omit<PurchaseOrder, "id" | "createdAt" | "updatedAt"> & { id?: string; createdAt?: number }) => {
+    const order: PurchaseOrder = {
+      ...input,
+      id: input.id || `PO-${Math.floor(1000 + Math.random() * 9000)}`,
+      createdAt: input.createdAt || Date.now(),
+      updatedAt: Date.now(),
+    };
+    setStore(prev => {
+      const next = { ...prev, purchaseOrders: [order, ...prev.purchaseOrders.filter(po => po.id !== order.id)] };
+      saveStore(next);
+      return next;
+    });
+    addLog("purchase_order_created", `Purchase order ${order.id} created`, "admin");
+    return order;
+  }, [addLog]);
+
+  const patchPurchaseOrder = useCallback((poId: string, patch: Partial<PurchaseOrder>) => {
+    setStore(prev => {
+      const before = prev.purchaseOrders.find(po => po.id === poId);
+      const becomingReceived = before?.status !== "received" && patch.status === "received";
+      const nextProducts = becomingReceived && before
+        ? prev.products.map(product => {
+            const matched = before.items.find(item => product.name.toLowerCase().includes(item.component.toLowerCase()) || product.category.toLowerCase() === item.component.toLowerCase());
+            return matched ? { ...product, stock: Number(product.stock || 0) + Number(matched.qty || 0), inStock: true, updatedAt: Date.now() } : product;
+          })
+        : prev.products;
+      const next = {
+        ...prev,
+        products: nextProducts,
+        purchaseOrders: prev.purchaseOrders.map(po => po.id === poId ? { ...po, ...patch, updatedAt: Date.now() } : po),
+      };
+      saveStore(next);
+      return next;
+    });
+    addLog("purchase_order_updated", `Purchase order ${poId} updated`, "admin");
+  }, [addLog]);
+
+  const addCoupon = useCallback((input: Omit<Coupon, "id" | "redeemed"> & { id?: string; redeemed?: boolean }) => {
+    const coupon: Coupon = { ...input, id: input.id || rid("cpn"), redeemed: Boolean(input.redeemed), active: input.active ?? true, usedCount: input.usedCount || 0 };
+    setStore(prev => {
+      const next = { ...prev, coupons: [coupon, ...prev.coupons.filter(c => c.id !== coupon.id)] };
+      saveStore(next);
+      return next;
+    });
+    addLog("coupon_created", `Coupon ${coupon.code} created`, "admin");
+    return coupon;
+  }, [addLog]);
+
+  const patchCoupon = useCallback((couponId: string, patch: Partial<Coupon>) => {
+    setStore(prev => {
+      const next = { ...prev, coupons: prev.coupons.map(c => c.id === couponId ? { ...c, ...patch } : c) };
+      saveStore(next);
+      return next;
+    });
+    addLog("coupon_updated", `Coupon ${couponId} updated`, "admin");
+  }, [addLog]);
+
+  const addOffer = useCallback((input: Omit<DashboardStore["offers"][number], "id" | "createdAt" | "updatedAt"> & { id?: string }) => {
+    const offer = { ...input, id: input.id || rid("ofr"), active: input.active ?? true, createdAt: Date.now(), updatedAt: Date.now() };
+    setStore(prev => {
+      const next = { ...prev, offers: [offer, ...prev.offers.filter(o => o.id !== offer.id)] };
+      saveStore(next);
+      return next;
+    });
+    addLog("offer_created", `Offer ${offer.title} created`, "admin");
+    return offer;
+  }, [addLog]);
+
+  const patchOffer = useCallback((offerId: string, patch: Partial<DashboardStore["offers"][number]>) => {
+    setStore(prev => {
+      const next = { ...prev, offers: prev.offers.map(o => o.id === offerId ? { ...o, ...patch, updatedAt: Date.now() } : o) };
+      saveStore(next);
+      return next;
+    });
+    addLog("offer_updated", `Offer ${offerId} updated`, "admin");
+  }, [addLog]);
+
   const updateSettings = useCallback((patch: Partial<DashboardSettings>) => {
     setStore(prev => {
       const next = { ...prev, settings: { ...prev.settings, ...patch } };
@@ -2234,6 +2767,7 @@ export function useDashboardData() {
       saveStore(next);
       return next;
     });
+    addLog("notification_sent", `Notification "${item.title}" sent to ${item.audience || "customer"}`, "admin");
   }, []);
 
   const resetStore = useCallback(() => {
@@ -2241,6 +2775,280 @@ export function useDashboardData() {
     saveStore(fresh);
     setStore(fresh);
   }, []);
+
+  const patchCustomBuilderConfig = useCallback((patch: Partial<CustomBuilderConfig>) => {
+    setStore(prev => {
+      const next = {
+        ...prev,
+        customBuilderConfig: {
+          ...prev.customBuilderConfig,
+          ...patch,
+          version: (prev.customBuilderConfig.version || 1) + 1,
+          lastModifiedAt: Date.now(),
+        },
+      };
+      saveStore(next);
+      return next;
+    });
+    addLog("builder_config_updated", "Custom PC Builder configuration updated", "admin");
+  }, [addLog]);
+
+  const publishBuilderConfig = useCallback(() => {
+    setStore(prev => {
+      const next = {
+        ...prev,
+        customBuilderConfig: {
+          ...prev.customBuilderConfig,
+          status: "published" as const,
+          publishedAt: Date.now(),
+          lastModifiedAt: Date.now(),
+        },
+      };
+      saveStore(next);
+      return next;
+    });
+    addLog("builder_published", "Custom PC Builder configuration published to customer-facing page", "admin");
+  }, [addLog]);
+
+  const addBuilderComponent = useCallback((categoryId: ComponentCategory, component: Omit<BuilderComponent, "id" | "order">) => {
+    setStore(prev => {
+      const existing = prev.customBuilderConfig.components[categoryId] || [];
+      const newComponent: BuilderComponent = {
+        ...component,
+        id: `comp_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`,
+        order: existing.length,
+      };
+      const next = {
+        ...prev,
+        customBuilderConfig: {
+          ...prev.customBuilderConfig,
+          components: {
+            ...prev.customBuilderConfig.components,
+            [categoryId]: [...existing, newComponent],
+          },
+          lastModifiedAt: Date.now(),
+        },
+      };
+      saveStore(next);
+      return next;
+    });
+    addLog("builder_component_added", `Component "${component.name}" added to ${categoryId}`, "admin");
+  }, [addLog]);
+
+  const updateBuilderComponent = useCallback((categoryId: ComponentCategory, componentId: string, patch: Partial<BuilderComponent>) => {
+    setStore(prev => {
+      const next = {
+        ...prev,
+        customBuilderConfig: {
+          ...prev.customBuilderConfig,
+          components: {
+            ...prev.customBuilderConfig.components,
+            [categoryId]: (prev.customBuilderConfig.components[categoryId] || []).map(c =>
+              c.id === componentId ? { ...c, ...patch } : c
+            ),
+          },
+          lastModifiedAt: Date.now(),
+        },
+      };
+      saveStore(next);
+      return next;
+    });
+    addLog("builder_component_updated", `Component ${componentId} in ${categoryId} updated`, "admin");
+  }, [addLog]);
+
+  const removeBuilderComponent = useCallback((categoryId: ComponentCategory, componentId: string) => {
+    setStore(prev => {
+      const component = (prev.customBuilderConfig.components[categoryId] || []).find(c => c.id === componentId);
+      const next = {
+        ...prev,
+        customBuilderConfig: {
+          ...prev.customBuilderConfig,
+          components: {
+            ...prev.customBuilderConfig.components,
+            [categoryId]: (prev.customBuilderConfig.components[categoryId] || [])
+              .filter(c => c.id !== componentId)
+              .map((c, i) => ({ ...c, order: i })),
+          },
+          lastModifiedAt: Date.now(),
+        },
+      };
+      saveStore(next);
+      return next;
+    });
+    addLog("builder_component_removed", `Component ${componentId} removed from ${categoryId}`, "admin");
+  }, [addLog]);
+
+  const reorderBuilderComponents = useCallback((categoryId: ComponentCategory, componentId: string, newOrder: number) => {
+    setStore(prev => {
+      const components = [...(prev.customBuilderConfig.components[categoryId] || [])];
+      const currentIndex = components.findIndex(c => c.id === componentId);
+      if (currentIndex === -1) return prev;
+      const [moved] = components.splice(currentIndex, 1);
+      components.splice(newOrder, 0, moved);
+      const next = {
+        ...prev,
+        customBuilderConfig: {
+          ...prev.customBuilderConfig,
+          components: {
+            ...prev.customBuilderConfig.components,
+            [categoryId]: components.map((c, i) => ({ ...c, order: i })),
+          },
+          lastModifiedAt: Date.now(),
+        },
+      };
+      saveStore(next);
+      return next;
+    });
+    addLog("builder_component_reordered", `Component ${componentId} reordered in ${categoryId}`, "admin");
+  }, [addLog]);
+
+  const updateBuildPurpose = useCallback((purposeId: string, patch: Partial<BuildPurposeButton>) => {
+    setStore(prev => {
+      const next = {
+        ...prev,
+        customBuilderConfig: {
+          ...prev.customBuilderConfig,
+          buildPurposes: prev.customBuilderConfig.buildPurposes.map(p =>
+            p.id === purposeId ? { ...p, ...patch } : p
+          ),
+          lastModifiedAt: Date.now(),
+        },
+      };
+      saveStore(next);
+      return next;
+    });
+    addLog("build_purpose_updated", `Build purpose ${purposeId} updated`, "admin");
+  }, [addLog]);
+
+  const addBuildPurpose = useCallback((purpose: Omit<BuildPurposeButton, "id">) => {
+    setStore(prev => {
+      const newPurpose: BuildPurposeButton = {
+        ...purpose,
+        id: `purpose_${Date.now().toString(36)}`,
+      };
+      const next = {
+        ...prev,
+        customBuilderConfig: {
+          ...prev.customBuilderConfig,
+          buildPurposes: [...prev.customBuilderConfig.buildPurposes, newPurpose].sort((a, b) => a.order - b.order),
+          lastModifiedAt: Date.now(),
+        },
+      };
+      saveStore(next);
+      return next;
+    });
+    addLog("build_purpose_added", `Build purpose "${purpose.purpose}" added`, "admin");
+  }, [addLog]);
+
+  const removeBuildPurpose = useCallback((purposeId: string) => {
+    setStore(prev => {
+      const next = {
+        ...prev,
+        customBuilderConfig: {
+          ...prev.customBuilderConfig,
+          buildPurposes: prev.customBuilderConfig.buildPurposes.filter(p => p.id !== purposeId),
+          lastModifiedAt: Date.now(),
+        },
+      };
+      saveStore(next);
+      return next;
+    });
+    addLog("build_purpose_removed", `Build purpose ${purposeId} removed`, "admin");
+  }, [addLog]);
+
+  const updatePricingRules = useCallback((patch: Partial<CustomBuilderConfig["pricingRules"]>) => {
+    setStore(prev => {
+      const next = {
+        ...prev,
+        customBuilderConfig: {
+          ...prev.customBuilderConfig,
+          pricingRules: {
+            ...prev.customBuilderConfig.pricingRules,
+            ...patch,
+          },
+          lastModifiedAt: Date.now(),
+        },
+      };
+      saveStore(next);
+      return next;
+    });
+    addLog("pricing_rules_updated", "Custom PC Builder pricing rules updated", "admin");
+  }, [addLog]);
+
+  const updateContentConfig = useCallback((patch: Partial<BuilderContentConfig>) => {
+    setStore(prev => {
+      const next = {
+        ...prev,
+        customBuilderConfig: {
+          ...prev.customBuilderConfig,
+          contentConfig: {
+            ...prev.customBuilderConfig.contentConfig,
+            ...patch,
+          },
+          lastModifiedAt: Date.now(),
+        },
+      };
+      saveStore(next);
+      return next;
+    });
+    addLog("builder_content_updated", "Custom PC Builder page content updated", "admin");
+  }, [addLog]);
+
+  const updateDefaultPreset = useCallback((tier: PerformanceTier, components: Record<string, string>) => {
+    setStore(prev => {
+      const next = {
+        ...prev,
+        customBuilderConfig: {
+          ...prev.customBuilderConfig,
+          defaultPresets: prev.customBuilderConfig.defaultPresets.map(p =>
+            p.tier === tier ? { ...p, components } : p
+          ),
+          lastModifiedAt: Date.now(),
+        },
+      };
+      saveStore(next);
+      return next;
+    });
+    addLog("default_preset_updated", `Default ${tier} preset updated`, "admin");
+  }, [addLog]);
+
+  const getBuilderMetrics = useCallback((): BuilderMetrics => {
+    const config = store.customBuilderConfig;
+    const allComponents = Object.values(config.components).flat();
+    const hiddenCount = allComponents.filter(c => !c.isActive).length;
+    const totalCategories = Object.keys(config.components).length;
+    const activeOptions = allComponents.filter(c => c.isActive).length;
+    const hiddenOptions = hiddenCount;
+
+    // Compute popular selections from submitted build requests
+    const selectionCounts: Record<string, { name: string; count: number; componentId: string }> = {};
+    store.pcBuilds.forEach(build => {
+      if (build.selectedBuilderComponents) {
+        Object.values(build.selectedBuilderComponents).forEach(componentId => {
+          const comp = allComponents.find(c => c.id === componentId);
+          if (comp) {
+            if (!selectionCounts[componentId]) {
+              selectionCounts[componentId] = { name: `${comp.brand} ${comp.model}`, count: 0, componentId };
+            }
+            selectionCounts[componentId].count++;
+          }
+        });
+      }
+    });
+    const popularSelections = Object.values(selectionCounts)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5)
+      .map(s => ({ componentId: s.componentId, name: s.name, count: s.count }));
+
+    return {
+      totalCategories,
+      activeOptions,
+      hiddenOptions,
+      popularSelections,
+      latestPriceUpdate: config.lastModifiedAt || config.publishedAt || Date.now(),
+      buildRequestsGenerated: store.pcBuilds.length,
+    };
+  }, [store]);
 
   // Cross-tab sync
   useEffect(() => {
@@ -2302,8 +3110,30 @@ export function useDashboardData() {
     addReplyToTicket,
     closeTicket,
     redeemCoupon,
+    addCRMNote,
+    addStaffMember,
+    addSupplier,
+    addPurchaseOrder,
+    patchPurchaseOrder,
+    addCoupon,
+    patchCoupon,
+    addOffer,
+    patchOffer,
     updateSettings,
     addNotification,
     resetStore,
+    patchCustomBuilderConfig,
+    publishBuilderConfig,
+    addBuilderComponent,
+    updateBuilderComponent,
+    removeBuilderComponent,
+    reorderBuilderComponents,
+    updateBuildPurpose,
+    addBuildPurpose,
+    removeBuildPurpose,
+    updatePricingRules,
+    updateContentConfig,
+    updateDefaultPreset,
+    getBuilderMetrics,
   };
 }

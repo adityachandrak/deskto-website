@@ -4,6 +4,9 @@ import {
   Users, UserCog, Truck as TruckIcon, Receipt, Ticket, Settings, History,
   RefreshCcw, BarChart3, Plus, Search, Filter, AlertCircle, Save, Send,
   Download, Eye, Lock, Unlock, Zap, X, Gamepad2, MessageSquare, Archive,
+  Cpu, Eye as EyeIcon, ClipboardList, GripVertical, ArrowUpDown, Trash2,
+  Edit3, Copy, ToggleLeft, ChevronRight, Monitor, Smartphone, Tv,
+  CheckCircle, Clock, Star,
 } from "lucide-react";
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar,
@@ -21,6 +24,8 @@ import type {
   StaffMember, Supplier, PurchaseOrder, Coupon, NotificationItem, AuditLog,
   DashboardSettings, ServiceRequest, ServiceRequestKind, CatalogProduct,
   GamingHubItem, GamingHubContentType, GamingHubStatus,
+  CustomBuilderConfig, ComponentCategory, MarketTag, BuildPurpose,
+  PerformanceTier, BuilderComponent, BuilderContentConfig,
 } from "./lib/dashboardData";
 
 const inr = (n: number) => `₹${(n || 0).toLocaleString("en-IN")}`;
@@ -827,8 +832,8 @@ export function AdminGamingHub({ store, addGamingHubItem, patchGamingHubItem, de
 }) {
   const [editing, setEditing] = useState<Partial<GamingHubItem> | null>(null);
   const [search, setSearch] = useState("");
-  const items = store.gamingHub || [];
-  const filtered = items.filter(item => `${item.title} ${item.category} ${item.status}`.toLowerCase().includes(search.toLowerCase()));
+  const items = Array.isArray(store.gamingHub) ? store.gamingHub.filter(Boolean) : [];
+  const filtered = items.filter(item => `${item.title || ""} ${item.category || ""} ${item.status || ""}`.toLowerCase().includes(search.toLowerCase()));
   const totalViews = items.reduce((sum, item) => sum + (item.views || 0), 0);
   const pendingComments = items.reduce((sum, item) => sum + (item.comments || []).filter(comment => comment.status === "pending").length, 0);
   const save = (status: GamingHubStatus) => {
@@ -852,17 +857,17 @@ export function AdminGamingHub({ store, addGamingHubItem, patchGamingHubItem, de
     setEditing(null);
   };
   const moderateComment = (item: GamingHubItem, commentId: string, status: "approved" | "rejected") => {
-    patchGamingHubItem(item.id, { comments: item.comments.map(comment => comment.id === commentId ? { ...comment, status } : comment) });
+    patchGamingHubItem(item.id, { comments: (item.comments || []).map(comment => comment.id === commentId ? { ...comment, status } : comment) });
     toast.success(`Comment ${status}`);
   };
   return (
     <div style={{ display: "grid", gap: 16 }}>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 12 }}>
-        <KPICard label="Total Posts" value={items.length} icon={Gamepad2} color="#FF1F45" />
-        <KPICard label="Published" value={items.filter(i => i.status === "published").length} icon={Eye} color="#00cc66" />
-        <KPICard label="Drafts" value={items.filter(i => i.status === "draft").length} icon={Archive} color="#ffd700" />
-        <KPICard label="Total Views" value={totalViews} icon={BarChart3} color="#00b4ff" />
-        <KPICard label="Pending Comments" value={pendingComments} icon={MessageSquare} color="#a855f7" />
+        <KPICard label="Total Posts" value={items.length} icon={<Gamepad2 size={14} />} color="#FF1F45" />
+        <KPICard label="Published" value={items.filter(i => i.status === "published").length} icon={<Eye size={14} />} color="#00cc66" />
+        <KPICard label="Drafts" value={items.filter(i => i.status === "draft").length} icon={<Archive size={14} />} color="#ffd700" />
+        <KPICard label="Total Views" value={totalViews} icon={<BarChart3 size={14} />} color="#00b4ff" />
+        <KPICard label="Pending Comments" value={pendingComments} icon={<MessageSquare size={14} />} color="#a855f7" />
       </div>
       <SectionCard
         title="Gaming Hub Management"
@@ -1463,15 +1468,32 @@ export function AdminCustomPC({ store, patchPCBuild }: { store: DashboardStore; 
               <div style={{ fontSize: 10, color: "#888", marginTop: 2 }}>{b.contactPhone || "No phone"}</div>
             </div>
           ) },
-          { key: "components", label: "Components", render: b => (
-            <div style={{ minWidth: 280, display: "grid", gap: 5 }}>
+          { key: "components", label: "Components & Breakdown", render: b => (
+            <div style={{ minWidth: 320, display: "grid", gap: 5 }}>
               {b.components.map(c => (
                 <div key={`${c.type}-${c.name}`} style={{ display: "flex", justifyContent: "space-between", gap: 12, fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, color: "#ddd" }}>
                   <span><strong style={{ color: "white" }}>{c.type}:</strong> {c.name}</span>
                   <span style={{ color: "#FF1F45", whiteSpace: "nowrap" }}>{inr(c.price)}</span>
                 </div>
               ))}
-              <small style={{ color: "#777", marginTop: 4 }}>{(b.validationReport || []).filter(v => v.pass).length} validations passed</small>
+              <div style={{ margin: "6px 0", height: 1, background: "rgba(255,255,255,.06)" }} />
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, color: "#aaa" }}>
+                <span>Assembly Charge</span><span>{inr(b.assemblyCharge || 0)}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, color: "#aaa" }}>
+                <span>GST (18%)</span><span>{inr(b.gst || 0)}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, color: "#aaa" }}>
+                <span>Shipping</span><span>{b.shipping ? inr(b.shipping) : "FREE"}</span>
+              </div>
+              <div style={{ margin: "6px 0", height: 1, background: "rgba(255,255,255,.06)" }} />
+              <div style={{ fontSize: 10, color: "#777", fontWeight: 700, letterSpacing: "0.8px", textTransform: "uppercase", marginBottom: 4 }}>Compatibility Report</div>
+              {(b.validationReport || []).map(v => (
+                <div key={v.label} style={{ display: "flex", gap: 6, fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, color: v.pass ? "#00cc66" : "#ff1f45", alignItems: "flex-start" }}>
+                  <CheckCircle size={11} style={{ marginTop: 2, flexShrink: 0 }} />
+                  <span title={v.detail}>{v.label}</span>
+                </div>
+              ))}
             </div>
           ) },
           { key: "total", label: "Quote", align: "right", render: b => inr(b.quotation || b.total) },
@@ -1529,7 +1551,580 @@ function PCBuildTechnicianCell({ build, builders, builderName, patchPCBuild }: {
   );
 }
 
-// ─── Assembly ─────────────────────────────────────────────────────────────
+// ─── Custom Builder Management ─────────────────────────────────────────────
+
+const COMPONENT_CATEGORIES: ComponentCategory[] = ["CPU", "Motherboard", "RAM", "GPU", "Storage", "PSU", "Cabinet", "Cooler", "Fans", "OS", "Accessories", "Network Device"];
+const MARKET_TAGS: MarketTag[] = ["Low Budget", "Budget Popular", "Frequent", "Popular", "Trending", "Latest", "Creator", "Premium", "Rich Class", "Extreme"];
+const STOCK_STATUSES: { value: BuilderComponent["stockStatus"]; label: string }[] = [
+  { value: "in-stock", label: "In Stock" },
+  { value: "low-stock", label: "Low Stock" },
+  { value: "out-of-stock", label: "Out of Stock" },
+  { value: "pre-order", label: "Pre-Order" },
+];
+const PERFORMANCE_TIERS: PerformanceTier[] = ["Entry", "Mid", "High", "Extreme"];
+const BUDGET_RANGES = ["Under ₹75,000", "₹75,000 - ₹1,00,000", "₹1,00,000 - ₹2,00,000", "₹2,00,000 - ₹3,00,000", "₹3,00,000+"];
+const COMPATIBILITY_RULE_TYPES = [
+  { value: "socket", label: "CPU Socket" },
+  { value: "chipset", label: "Chipset" },
+  { value: "memory-type", label: "Memory Type (DDR4/DDR5)" },
+  { value: "power", label: "Power/PSU" },
+  { value: "physical", label: "Physical Fit" },
+  { value: "slot", label: "Slot Availability" },
+  { value: "interface", label: "Interface" },
+];
+
+function BuilderOverviewMetrics({ metrics }: { metrics: { totalCategories: number; activeOptions: number; hiddenOptions: number; popularSelections: { componentId: string; name: string; count: number }[]; latestPriceUpdate: number; buildRequestsGenerated: number } }) {
+  const topPick = metrics.popularSelections[0];
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, marginBottom: 24 }}>
+      <KPICard label="Total Categories" value={metrics.totalCategories} icon={<Package size={14} />} color="#FF1F45" />
+      <KPICard label="Active Options" value={metrics.activeOptions} icon={<CheckCircle size={14} />} color="#00cc66" />
+      <KPICard label="Hidden/Disabled" value={metrics.hiddenOptions} icon={<Archive size={14} />} color="#ff6b00" />
+      <KPICard label="Top Selected" value={topPick ? `${topPick.name} (${topPick.count}×)` : "No data yet"} icon={<Star size={14} />} color="#FFD700" />
+      <KPICard label="Latest Price Update" value={new Date(metrics.latestPriceUpdate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })} icon={<Clock size={14} />} color="#00b4ff" />
+      <KPICard label="Build Requests" value={metrics.buildRequestsGenerated} icon={<Cpu size={14} />} color="#a855f7" />
+    </div>
+  );
+}
+
+
+function ContentConfigEditor({ config, onChange }: { config: BuilderContentConfig; onChange: (patch: Partial<BuilderContentConfig>) => void }) {
+  const set = <K extends keyof BuilderContentConfig>(key: K, value: BuilderContentConfig[K]) => onChange({ [key]: value });
+  return (
+    <SectionCard title="Builder Page Content" subtitle="Customize the customer-facing Custom PC Builder page">
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
+        <Field label="Page Title" value={config.pageTitle} onChange={v => set("pageTitle", v)} placeholder="Custom PC Solutions" />
+        <Field label="Subtitle" value={config.subtitle} onChange={v => set("subtitle", v)} placeholder="Configure your dream PC" />
+        <Field label="Workflow Badge Text" value={config.workflowBadgeText} onChange={v => set("workflowBadgeText", v)} placeholder="End-to-End Build Workflow" />
+        <Field label="Builder Description" value={config.builderDescription} onChange={v => set("builderDescription", v)} placeholder="Detailed description..." multiline />
+        <Field label="CTA Button Text" value={config.ctaButtonText} onChange={v => set("ctaButtonText", v)} placeholder="Submit Build Request" />
+        <Field label="Assembly Charge (₹)" type="number" value={String(config.assemblyCharge)} onChange={v => set("assemblyCharge", Number(v) || 0)} />
+        <Field label="GST Percentage" type="number" value={String(config.gstPercentage)} onChange={v => set("gstPercentage", Number(v) || 0)} />
+        <Field label="Free Shipping Threshold (₹)" type="number" value={String(config.freeShippingThreshold)} onChange={v => set("freeShippingThreshold", Number(v) || 0)} />
+        <Field label="Shipping Rule Description" value={config.shippingRule} onChange={v => set("shippingRule", v)} placeholder="Free shipping above..." />
+      </div>
+      <div style={{ marginTop: 20 }}>
+        <label style={{ fontSize: 11, color: "#777", fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase" }}>Validation Checklist Labels</label>
+        <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
+          {config.validationChecklist.map((item, idx) => (
+            <div key={idx} style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <input value={item} onChange={e => {
+                const next = [...config.validationChecklist];
+                next[idx] = e.target.value;
+                onChange({ validationChecklist: next });
+              }} style={{ flex: 1, background: "#111", border: "1px solid rgba(255,255,255,.12)", borderRadius: 6, padding: "8px 12px", color: "white", fontSize: 12 }} />
+              <button className="glass-pill glass-pill-sm glass-pill-red" onClick={() => {
+                const next = config.validationChecklist.filter((_, i) => i !== idx);
+                onChange({ validationChecklist: next });
+              }}><Trash2 size={10} /></button>
+            </div>
+          ))}
+          <button className="glass-pill glass-pill-sm glass-pill-outline" onClick={() => onChange({ validationChecklist: [...config.validationChecklist, "New Check"] })} style={{ marginTop: 8 }}>
+            <Plus size={10} /> Add Checklist Item
+          </button>
+        </div>
+      </div>
+    </SectionCard>
+  );
+}
+
+function BuildPurposesManager({ purposes, onUpdate, onAdd, onRemove }: { purposes: BuildPurposeButton[]; onUpdate: (id: string, patch: Partial<BuildPurposeButton>) => void; onAdd: () => void; onRemove: (id: string) => void }) {
+  const sorted = [...purposes].sort((a, b) => a.order - b.order);
+  return (
+    <SectionCard title="Build Purposes" subtitle="Manage customer build purpose options">
+      <div style={{ display: "grid", gap: 8 }}>
+        {sorted.map(p => (
+          <div key={p.id} className="glass" style={{ borderRadius: 10, padding: 14, display: "grid", gridTemplateColumns: "auto 1fr auto auto", gap: 12, alignItems: "center" }}>
+            <GripVertical size={14} color="#555" />
+            <Field label="Purpose" value={p.purpose} onChange={v => onUpdate(p.id, { purpose: v as BuildPurpose })} />
+            <Field label="Label" value={p.label} onChange={v => onUpdate(p.id, { label: v })} />
+            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              <select value={p.isActive ? "active" : "hidden"} onChange={e => onUpdate(p.id, { isActive: e.target.value === "active" })} style={{ background: "#111", border: "1px solid rgba(255,255,255,.12)", borderRadius: 6, padding: "6px 8px", color: "white", fontSize: 11 }}>
+                <option value="active">Active</option>
+                <option value="hidden">Hidden</option>
+              </select>
+              <button className={`glass-pill glass-pill-sm ${p.isActive ? "glass-pill-success" : "glass-pill-outline"}`} onClick={() => onUpdate(p.id, { isActive: !p.isActive })} style={{ padding: "5px 8px", fontSize: 9 }}>
+                <ToggleLeft size={11} /> {p.isActive ? "On" : "Off"}
+              </button>
+              <button className="glass-pill glass-pill-sm glass-pill-red" onClick={() => onRemove(p.id)}><Trash2 size={10} /></button>
+            </div>
+          </div>
+        ))}
+      </div>
+      <button className="glass-pill glass-pill-primary" onClick={onAdd} style={{ marginTop: 14 }}>
+        <Plus size={12} /> Add Build Purpose
+      </button>
+    </SectionCard>
+  );
+}
+
+function ComponentCategoryManager({ components, categoryId, onAdd, onUpdate, onRemove, onReorder }: { components: BuilderComponent[]; categoryId: ComponentCategory; onAdd: () => void; onUpdate: (id: string, patch: Partial<BuilderComponent>) => void; onRemove: (id: string) => void; onReorder: (id: string, newOrder: number) => void }) {
+  const sorted = [...components].sort((a, b) => a.order - b.order);
+  return (
+    <div className="glass" style={{ borderRadius: 12, padding: 16, border: "1px solid rgba(255,31,69,.15)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 13, color: "#FF1F45" }}>{categoryId}</div>
+        <span style={{ fontSize: 11, color: "#777" }}>{sorted.filter(c => c.isActive).length} active · {sorted.length} total</span>
+      </div>
+      <div style={{ display: "grid", gap: 8 }}>
+        {sorted.map((comp, idx) => (
+          <div key={comp.id} style={{ display: "grid", gridTemplateColumns: "auto 1fr auto auto auto", gap: 8, alignItems: "center", padding: "8px 10px", background: comp.isActive ? "transparent" : "rgba(255,255,255,.02)", borderRadius: 8 }}>
+            <GripVertical size={12} color="#555" />
+            <div style={{ fontSize: 12, color: comp.isActive ? "white" : "#666", textDecoration: comp.isActive ? "none" : "line-through" }}>
+              {comp.brand} {comp.model}
+            </div>
+            <div style={{ fontSize: 11, color: "#aaa" }}>₹{comp.price.toLocaleString("en-IN")}</div>
+            {comp.marketTag && <span className="glass-pill glass-pill-sm glass-pill-outline" style={{ fontSize: 9, padding: "3px 6px" }}>{comp.marketTag}</span>}
+            <div style={{ display: "flex", gap: 4 }}>
+              <button className="glass-pill glass-pill-sm glass-pill-outline" onClick={() => onUpdate(comp.id, { isActive: !comp.isActive })} style={{ fontSize: 9, padding: "4px 6px" }}>
+                {comp.isActive ? <EyeIcon size={10} /> : <Eye size={10} />}
+              </button>
+              <button className="glass-pill glass-pill-sm glass-pill-info" onClick={() => {
+                const newName = prompt("Rename component:", comp.name);
+                if (newName) onUpdate(comp.id, { name: newName });
+              }} style={{ fontSize: 9, padding: "4px 6px" }}><Edit3 size={10} /></button>
+              <button className="glass-pill glass-pill-sm glass-pill-red" onClick={() => onRemove(comp.id)} style={{ fontSize: 9, padding: "4px 6px" }}><Trash2 size={10} /></button>
+            </div>
+          </div>
+        ))}
+      </div>
+      <button className="glass-pill glass-pill-sm glass-pill-primary" onClick={onAdd} style={{ marginTop: 10, fontSize: 10 }}>
+        <Plus size={10} /> Add Component
+      </button>
+    </div>
+  );
+}
+
+function AddComponentDialog({ categoryId, onClose, onAdd }: { categoryId: ComponentCategory; onClose: () => void; onAdd: (comp: Omit<BuilderComponent, "id" | "order">) => void }) {
+  const [form, setForm] = useState({
+    name: "", brand: "", model: "", price: "", marketTag: "" as MarketTag | "",
+    tier: "" as PerformanceTier | "", compatibilityNotes: "", stockStatus: "in-stock" as BuilderComponent["stockStatus"],
+    isActive: true,
+  });
+  const set = (key: string, value: string | boolean) => setForm(prev => ({ ...prev, [key]: value }));
+  const submit = () => {
+    if (!form.name.trim() || !form.price) { toast.error("Name and price are required."); return; }
+    onAdd({
+      categoryId,
+      name: form.name.trim(),
+      brand: form.brand.trim(),
+      model: form.model.trim(),
+      price: Number(form.price),
+      marketTag: form.marketTag || undefined,
+      tier: form.tier || undefined,
+      compatibilityNotes: form.compatibilityNotes.trim() || undefined,
+      stockStatus: form.stockStatus,
+      isActive: form.isActive,
+    });
+    onClose();
+    toast.success("Component added successfully");
+  };
+  return (
+    <div className="glass-card" style={{ padding: 20, maxWidth: 500, margin: "0 auto", border: "1px solid rgba(255,31,69,.3)" }}>
+      <h3 style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 13, color: "white", marginBottom: 16 }}>Add Component to {categoryId}</h3>
+      <div style={{ display: "grid", gap: 12 }}>
+        <Field label="Component Name" value={form.name} onChange={v => set("name", v)} placeholder="e.g., RTX 5070 12GB" required />
+        <Field label="Brand" value={form.brand} onChange={v => set("brand", v)} placeholder="e.g., NVIDIA" />
+        <Field label="Model" value={form.model} onChange={v => set("model", v)} placeholder="e.g., RTX 5070" />
+        <Field label="Price (₹)" type="number" value={form.price} onChange={v => set("price", v)} placeholder="66000" required />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <Field label="Market Tag" value={form.marketTag} onChange={v => set("marketTag", v as MarketTag)} placeholder="e.g., Trending" />
+          <Field label="Tier" value={form.tier} onChange={v => set("tier", v as PerformanceTier)} placeholder="e.g., High" />
+        </div>
+        <Field label="Compatibility Notes" value={form.compatibilityNotes} onChange={v => set("compatibilityNotes", v)} placeholder="e.g., Requires DDR5 motherboard" />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div>
+            <label style={{ fontSize: 11, color: "#777", fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase" }}>Stock Status</label>
+            <select value={form.stockStatus} onChange={e => set("stockStatus", e.target.value)} style={{ width: "100%", background: "#111", border: "1px solid rgba(255,255,255,.12)", borderRadius: 6, padding: "8px 12px", color: "white", fontSize: 12, marginTop: 6 }}>
+              {STOCK_STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+            </select>
+          </div>
+          <div style={{ display: "flex", alignItems: "flex-end", paddingBottom: 8 }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+              <input type="checkbox" checked={form.isActive} onChange={e => set("isActive", e.target.checked)} />
+              <span style={{ fontSize: 12, color: "white" }}>Active</span>
+            </label>
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+          <button className="glass-pill glass-pill-primary" onClick={submit}><Save size={12} /> Add Component</button>
+          <button className="glass-pill glass-pill-outline" onClick={onClose}><X size={12} /> Cancel</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PricingRulesEditor({ pricingRules, onChange }: { pricingRules: CustomBuilderConfig["pricingRules"]; onChange: (patch: Partial<CustomBuilderConfig["pricingRules"]>) => void }) {
+  return (
+    <SectionCard title="Pricing Rules" subtitle="Configure assembly charges, GST, and shipping">
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
+        <div>
+          <label style={{ fontSize: 11, color: "#777", fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase" }}>Assembly Charges by Tier</label>
+          <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
+            {PERFORMANCE_TIERS.map(tier => (
+              <div key={tier} style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <span style={{ fontSize: 12, color: "#aaa", width: 80 }}>{tier}</span>
+                <Field label="" type="number" value={String(pricingRules.assemblyCharges[tier] || 0)} onChange={v => onChange({ assemblyCharges: { ...pricingRules.assemblyCharges, [tier]: Number(v) || 0 } })} style={{ flex: 1 }} />
+              </div>
+            ))}
+          </div>
+        </div>
+        <div style={{ display: "grid", gap: 12 }}>
+          <Field label="GST (%)" type="number" value={String(pricingRules.gstPercent)} onChange={v => onChange({ gstPercent: Number(v) || 0 })} />
+          <Field label="Shipping Charge (₹)" type="number" value={String(pricingRules.shippingCharge)} onChange={v => onChange({ shippingCharge: Number(v) || 0 })} />
+          <Field label="Free Shipping Threshold (₹)" type="number" value={String(pricingRules.freeShippingThreshold)} onChange={v => onChange({ freeShippingThreshold: Number(v) || 0 })} />
+        </div>
+      </div>
+    </SectionCard>
+  );
+}
+
+function CompatibilityRulesEditor({ rules, onUpdate, onAdd }: { rules: CompatibilityRule[]; onUpdate: (id: string, patch: Partial<CompatibilityRule>) => void; onAdd: () => void }) {
+  return (
+    <SectionCard title="Compatibility Rules" subtitle="Configure validation rules for component compatibility">
+      <div style={{ display: "grid", gap: 8 }}>
+        {rules.map(rule => (
+          <div key={rule.id} className="glass" style={{ borderRadius: 10, padding: 14, display: "grid", gridTemplateColumns: "1fr auto auto", gap: 12, alignItems: "center" }}>
+            <div>
+              <div style={{ fontSize: 13, color: "white", fontWeight: 600 }}>{rule.name}</div>
+              <div style={{ fontSize: 11, color: "#888", marginTop: 4 }}>{rule.description}</div>
+              <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
+                <span className="glass-pill glass-pill-sm glass-pill-outline">{rule.category}</span>
+                <span style={{ fontSize: 10, color: "#555" }}>↔</span>
+                {rule.checksWith.map(cat => <span key={cat} className="glass-pill glass-pill-sm glass-pill-outline">{cat}</span>)}
+                <span className="glass-pill glass-pill-sm glass-pill-info">{COMPATIBILITY_RULE_TYPES.find(t => t.value === rule.ruleType)?.label}</span>
+              </div>
+            </div>
+            <select value={rule.isActive ? "active" : "inactive"} onChange={e => onUpdate(rule.id, { isActive: e.target.value === "active" })} style={{ background: "#111", border: "1px solid rgba(255,255,255,.12)", borderRadius: 6, padding: "6px 8px", color: "white", fontSize: 11 }}>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+            <button className={`glass-pill glass-pill-sm ${rule.isActive ? "glass-pill-success" : "glass-pill-outline"}`} onClick={() => onUpdate(rule.id, { isActive: !rule.isActive })}>
+              <ToggleLeft size={11} /> {rule.isActive ? "On" : "Off"}
+            </button>
+          </div>
+        ))}
+      </div>
+    </SectionCard>
+  );
+}
+
+function BuilderPreviewDialog({ config, onClose }: { config: CustomBuilderConfig; onClose: () => void }) {
+  const [form, setForm] = useState({ name: "Preview Customer", phone: "9876543210", email: "preview@test.com", purpose: "Gaming", budgetRange: "₹1,00,000 - ₹2,00,000", performanceLevel: "High" });
+  const selected = COMPONENT_CATEGORIES.reduce((acc, cat) => { acc[cat] = 0; return acc; }, {} as Record<ComponentCategory, number>);
+  const set = (key: string, value: string) => setForm(prev => ({ ...prev, [key]: value }));
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.85)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={onClose}>
+      <div style={{ background: "#050505", borderRadius: 16, maxWidth: 1200, width: "100%", maxHeight: "90vh", overflow: "auto", border: "1px solid rgba(122,0,255,.35)", padding: 24 }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <h2 style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 16, color: "white" }}>Preview: {config.contentConfig.pageTitle}</h2>
+          <button className="glass-pill glass-pill-sm glass-pill-red" onClick={onClose}><X size={14} /> Close</button>
+        </div>
+        <div style={{ background: "#0a0a0a", borderRadius: 12, padding: 20, marginBottom: 20 }}>
+          <h3 style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 14, color: "#FF1F45", marginBottom: 8 }}>{config.contentConfig.pageTitle}</h3>
+          <p style={{ color: "#aaa", fontSize: 13, marginBottom: 16 }}>{config.contentConfig.builderDescription}</p>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
+            {config.buildPurposes.filter(p => p.isActive).map(v => (
+              <button key={v.id} className={form.purpose === v.purpose ? "glass-pill glass-pill-primary" : "glass-pill glass-pill-outline"} onClick={() => set("purpose", v.purpose)} style={{ padding: "9px 13px", fontSize: 10 }}>{v.label}</button>
+            ))}
+          </div>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 18 }}>
+            {PERFORMANCE_TIERS.map(v => (
+              <button key={v} className={form.performanceLevel === v ? "glass-pill glass-pill-primary" : "glass-pill glass-pill-outline"} onClick={() => set("performanceLevel", v)} style={{ padding: "9px 13px", fontSize: 10 }}>{v}</button>
+            ))}
+            <select value={form.budgetRange} onChange={e => set("budgetRange", e.target.value)} style={{ background: "#111", border: "1px solid rgba(255,255,255,.12)", borderRadius: 999, padding: "9px 13px", color: "white", fontSize: 11 }}>
+              {BUDGET_RANGES.map(v => <option key={v}>{v}</option>)}
+            </select>
+          </div>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 12, marginBottom: 20 }}>
+          {COMPONENT_CATEGORIES.map(cat => {
+            const catComponents = config.components[cat]?.filter(c => c.isActive) || [];
+            if (!catComponents.length) return null;
+            return (
+              <div key={cat} className="glass" style={{ borderRadius: 10, padding: 12 }}>
+                <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 10, color: "#FF1F45", marginBottom: 8 }}>{cat}</div>
+                <select style={{ width: "100%", background: "#111", border: "1px solid rgba(255,255,255,.12)", borderRadius: 8, padding: "10px", color: "white" }}>
+                  {catComponents.map((o, i) => <option key={o.id} value={i}>{o.name} · ₹{o.price.toLocaleString("en-IN")}</option>)}
+                </select>
+              </div>
+            );
+          })}
+        </div>
+        <div className="glass-card" style={{ borderRadius: 14, padding: 22, border: "1px solid rgba(122,0,255,.35)" }}>
+          <h3 style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 13, color: "white", margin: "0 0 16px" }}>Build Summary Preview</h3>
+          <div style={{ color: "#aaa", fontSize: 12, lineHeight: 1.7 }}>
+            <div style={{ marginBottom: 12 }}><strong style={{ color: "white" }}>Customer:</strong> {form.name} · {form.phone}</div>
+            <div style={{ marginBottom: 12 }}><strong style={{ color: "white" }}>Purpose:</strong> {form.purpose} · <strong style={{ color: "white" }}>Tier:</strong> {form.performanceLevel}</div>
+            <div style={{ marginBottom: 12 }}><strong style={{ color: "white" }}>Budget:</strong> {form.budgetRange}</div>
+            <div style={{ marginTop: 16, display: "grid", gap: 8 }}>
+              {(config.contentConfig.validationChecklist || []).map(v => (
+                <span key={v} style={{ display: "flex", gap: 8, fontSize: 12, color: "#00cc66" }}><CheckCircle size={13} /> {v}</span>
+              ))}
+            </div>
+            <div style={{ marginTop: 18, borderTop: "1px solid rgba(255,255,255,.1)", paddingTop: 16 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                <span style={{ color: "#aaa" }}>Components Total</span>
+                <span style={{ color: "white" }}>₹--</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                <span style={{ color: "#aaa" }}>Assembly ({form.performanceLevel})</span>
+                <span style={{ color: "white" }}>₹{config.pricingRules.assemblyCharges[form.performanceLevel as PerformanceTier]?.toLocaleString("en-IN") || "--"}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                <span style={{ color: "#aaa" }}>GST ({config.contentConfig.gstPercentage}%)</span>
+                <span style={{ color: "white" }}>Calculated at checkout</span>
+              </div>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 18, paddingTop: 16, borderTop: "2px solid rgba(122,0,255,.5)" }}>
+              <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 12 }}>Final Estimate</span>
+              <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 28, color: "#7a00ff", fontWeight: 800 }}>₹--</span>
+            </div>
+          </div>
+          <button className="glass-pill glass-pill-primary" style={{ padding: "13px 20px", fontSize: 10, marginTop: 18, width: "100%", opacity: 0.6, cursor: "not-allowed" }} disabled>
+            {config.contentConfig.ctaButtonText} (Preview Mode)
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function AdminCustomBuilder({
+  store, patchCustomBuilderConfig, publishBuilderConfig, addBuilderComponent,
+  updateBuilderComponent, removeBuilderComponent, reorderBuilderComponents,
+  updateBuildPurpose, addBuildPurpose, removeBuildPurpose,
+  updatePricingRules, updateContentConfig, updateDefaultPreset, getBuilderMetrics,
+}: {
+  store: DashboardStore;
+  patchCustomBuilderConfig: (patch: Partial<CustomBuilderConfig>) => void;
+  publishBuilderConfig: () => void;
+  addBuilderComponent: (categoryId: ComponentCategory, component: Omit<BuilderComponent, "id" | "order">) => void;
+  updateBuilderComponent: (categoryId: ComponentCategory, componentId: string, patch: Partial<BuilderComponent>) => void;
+  removeBuilderComponent: (categoryId: ComponentCategory, componentId: string) => void;
+  reorderBuilderComponents: (categoryId: ComponentCategory, componentId: string, newOrder: number) => void;
+  updateBuildPurpose: (purposeId: string, patch: Partial<BuildPurposeButton>) => void;
+  addBuildPurpose: (purpose: Omit<BuildPurposeButton, "id">) => void;
+  removeBuildPurpose: (purposeId: string) => void;
+  updatePricingRules: (patch: Partial<CustomBuilderConfig["pricingRules"]>) => void;
+  updateContentConfig: (patch: Partial<BuilderContentConfig>) => void;
+  updateDefaultPreset: (tier: PerformanceTier, components: Record<string, string>) => void;
+  getBuilderMetrics: () => { totalCategories: number; activeOptions: number; hiddenOptions: number; popularSelections: { componentId: string; name: string; count: number }[]; latestPriceUpdate: number; buildRequestsGenerated: number };
+}) {
+  useAuthStaffRefresh();
+  const config = store.customBuilderConfig;
+  const metrics = getBuilderMetrics();
+  const [activeTab, setActiveTab] = useState("overview");
+  const [showPreview, setShowPreview] = useState(false);
+  const [showAddComponent, setShowAddComponent] = useState<string | null>(null);
+  const [draftSaved, setDraftSaved] = useState(false);
+
+  const sections = [
+    { id: "overview", label: "Overview", icon: <BarChart3 size={14} /> },
+    { id: "content", label: "Page Content", icon: <Edit3 size={14} /> },
+    { id: "purposes", label: "Build Purposes", icon: <ClipboardList size={14} /> },
+    { id: "categories", label: "Component Categories", icon: <Package size={14} /> },
+    { id: "compatibility", label: "Compatibility Rules", icon: <CheckCircle size={14} /> },
+    { id: "pricing", label: "Pricing Rules", icon: <Receipt size={14} /> },
+  ];
+
+  const saveDraft = () => {
+    patchCustomBuilderConfig({ status: "draft" });
+    setDraftSaved(true);
+    setTimeout(() => setDraftSaved(false), 3000);
+    toast.success("Draft saved successfully");
+  };
+
+  const publish = () => {
+    const validationErrors: string[] = [];
+    const categoriesWithComponents = Object.keys(config.components) as ComponentCategory[];
+    categoriesWithComponents.forEach(cat => {
+      const active = config.components[cat]?.filter(c => c.isActive) || [];
+      if (cat === "CPU" || cat === "Motherboard" || cat === "RAM" || cat === "GPU" || cat === "PSU") {
+        if (active.length === 0) validationErrors.push(`${cat}: At least one active option required`);
+      }
+      const names = active.map(c => c.name);
+      const duplicates = names.filter((name, index) => names.indexOf(name) !== index);
+      if (duplicates.length > 0) validationErrors.push(`${cat}: Duplicate component names found`);
+    });
+    const hasDefaults = config.defaultPresets.every(p => Object.keys(p.components).length > 0);
+    if (!hasDefaults) validationErrors.push("All tier presets must have default selections");
+    if (!config.contentConfig.validationChecklist.length) validationErrors.push("Validation checklist is empty");
+    if (validationErrors.length > 0) {
+      toast.error("Validation failed:\n" + validationErrors.join("\n"));
+      return;
+    }
+    publishBuilderConfig();
+    toast.success("Builder configuration published successfully!");
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div>
+          <h1 style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 18, color: "white", margin: 0 }}>Custom Builder Management</h1>
+          <div style={{ fontSize: 12, color: "#888", marginTop: 4 }}>Configure the customer-facing Custom PC Builder</div>
+        </div>
+        <div style={{ display: "flex", gap: 10 }}>
+          <span className={`glass-pill ${config.status === "published" ? "glass-pill-success" : "glass-pill-outline"}`} style={{ fontSize: 10 }}>
+            <StatusBadge status={config.status} />
+          </span>
+          <button className="glass-pill glass-pill-outline" onClick={() => setShowPreview(true)}><EyeIcon size={12} /> Preview Builder</button>
+          <button className="glass-pill glass-pill-info" onClick={saveDraft}>
+            <Save size={12} /> {draftSaved ? "Saved!" : "Save Draft"}
+          </button>
+          <button className="glass-pill glass-pill-primary" onClick={publish}><Send size={12} /> Publish Changes</button>
+        </div>
+      </div>
+
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", borderBottom: "1px solid rgba(255,255,255,.08)", paddingBottom: 12 }}>
+        {sections.map(s => (
+          <button key={s.id} className={`glass-pill ${activeTab === s.id ? "glass-pill-primary" : "glass-pill-outline"}`} onClick={() => setActiveTab(s.id)} style={{ fontSize: 11 }}>
+            {s.icon} {s.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === "overview" && (
+        <div>
+          <BuilderOverviewMetrics metrics={metrics} />
+          <SectionCard title="Builder Configuration" subtitle="Current configuration overview">
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
+              <div>
+                <div style={{ fontSize: 11, color: "#777", fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase", marginBottom: 10 }}>Configuration Info</div>
+                <div style={{ display: "grid", gap: 8, fontSize: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#aaa" }}>Version</span><span style={{ color: "white" }}>v{config.version}</span></div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#aaa" }}>Status</span><span style={{ color: "white" }}>{config.status}</span></div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#aaa" }}>Published At</span><span style={{ color: "white" }}>{config.publishedAt ? new Date(config.publishedAt).toLocaleString("en-IN") : "Never"}</span></div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#aaa" }}>Last Modified</span><span style={{ color: "white" }}>{new Date(config.lastModifiedAt).toLocaleString("en-IN")}</span></div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#aaa" }}>Modified By</span><span style={{ color: "white" }}>{config.modifiedBy}</span></div>
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: "#777", fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase", marginBottom: 10 }}>Quick Stats</div>
+                <div style={{ display: "grid", gap: 8, fontSize: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#aaa" }}>Build Purposes</span><span style={{ color: "white" }}>{config.buildPurposes.length} ({config.buildPurposes.filter(p => p.isActive).length} active)</span></div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#aaa" }}>Component Categories</span><span style={{ color: "white" }}>{Object.keys(config.components).length}</span></div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#aaa" }}>Compatibility Rules</span><span style={{ color: "white" }}>{config.compatibilityRules.length} ({config.compatibilityRules.filter(r => r.isActive).length} active)</span></div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#aaa" }}>Performance Tiers</span><span style={{ color: "white" }}>{PERFORMANCE_TIERS.length}</span></div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#aaa" }}>Budget Ranges</span><span style={{ color: "white" }}>{BUDGET_RANGES.length}</span></div>
+                </div>
+              </div>
+            </div>
+          </SectionCard>
+        </div>
+      )}
+
+      {activeTab === "content" && (
+        <ContentConfigEditor config={config.contentConfig} onChange={patch => updateContentConfig(patch)} />
+      )}
+
+      {activeTab === "purposes" && (
+        <BuildPurposesManager
+          purposes={config.buildPurposes}
+          onUpdate={(id, patch) => updateBuildPurpose(id, patch)}
+          onAdd={() => {
+            const name = prompt("Enter new build purpose name:");
+            if (name) addBuildPurpose({ purpose: name as BuildPurpose, label: name, order: config.buildPurposes.length + 1, isActive: true });
+          }}
+          onRemove={id => { if (confirm("Remove this build purpose?")) removeBuildPurpose(id); }}
+        />
+      )}
+
+      {activeTab === "categories" && (
+        <SectionCard title="Component Categories" subtitle="Manage all builder component options and tier presets">
+          <DefaultPresetsEditor config={config} onUpdatePreset={updateDefaultPreset} />
+          <div style={{ display: "grid", gap: 20, marginTop: 24 }}>
+            {COMPONENT_CATEGORIES.map(cat => (
+              <ComponentCategoryManager
+                key={cat}
+                categoryId={cat}
+                components={config.components[cat] || []}
+                onAdd={() => setShowAddComponent(cat)}
+                onUpdate={(id, patch) => updateBuilderComponent(cat, id, patch)}
+                onRemove={id => { if (confirm("Remove this component?")) removeBuilderComponent(cat, id); }}
+                onReorder={(id, newOrder) => reorderBuilderComponents(cat, id, newOrder)}
+              />
+            ))}
+          </div>
+          {showAddComponent && (
+            <AddComponentDialog categoryId={showAddComponent} onClose={() => setShowAddComponent(null)} onAdd={(comp) => addBuilderComponent(showAddComponent, comp)} />
+          )}
+        </SectionCard>
+      )}
+
+      {activeTab === "compatibility" && (
+        <CompatibilityRulesEditor rules={config.compatibilityRules} onUpdate={(id, patch) => {
+          patchCustomBuilderConfig({
+            compatibilityRules: config.compatibilityRules.map(r => r.id === id ? { ...r, ...patch } : r),
+          });
+        }} onAdd={() => {
+          const name = prompt("Enter compatibility rule name:");
+          if (name) patchCustomBuilderConfig({
+            compatibilityRules: [...config.compatibilityRules, {
+              id: `rule_${Date.now()}`,
+              name,
+              description: "",
+              category: "CPU",
+              checksWith: ["Motherboard"],
+              ruleType: "socket",
+              isActive: true,
+            }],
+          });
+        }} />
+      )}
+
+      {activeTab === "pricing" && (
+        <PricingRulesEditor pricingRules={config.pricingRules} onChange={patch => updatePricingRules(patch)} />
+      )}
+
+      {showPreview && (
+        <BuilderPreviewDialog config={config} onClose={() => setShowPreview(false)} />
+      )}
+    </div>
+  );
+}
+
+
+function DefaultPresetsEditor({ config, onUpdatePreset }: { config: CustomBuilderConfig; onUpdatePreset: (tier: PerformanceTier, components: Record<string, string>) => void }) {
+  const [activeTier, setActiveTier] = useState<PerformanceTier>("Mid");
+  const currentPreset = config.defaultPresets.find(p => p.tier === activeTier)?.components || {};
+
+  return (
+    <div style={{ marginBottom: 24, paddingBottom: 24, borderBottom: "1px solid rgba(255,255,255,.08)" }}>
+      <div style={{ fontSize: 11, color: "#777", fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase", marginBottom: 12 }}>Default Presets</div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+        {PERFORMANCE_TIERS.map(tier => (
+          <button key={tier} className={activeTier === tier ? "glass-pill glass-pill-primary" : "glass-pill glass-pill-outline"} onClick={() => setActiveTier(tier)} style={{ fontSize: 11 }}>
+            {tier} Tier
+          </button>
+        ))}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
+        {COMPONENT_CATEGORIES.map(cat => {
+          const options = config.components[cat] || [];
+          const activeOptions = options.filter(o => o.isActive);
+          return (
+            <div key={cat} className="glass" style={{ borderRadius: 8, padding: 10 }}>
+              <div style={{ fontSize: 10, color: "#aaa", marginBottom: 6 }}>{cat}</div>
+              <select
+                value={currentPreset[cat] || ""}
+                onChange={e => onUpdatePreset(activeTier, { ...currentPreset, [cat]: e.target.value })}
+                style={{ width: "100%", background: "#111", border: "1px solid rgba(255,255,255,.12)", borderRadius: 6, padding: "6px 8px", color: "white", fontSize: 11 }}
+              >
+                <option value="">-- Select Default --</option>
+                {activeOptions.map(o => (
+                  <option key={o.id} value={o.id}>{o.brand} {o.model} (₹{o.price.toLocaleString("en-IN")})</option>
+                ))}
+              </select>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 export function AdminAssembly({ store }: { store: DashboardStore }) {
   return (
@@ -1590,24 +2185,6 @@ export function AdminMarketplace({ store }: { store: DashboardStore }) {
 
 // ─── CRM ──────────────────────────────────────────────────────────────────
 
-export function AdminCRM({ store }: { store: DashboardStore }) {
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-      <SectionCard title="Customer History">
-        <DataTable
-          rowKey={n => n.id}
-          data={store.crmNotes}
-          columns={[
-            { key: "by", label: "By", render: n => n.by },
-            { key: "text", label: "Note", render: n => <span style={{ maxWidth: 400, display: "inline-block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{n.text}</span> },
-            { key: "at", label: "Date", render: n => formatDate(n.at) },
-          ]}
-        />
-      </SectionCard>
-    </div>
-  );
-}
-
 // ─── Customers ────────────────────────────────────────────────────────────
 
 interface DemoUser { id: string; name: string; email: string; role: string; status: string; createdAt: string; }
@@ -1621,62 +2198,230 @@ function readDemoUsers(): DemoUser[] {
   } catch { return []; }
 }
 
-export function AdminCustomers({ store }: { store: DashboardStore }) {
+function writeDemoUserStatus(userId: string, status: string) {
+  if (typeof window === "undefined") return false;
+  try {
+    const raw = window.localStorage.getItem(AUTH_STORAGE_KEY);
+    if (!raw) return false;
+    const parsed = JSON.parse(raw);
+    parsed.users = (parsed.users || []).map((u: any) => String(u.id) === userId ? { ...u, status } : u);
+    window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(parsed));
+    window.dispatchEvent(new Event("deskto-auth-state-changed"));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function customerMetrics(store: DashboardStore, customerId: string) {
+  const orders = store.orders.filter(o => o.customerId === customerId);
+  const repairs = store.repairs.filter(r => r.customerId === customerId);
+  const services = store.serviceRequests.filter(r => r.customerId === customerId);
+  const builds = store.pcBuilds.filter(b => b.customerId === customerId);
+  const reviews = store.reviews.filter(r => r.customerId === customerId);
+  const spent = orders.reduce((sum, order) => sum + Number(order.total || 0), 0)
+    + repairs.reduce((sum, repair) => sum + Number(repair.quotation || repair.estimatedCharge || 0), 0)
+    + services.reduce((sum, request) => sum + Number(request.quotation || 0), 0)
+    + builds.reduce((sum, build) => sum + Number(build.total || 0), 0);
+  return { orders, repairs, services, builds, reviews, spent };
+}
+
+export function AdminCRM({ store, addCRMNote }: { store: DashboardStore; addCRMNote: (note: { customerId: string; text: string; by: string }) => void }) {
   const users = readDemoUsers();
+  const [customerId, setCustomerId] = useState(users.find(u => u.role === "customer")?.id || users[0]?.id || "");
+  const [note, setNote] = useState("");
+  const selected = users.find(u => u.id === customerId) || users[0];
+  const metrics = selected ? customerMetrics(store, selected.id) : null;
+  const notes = store.crmNotes.filter(n => !selected || n.customerId === selected.id);
+
+  const saveNote = () => {
+    if (!selected || !note.trim()) {
+      toast.error("Select a customer and enter a CRM note.");
+      return;
+    }
+    addCRMNote({ customerId: selected.id, text: note.trim(), by: "Admin" });
+    setNote("");
+    toast.success("CRM note saved");
+  };
+
   return (
-    <SectionCard title="Customer Directory" subtitle={`${users.length} registered`}>
-      <DataTable
-        rowKey={u => u.id}
-        data={users}
-        columns={[
-          { key: "name", label: "Name" },
-          { key: "email", label: "Email" },
-          { key: "role", label: "Role", render: u => <span className="glass-pill glass-pill-sm glass-pill-outline" style={{ pointerEvents: "none" }}>{u.role}</span> },
-          { key: "status", label: "Status", render: u => <span className={`glass-pill glass-pill-sm ${u.status === "active" ? "glass-pill-success" : "glass-pill-red"}`} style={{ pointerEvents: "none" }}>{u.status}</span> },
-          { key: "createdAt", label: "Joined", render: u => u.createdAt ? formatDate(new Date(u.createdAt).getTime()) : "—" },
-          { key: "action", label: "", render: u => (
-            <div style={{ display: "flex", gap: 4 }}>
-              <button className="glass-pill glass-pill-sm glass-pill-outline">{u.status === "locked" ? <Unlock size={10} /> : <Lock size={10} />} {u.status === "locked" ? "Unlock" : "Lock"}</button>
-              <button className="glass-pill glass-pill-sm glass-pill-info">History</button>
-            </div>
-          )},
-        ]}
-      />
-    </SectionCard>
+    <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+      <SectionCard title="Customer CRM Profile" subtitle="Orders, services, preferences, notes, and retention context">
+        <div style={{ display: "grid", gridTemplateColumns: "minmax(260px, 360px) 1fr", gap: 16 }}>
+          <div style={{ display: "grid", gap: 12 }}>
+            <SelectField label="Customer" value={selected?.id || ""} onChange={setCustomerId} options={users.map(u => u.id)} />
+            {selected && (
+              <div className="glass-card" style={{ padding: 14, display: "grid", gap: 8 }}>
+                <strong style={{ color: "white" }}>{selected.name}</strong>
+                <span style={{ color: "#aaa", fontSize: 12 }}>{selected.email}</span>
+                <span className="glass-pill glass-pill-sm glass-pill-outline" style={{ width: "fit-content", pointerEvents: "none" }}>{selected.status}</span>
+              </div>
+            )}
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(120px, 1fr))", gap: 10 }}>
+            <KPICard label="Orders" value={metrics?.orders.length || 0} icon={<ShoppingBag size={14} />} color="#FF1F45" />
+            <KPICard label="Service Requests" value={(metrics?.repairs.length || 0) + (metrics?.services.length || 0) + (metrics?.builds.length || 0)} icon={<Wrench size={14} />} color="#00b4ff" />
+            <KPICard label="Payments" value={inr(metrics?.spent || 0)} icon={<Receipt size={14} />} color="#00cc66" />
+            <KPICard label="Reviews" value={metrics?.reviews.length || 0} icon={<MessageSquare size={14} />} color="#ffd700" />
+          </div>
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Add CRM Note" subtitle="Preference, follow-up, complaint, VIP eligibility, or service history">
+        <Area label="Note" value={note} onChange={setNote} placeholder="Customer prefers WhatsApp updates, follow up tomorrow, complaint resolved..." />
+        <button className="glass-pill glass-pill-primary" style={{ marginTop: 12 }} onClick={saveNote}><Save size={12} /> Save Note</button>
+      </SectionCard>
+
+      <SectionCard title="CRM History" subtitle={`${notes.length} notes for selected customer`}>
+        <DataTable
+          rowKey={n => n.id}
+          data={notes}
+          columns={[
+            { key: "by", label: "By", render: n => n.by },
+            { key: "text", label: "Note", render: n => <span style={{ maxWidth: 720, display: "inline-block" }}>{n.text}</span> },
+            { key: "at", label: "Date", render: n => formatDate(n.at) },
+          ]}
+        />
+      </SectionCard>
+    </div>
+  );
+}
+
+export function AdminCustomers({ store, addLog }: { store: DashboardStore; addLog: (event: string, detail: string, actor?: string) => void }) {
+  const users = readDemoUsers();
+  const [selectedId, setSelectedId] = useState(users[0]?.id || "");
+  const [refresh, setRefresh] = useState(0);
+  const selected = users.find(u => u.id === selectedId) || users[0];
+  const metrics = selected ? customerMetrics(store, selected.id) : null;
+
+  const setStatus = (user: DemoUser, status: string) => {
+    if (!writeDemoUserStatus(user.id, status)) {
+      toast.error("Could not update account status.");
+      return;
+    }
+    addLog("customer_status_updated", `${user.email} marked ${status}`, "admin");
+    setRefresh(t => t + 1);
+    toast.success(`Customer ${status}`);
+  };
+
+  return (
+    <div key={refresh} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+      <SectionCard title="Customer Directory" subtitle={`${users.length} registered`}>
+        <DataTable
+          rowKey={u => u.id}
+          data={users}
+          columns={[
+            { key: "name", label: "Name" },
+            { key: "email", label: "Email" },
+            { key: "role", label: "Role", render: u => <span className="glass-pill glass-pill-sm glass-pill-outline" style={{ pointerEvents: "none" }}>{u.role}</span> },
+            { key: "status", label: "Status", render: u => <span className={`glass-pill glass-pill-sm ${u.status === "active" ? "glass-pill-success" : "glass-pill-red"}`} style={{ pointerEvents: "none" }}>{u.status}</span> },
+            { key: "createdAt", label: "Joined", render: u => u.createdAt ? formatDate(new Date(u.createdAt).getTime()) : "—" },
+            { key: "action", label: "", render: u => (
+              <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                <button className="glass-pill glass-pill-sm glass-pill-outline" onClick={() => setStatus(u, u.status === "locked" ? "active" : "locked")}>{u.status === "locked" ? <Unlock size={10} /> : <Lock size={10} />} {u.status === "locked" ? "Unlock" : "Lock"}</button>
+                <button className="glass-pill glass-pill-sm glass-pill-success" onClick={() => setStatus(u, "active")}>Verify</button>
+                <button className="glass-pill glass-pill-sm glass-pill-info" onClick={() => setSelectedId(u.id)}>History</button>
+              </div>
+            )},
+          ]}
+        />
+      </SectionCard>
+
+      {selected && metrics && (
+        <SectionCard title={`${selected.name} History`} subtitle="Orders, services, payments, reviews, and support context">
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(120px, 1fr))", gap: 10, marginBottom: 14 }}>
+            <KPICard label="Orders" value={metrics.orders.length} icon={<ShoppingBag size={14} />} color="#FF1F45" />
+            <KPICard label="Repairs" value={metrics.repairs.length} icon={<Wrench size={14} />} color="#ff6b00" />
+            <KPICard label="Services" value={metrics.services.length + metrics.builds.length} icon={<Database size={14} />} color="#00b4ff" />
+            <KPICard label="Payments" value={inr(metrics.spent)} icon={<Receipt size={14} />} color="#00cc66" />
+            <KPICard label="Reviews" value={metrics.reviews.length} icon={<MessageSquare size={14} />} color="#ffd700" />
+          </div>
+          <div style={{ color: "#aaa", fontSize: 12, lineHeight: 1.7 }}>
+            Use this history for refund decisions, warranty checks, repeat-customer offers, and suspicious account review.
+          </div>
+        </SectionCard>
+      )}
+    </div>
   );
 }
 
 // ─── Staff ────────────────────────────────────────────────────────────────
 
-export function AdminStaff({ store }: { store: DashboardStore }) {
+export function AdminStaff({ store, addStaffMember }: { store: DashboardStore; addStaffMember: (staff: Omit<StaffMember, "id" | "joinedAt" | "performance"> & { id?: string }) => StaffMember }) {
+  const [showForm, setShowForm] = useState(false);
+  const [draft, setDraft] = useState({ name: "", email: "", role: "technician", department: "Repairs", phone: "" });
+  const save = () => {
+    if (!draft.name.trim() || !draft.email.trim()) {
+      toast.error("Name and email are required.");
+      return;
+    }
+    addStaffMember({ name: draft.name.trim(), email: draft.email.trim(), role: draft.role as StaffMember["role"], department: draft.department.trim() || "Operations" });
+    setDraft({ name: "", email: "", role: "technician", department: "Repairs", phone: "" });
+    setShowForm(false);
+    toast.success("Staff profile created");
+  };
   return (
-    <SectionCard title="Staff Directory" subtitle={`${store.staff.length} members`}
-      action={<button className="glass-pill glass-pill-primary glass-pill-sm"><Plus size={12} /> Add Staff</button>}
-    >
-      <DataTable
-        rowKey={s => s.id}
-        data={store.staff}
-        columns={[
-          { key: "id", label: "ID", render: s => <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 10 }}>{s.id.toUpperCase()}</span> },
-          { key: "name", label: "Name" },
-          { key: "role", label: "Role", render: s => <span style={{ textTransform: "capitalize" }}>{s.role}</span> },
-          { key: "department", label: "Department" },
-          { key: "rating", label: "Rating", align: "right", render: s => `${s.performance.rating}★` },
-          { key: "jobs", label: "Jobs", align: "right", render: s => s.performance.jobs },
-          { key: "attendance", label: "Attend.", align: "right", render: s => `${s.performance.attendancePct}%` },
-        ]}
-      />
-    </SectionCard>
+    <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+      <SectionCard title="Staff Directory" subtitle={`${store.staff.length} members`}
+        action={<button className="glass-pill glass-pill-primary glass-pill-sm" onClick={() => setShowForm(v => !v)}><Plus size={12} /> Add Staff</button>}
+      >
+        {showForm && (
+          <div className="glass-card" style={{ padding: 14, marginBottom: 14, display: "grid", gridTemplateColumns: "repeat(5, 1fr) auto", gap: 10, alignItems: "end" }}>
+            <Field label="Name" value={draft.name} onChange={v => setDraft({ ...draft, name: v })} />
+            <Field label="Email" value={draft.email} onChange={v => setDraft({ ...draft, email: v })} />
+            <SelectField label="Role" value={draft.role} onChange={v => setDraft({ ...draft, role: v })} options={["technician", "sales", "support", "delivery"]} />
+            <Field label="Department" value={draft.department} onChange={v => setDraft({ ...draft, department: v })} />
+            <Field label="Phone" value={draft.phone} onChange={v => setDraft({ ...draft, phone: v })} />
+            <button className="glass-pill glass-pill-primary glass-pill-sm" onClick={save}><Save size={11} /> Save</button>
+          </div>
+        )}
+        <DataTable
+          rowKey={s => s.id}
+          data={store.staff}
+          columns={[
+            { key: "id", label: "ID", render: s => <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 10 }}>{s.id.toUpperCase()}</span> },
+            { key: "name", label: "Name" },
+            { key: "role", label: "Role", render: s => <span style={{ textTransform: "capitalize" }}>{s.role}</span> },
+            { key: "department", label: "Department" },
+            { key: "rating", label: "Rating", align: "right", render: s => `${s.performance.rating}★` },
+            { key: "jobs", label: "Jobs", align: "right", render: s => s.performance.jobs },
+            { key: "attendance", label: "Attend.", align: "right", render: s => `${s.performance.attendancePct}%` },
+          ]}
+        />
+      </SectionCard>
+      <SectionCard title="Assignment Availability" subtitle="New staff can be assigned across repairs, upgrades, software, rentals, support, sell used, and custom PC work." />
+    </div>
   );
 }
 
 // ─── Suppliers ────────────────────────────────────────────────────────────
 
-export function AdminSuppliers({ store }: { store: DashboardStore }) {
+export function AdminSuppliers({ store, addSupplier }: { store: DashboardStore; addSupplier: (supplier: Omit<Supplier, "id"> & { id?: string }) => Supplier }) {
+  const [showForm, setShowForm] = useState(false);
+  const [draft, setDraft] = useState({ name: "", contact: "", email: "", components: "" });
+  const save = () => {
+    if (!draft.name.trim() || !draft.contact.trim() || !draft.email.trim()) {
+      toast.error("Supplier name, contact, and email are required.");
+      return;
+    }
+    addSupplier({ name: draft.name.trim(), contact: draft.contact.trim(), email: draft.email.trim(), components: splitList(draft.components.replace(/,/g, "|")) });
+    setDraft({ name: "", contact: "", email: "", components: "" });
+    setShowForm(false);
+    toast.success("Supplier added");
+  };
   return (
     <SectionCard title="Suppliers" subtitle={`${store.suppliers.length} active`}
-      action={<button className="glass-pill glass-pill-primary glass-pill-sm"><Plus size={12} /> Add Supplier</button>}
+      action={<button className="glass-pill glass-pill-primary glass-pill-sm" onClick={() => setShowForm(v => !v)}><Plus size={12} /> Add Supplier</button>}
     >
+      {showForm && (
+        <div className="glass-card" style={{ padding: 14, marginBottom: 14, display: "grid", gridTemplateColumns: "repeat(4, 1fr) auto", gap: 10, alignItems: "end" }}>
+          <Field label="Supplier Name" value={draft.name} onChange={v => setDraft({ ...draft, name: v })} />
+          <Field label="Contact Number" value={draft.contact} onChange={v => setDraft({ ...draft, contact: v })} />
+          <Field label="Email" value={draft.email} onChange={v => setDraft({ ...draft, email: v })} />
+          <Field label="Components" value={draft.components} onChange={v => setDraft({ ...draft, components: v })} placeholder="CPU | GPU | RAM" />
+          <button className="glass-pill glass-pill-primary glass-pill-sm" onClick={save}><Save size={11} /> Save</button>
+        </div>
+      )}
       <DataTable
         rowKey={s => s.id}
         data={store.suppliers}
@@ -1693,11 +2438,37 @@ export function AdminSuppliers({ store }: { store: DashboardStore }) {
 
 // ─── Purchase Orders ──────────────────────────────────────────────────────
 
-export function AdminPurchaseOrders({ store }: { store: DashboardStore }) {
+export function AdminPurchaseOrders({ store, addPurchaseOrder, patchPurchaseOrder }: { store: DashboardStore; addPurchaseOrder: (po: Omit<PurchaseOrder, "id" | "createdAt" | "updatedAt"> & { id?: string }) => PurchaseOrder; patchPurchaseOrder: (id: string, patch: Partial<PurchaseOrder>) => void }) {
+  const [showForm, setShowForm] = useState(false);
+  const [draft, setDraft] = useState({ supplierId: store.suppliers[0]?.id || "", component: "", qty: "1", cost: "", gst: "18" });
+  const save = () => {
+    const qty = Number(draft.qty || 0);
+    const cost = Number(draft.cost || 0);
+    const gst = Number(draft.gst || 0);
+    if (!draft.supplierId || !draft.component.trim() || qty <= 0 || cost <= 0) {
+      toast.error("Supplier, component, quantity, and unit cost are required.");
+      return;
+    }
+    const total = Math.round(qty * cost * (1 + gst / 100));
+    addPurchaseOrder({ supplierId: draft.supplierId, items: [{ component: draft.component.trim(), qty, cost, gst }], total, status: "sent" });
+    setDraft({ supplierId: store.suppliers[0]?.id || "", component: "", qty: "1", cost: "", gst: "18" });
+    setShowForm(false);
+    toast.success("Purchase order sent");
+  };
   return (
     <SectionCard title="Purchase Orders" subtitle={`${store.purchaseOrders.length} total`}
-      action={<button className="glass-pill glass-pill-primary glass-pill-sm"><Plus size={12} /> Create PO</button>}
+      action={<button className="glass-pill glass-pill-primary glass-pill-sm" onClick={() => setShowForm(v => !v)}><Plus size={12} /> Create PO</button>}
     >
+      {showForm && (
+        <div className="glass-card" style={{ padding: 14, marginBottom: 14, display: "grid", gridTemplateColumns: "1.2fr repeat(4, 1fr) auto", gap: 10, alignItems: "end" }}>
+          <SelectField label="Supplier" value={draft.supplierId} onChange={v => setDraft({ ...draft, supplierId: v })} options={store.suppliers.map(s => s.id)} />
+          <Field label="Component" value={draft.component} onChange={v => setDraft({ ...draft, component: v })} />
+          <Field label="Quantity" value={draft.qty} onChange={v => setDraft({ ...draft, qty: v })} type="number" />
+          <Field label="Unit Cost" value={draft.cost} onChange={v => setDraft({ ...draft, cost: v })} type="number" />
+          <Field label="GST %" value={draft.gst} onChange={v => setDraft({ ...draft, gst: v })} type="number" />
+          <button className="glass-pill glass-pill-primary glass-pill-sm" onClick={save}><Send size={11} /> Send PO</button>
+        </div>
+      )}
       <DataTable
         rowKey={p => p.id}
         data={store.purchaseOrders}
@@ -1707,6 +2478,12 @@ export function AdminPurchaseOrders({ store }: { store: DashboardStore }) {
           { key: "items", label: "Items", render: p => `${p.items.length} item${p.items.length > 1 ? "s" : ""}` },
           { key: "total", label: "Total", align: "right", render: p => inr(p.total) },
           { key: "status", label: "Status", render: p => <StatusBadge status={p.status} /> },
+          { key: "action", label: "", render: p => (
+            <div style={{ display: "flex", gap: 6 }}>
+              <button className="glass-pill glass-pill-sm glass-pill-info" onClick={() => patchPurchaseOrder(p.id, { status: "sent" })}>Sent</button>
+              <button className="glass-pill glass-pill-sm glass-pill-success" onClick={() => patchPurchaseOrder(p.id, { status: "received" })}>Receive</button>
+            </div>
+          ) },
         ]}
       />
     </SectionCard>
@@ -1715,21 +2492,57 @@ export function AdminPurchaseOrders({ store }: { store: DashboardStore }) {
 
 // ─── Coupons ──────────────────────────────────────────────────────────────
 
-export function AdminCoupons({ store }: { store: DashboardStore }) {
+export function AdminCoupons({ store, addCoupon, patchCoupon }: { store: DashboardStore; addCoupon: (coupon: Omit<Coupon, "id" | "redeemed"> & { id?: string; redeemed?: boolean }) => Coupon; patchCoupon: (id: string, patch: Partial<Coupon>) => void }) {
+  const [showForm, setShowForm] = useState(false);
+  const [draft, setDraft] = useState({ code: "", description: "", discountPercent: "", discountAmount: "", minSpend: "", expiresAt: "", usageLimit: "" });
+  const save = () => {
+    if (!draft.code.trim() || !draft.description.trim() || (!Number(draft.discountPercent) && !Number(draft.discountAmount))) {
+      toast.error("Code, description, and discount are required.");
+      return;
+    }
+    addCoupon({
+      code: draft.code.trim().toUpperCase(),
+      description: draft.description.trim(),
+      discountPercent: Number(draft.discountPercent || 0),
+      discountAmount: Number(draft.discountAmount || 0),
+      minSpend: Number(draft.minSpend || 0),
+      expiresAt: draft.expiresAt ? new Date(draft.expiresAt).getTime() : Date.now() + 30 * 86400000,
+      usageLimit: Number(draft.usageLimit || 0) || undefined,
+      redeemed: false,
+      active: true,
+    });
+    setDraft({ code: "", description: "", discountPercent: "", discountAmount: "", minSpend: "", expiresAt: "", usageLimit: "" });
+    setShowForm(false);
+    toast.success("Coupon created");
+  };
   return (
     <SectionCard title="Coupons" subtitle={`${store.coupons.length} configured`}
-      action={<button className="glass-pill glass-pill-primary glass-pill-sm"><Plus size={12} /> New Coupon</button>}
+      action={<button className="glass-pill glass-pill-primary glass-pill-sm" onClick={() => setShowForm(v => !v)}><Plus size={12} /> New Coupon</button>}
     >
+      {showForm && (
+        <div className="glass-card" style={{ padding: 14, marginBottom: 14, display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
+          <Field label="Code" value={draft.code} onChange={v => setDraft({ ...draft, code: v })} />
+          <Field label="Description" value={draft.description} onChange={v => setDraft({ ...draft, description: v })} />
+          <Field label="Discount %" value={draft.discountPercent} onChange={v => setDraft({ ...draft, discountPercent: v })} type="number" />
+          <Field label="Flat Discount" value={draft.discountAmount} onChange={v => setDraft({ ...draft, discountAmount: v })} type="number" />
+          <Field label="Min Spend" value={draft.minSpend} onChange={v => setDraft({ ...draft, minSpend: v })} type="number" />
+          <Field label="Expiry" value={draft.expiresAt} onChange={v => setDraft({ ...draft, expiresAt: v })} type="date" />
+          <Field label="Usage Limit" value={draft.usageLimit} onChange={v => setDraft({ ...draft, usageLimit: v })} type="number" />
+          <button className="glass-pill glass-pill-primary glass-pill-sm" style={{ alignSelf: "end" }} onClick={save}><Save size={11} /> Save Coupon</button>
+        </div>
+      )}
       <DataTable
         rowKey={c => c.id}
         data={store.coupons}
         columns={[
           { key: "code", label: "Code", render: c => <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 11, color: "#FF1F45", letterSpacing: 1 }}>{c.code}</span> },
           { key: "description", label: "Description" },
-          { key: "discount", label: "Discount", align: "right", render: c => c.discountPercent ? `${c.discountPercent}%` : "—"},
+          { key: "discount", label: "Discount", align: "right", render: c => c.discountPercent ? `${c.discountPercent}%` : c.discountAmount ? inr(c.discountAmount) : "—"},
           { key: "minSpend", label: "Min Spend", align: "right", render: c => inr(c.minSpend) },
+          { key: "usage", label: "Usage", render: c => `${c.usedCount || 0}/${c.usageLimit || "∞"}` },
           { key: "expires", label: "Expires", render: c => formatDate(c.expiresAt) },
-          { key: "status", label: "Status", render: c => <span className={`glass-pill glass-pill-sm ${c.redeemed ? "glass-pill-success" : "glass-pill-outline"}`} style={{ pointerEvents: "none" }}>{c.redeemed ? "Redeemed" : "Active"}</span> },
+          { key: "status", label: "Status", render: c => <span className={`glass-pill glass-pill-sm ${c.active === false ? "glass-pill-red" : "glass-pill-success"}`} style={{ pointerEvents: "none" }}>{c.active === false ? "Disabled" : "Active"}</span> },
+          { key: "action", label: "", render: c => <button className="glass-pill glass-pill-sm glass-pill-outline" onClick={() => patchCoupon(c.id, { active: c.active === false })}>{c.active === false ? "Enable" : "Disable"}</button> },
         ]}
       />
     </SectionCard>
@@ -1738,20 +2551,58 @@ export function AdminCoupons({ store }: { store: DashboardStore }) {
 
 // ─── Offers ───────────────────────────────────────────────────────────────
 
-export function AdminOffers({ store }: { store: DashboardStore }) {
+export function AdminOffers({ store, addOffer, patchOffer }: { store: DashboardStore; addOffer: (offer: Omit<DashboardStore["offers"][number], "id" | "createdAt" | "updatedAt"> & { id?: string }) => DashboardStore["offers"][number]; patchOffer: (id: string, patch: Partial<DashboardStore["offers"][number]>) => void }) {
+  const [showForm, setShowForm] = useState(false);
+  const [draft, setDraft] = useState({ title: "", detail: "", code: "", discount: "", linkedTo: "", startsAt: "", expiresAt: "" });
+  const save = () => {
+    if (!draft.title.trim() || !draft.detail.trim() || !draft.code.trim()) {
+      toast.error("Offer title, details, and code are required.");
+      return;
+    }
+    addOffer({
+      title: draft.title.trim(),
+      detail: draft.detail.trim(),
+      code: draft.code.trim().toUpperCase(),
+      discount: draft.discount.trim(),
+      linkedTo: draft.linkedTo.trim(),
+      startsAt: draft.startsAt ? new Date(draft.startsAt).getTime() : Date.now(),
+      expiresAt: draft.expiresAt ? new Date(draft.expiresAt).getTime() : Date.now() + 30 * 86400000,
+      active: true,
+    });
+    setDraft({ title: "", detail: "", code: "", discount: "", linkedTo: "", startsAt: "", expiresAt: "" });
+    setShowForm(false);
+    toast.success("Offer created");
+  };
   return (
     <SectionCard title="Promotional Offers" subtitle={`${store.offers.length} active`}
-      action={<button className="glass-pill glass-pill-primary glass-pill-sm"><Plus size={12} /> New Offer</button>}
+      action={<button className="glass-pill glass-pill-primary glass-pill-sm" onClick={() => setShowForm(v => !v)}><Plus size={12} /> New Offer</button>}
     >
+      {showForm && (
+        <div className="glass-card" style={{ padding: 14, marginBottom: 14, display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
+          <Field label="Offer Title" value={draft.title} onChange={v => setDraft({ ...draft, title: v })} />
+          <Field label="Offer Code" value={draft.code} onChange={v => setDraft({ ...draft, code: v })} />
+          <Field label="Discount" value={draft.discount} onChange={v => setDraft({ ...draft, discount: v })} placeholder="25% OFF / Free 1st Day" />
+          <Field label="Linked Product/Service" value={draft.linkedTo} onChange={v => setDraft({ ...draft, linkedTo: v })} />
+          <Field label="Start Date" value={draft.startsAt} onChange={v => setDraft({ ...draft, startsAt: v })} type="date" />
+          <Field label="End Date" value={draft.expiresAt} onChange={v => setDraft({ ...draft, expiresAt: v })} type="date" />
+          <Area label="Offer Details" value={draft.detail} onChange={v => setDraft({ ...draft, detail: v })} />
+          <button className="glass-pill glass-pill-primary glass-pill-sm" style={{ alignSelf: "end" }} onClick={save}><Save size={11} /> Activate</button>
+        </div>
+      )}
       <div className="dash-tab-grid">
         {store.offers.map(o => (
           <div key={o.id} className="glass-card" style={{ padding: 16 }}>
-            <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 13, color: "white" }}>{o.title}</div>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+              <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 13, color: "white" }}>{o.title}</div>
+              <span className={`glass-pill glass-pill-sm ${o.active === false ? "glass-pill-red" : "glass-pill-success"}`} style={{ pointerEvents: "none" }}>{o.active === false ? "Inactive" : "Active"}</span>
+            </div>
             <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, color: "#aaa", marginTop: 4 }}>{o.detail}</div>
+            {o.discount && <div style={{ color: "#00cc66", fontWeight: 700, marginTop: 8 }}>{o.discount}</div>}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
               <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 11, color: "#FF1F45", letterSpacing: 1 }}>{o.code}</span>
               <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, color: "#666" }}>Expires {formatDate(o.expiresAt)}</span>
             </div>
+            <button className="glass-pill glass-pill-sm glass-pill-outline" style={{ marginTop: 12 }} onClick={() => patchOffer(o.id, { active: o.active === false })}>{o.active === false ? "Activate" : "Disable"}</button>
           </div>
         ))}
       </div>
@@ -1831,10 +2682,10 @@ export function AdminReports({ store }: { store: DashboardStore }) {
 
 // ─── Notifications ────────────────────────────────────────────────────────
 
-export function AdminNotifications({ store, addNotification }: { store: DashboardStore; addNotification: any }) {
+export function AdminNotifications({ store, addNotification, markNotificationRead, archiveNotification }: { store: DashboardStore; addNotification: any; markNotificationRead: (id: string) => void; archiveNotification: (id: string) => void }) {
   const [title, setTitle] = useState("");
   const [detail, setDetail] = useState("");
-  const [audience, setAudience] = useState<"all" | "customers" | "staff">("all");
+  const [audience, setAudience] = useState<"all" | "customers" | "staff" | "admins">("all");
   const items = store.notifications.slice(0, 30);
 
   return (
@@ -1847,6 +2698,7 @@ export function AdminNotifications({ store, addNotification }: { store: Dashboar
             <option value="all">All users</option>
             <option value="customers">Customers only</option>
             <option value="staff">Staff only</option>
+            <option value="admins">Admins only</option>
           </select>
         </div>
         <div style={{ marginTop: 12 }}>
@@ -1864,7 +2716,11 @@ export function AdminNotifications({ store, addNotification }: { store: Dashboar
                   <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, color: "#aaa", marginTop: 4 }}>{n.detail}</div>
                   <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, color: "#666", marginTop: 4 }}>{formatDate(n.createdAt)} · audience: {n.audience || "customer"}</div>
                 </div>
-                <span className="glass-pill glass-pill-sm glass-pill-outline" style={{ pointerEvents: "none" }}>{n.type}</span>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                  <span className="glass-pill glass-pill-sm glass-pill-outline" style={{ pointerEvents: "none" }}>{n.type}</span>
+                  {!n.read && <button className="glass-pill glass-pill-sm glass-pill-info" onClick={() => markNotificationRead(n.id)}>Mark Read</button>}
+                  {!n.archived && <button className="glass-pill glass-pill-sm glass-pill-outline" onClick={() => archiveNotification(n.id)}><Archive size={10} /> Archive</button>}
+                </div>
               </div>
             </div>
           ))}
@@ -1878,6 +2734,7 @@ export function AdminNotifications({ store, addNotification }: { store: Dashboar
 
 export function AdminSettings({ store, updateSettings }: { store: DashboardStore; updateSettings: any }) {
   const [form, setForm] = useState<DashboardSettings>(store.settings);
+  const [zone, setZone] = useState("");
 
   const Field = ({ label, k, type = "text" }: { label: string; k: keyof DashboardSettings; type?: string }) => (
     <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -1889,7 +2746,7 @@ export function AdminSettings({ store, updateSettings }: { store: DashboardStore
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
       <SectionCard title="Tax & Payment"
-        action={<button className="glass-pill glass-pill-primary glass-pill-sm" onClick={() => { updateSettings(form); toast.success("Settings saved"); }}><Save size={11} /> Save</button>}
+        action={<button className="glass-pill glass-pill-primary glass-pill-sm" onClick={() => { updateSettings({ ...form, gstPercent: Number(form.gstPercent || 0) }); toast.success("Settings saved"); }}><Save size={11} /> Save</button>}
       >
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14 }}>
           <Field label="GST %" k="gstPercent" type="number" />
@@ -1906,7 +2763,15 @@ export function AdminSettings({ store, updateSettings }: { store: DashboardStore
           {form.shippingZones.map(z => (
             <span key={z} className="glass-pill glass-pill-outline glass-pill-sm" style={{ pointerEvents: "none" }}>{z}</span>
           ))}
-          <button className="glass-pill glass-pill-sm glass-pill-outline"><Plus size={10} /> Add Zone</button>
+        </div>
+        <div style={{ display: "flex", gap: 8, marginTop: 12, maxWidth: 520 }}>
+          <input value={zone} onChange={e => setZone(e.target.value)} placeholder="Add shipping zone" style={{ flex: 1, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "10px 14px", color: "white", fontFamily: "'Space Grotesk', sans-serif", fontSize: 13, outline: "none" }} />
+          <button className="glass-pill glass-pill-sm glass-pill-outline" onClick={() => {
+            const next = zone.trim();
+            if (!next) return;
+            setForm({ ...form, shippingZones: Array.from(new Set([...form.shippingZones, next])) });
+            setZone("");
+          }}><Plus size={10} /> Add Zone</button>
         </div>
       </SectionCard>
     </div>

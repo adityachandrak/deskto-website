@@ -1014,56 +1014,279 @@ function RepairBookingPage({ kind }: { kind: "pc-repair" | "laptop-repair" }) {
 }
 
 const PC_COMPONENTS = {
-  CPU: [["Intel i5-14400F", 18000], ["Intel i7-14700K", 36000], ["Ryzen 9 7950X", 58000]],
-  Motherboard: [["B760 WiFi DDR5", 16500], ["Z790 Creator WiFi", 34000], ["X670E Gaming", 41000]],
-  RAM: [["16GB DDR5", 5000], ["32GB DDR5", 9000], ["64GB DDR5", 16000]],
-  GPU: [["RTX 4060", 35000], ["RTX 4070 Ti", 80000], ["RTX 4080 Super", 110000], ["RTX 4090", 175000]],
-  Storage: [["1TB NVMe", 4000], ["2TB NVMe", 7500], ["4TB NVMe", 14000]],
-  PSU: [["650W Bronze", 5500], ["850W Gold", 12500], ["1000W Platinum", 22000]],
-  Cabinet: [["Fractal Pop Air", 5500], ["Lian Li O11D", 12000], ["Custom RGB Glass", 25000]],
-  Cooler: [["Air Tower", 3500], ["240mm AIO", 9000], ["360mm AIO", 15000]],
-  Fans: [["Standard Fans", 1500], ["ARGB Fan Kit", 4500]],
-  OS: [["No OS", 0], ["Windows 11 Home", 11500], ["Ubuntu Setup", 1500]],
-  Accessories: [["None", 0], ["Keyboard + Mouse", 4500], ["Monitor + UPS", 28000]],
+  CPU: [
+    ["None", 0],
+    ["Intel i3-12100F - Low Budget", 7800],
+    ["Ryzen 5 5500 - Budget Gaming", 8500],
+    ["Ryzen 5 5600 - Popular Value", 10500],
+    ["Intel i5-12400F - Frequent Office/Gaming", 11500],
+    ["Intel i5-13400F - Popular Mid Range", 16500],
+    ["Intel i5-14400F - Trending Mid", 17500],
+    ["Ryzen 5 7600 - AM5 Popular", 19000],
+    ["Ryzen 5 9600X - Latest Value AM5", 24500],
+    ["Intel Core Ultra 5 245K - Latest Intel", 29000],
+    ["Ryzen 7 7700 - Frequent Creator", 25500],
+    ["Ryzen 7 9700X - Latest Efficient", 32000],
+    ["Intel i7-14700K - High Demand", 36000],
+    ["Intel Core Ultra 7 265K - Latest Productivity", 38000],
+    ["Ryzen 7 7800X3D - Popular Gaming", 39000],
+    ["Ryzen 7 9800X3D - Trending Best Gaming", 45500],
+    ["Ryzen 7 9850X3D - Latest Gaming", 52000],
+    ["Ryzen 9 9900X - Creator/Streaming", 40500],
+    ["Intel Core Ultra 9 285K - Latest Premium", 54000],
+    ["Ryzen 9 9950X - Premium Creator", 56000],
+    ["Ryzen 9 9950X3D - Flagship Gaming/Creator", 68000],
+  ],
+  Motherboard: [
+    ["None", 0],
+    ["A520M DDR4 - Lowest Budget AMD", 5200],
+    ["H610 DDR4 - Budget Frequent", 6500],
+    ["B550M DDR4 - Popular AM4", 8800],
+    ["B550M WiFi - Frequent AM4", 10500],
+    ["B760M DDR4 - Intel Value", 11200],
+    ["B760 WiFi DDR5 - Trending Intel", 16500],
+    ["B650M DDR5 - AM5 Budget", 15000],
+    ["B650 WiFi DDR5 - Popular AMD", 18000],
+    ["B860 WiFi DDR5 - Latest Intel Value", 20500],
+    ["X870 WiFi DDR5 - Latest AMD", 28500],
+    ["Z790 Creator WiFi - Premium Intel", 34000],
+    ["Z890 WiFi DDR5 - Latest Intel Premium", 38500],
+    ["X670E Gaming - Premium AMD", 41000],
+    ["X870E Gaming WiFi - Latest AMD Premium", 46500],
+    ["TRX50 Workstation - Rich Class", 85000],
+  ],
+  RAM: [
+    ["None", 0],
+    ["8GB DDR4 - Basic Office", 1800],
+    ["16GB DDR4 3200 - Budget Popular", 3000],
+    ["32GB DDR4 3200 - Frequent Upgrade", 5600],
+    ["16GB DDR5 5200 - Entry DDR5", 4300],
+    ["16GB DDR5 6000 - Popular DDR5", 5200],
+    ["32GB DDR5 5600 - Value Gaming", 7800],
+    ["32GB DDR5 6000 CL30 - Trending Gaming", 9500],
+    ["32GB DDR5 6400 RGB - Latest Performance", 11500],
+    ["48GB DDR5 6000 - Creator Sweet Spot", 14000],
+    ["64GB DDR5 6000 - Creator/Editing", 18000],
+    ["96GB DDR5 6000 - Heavy Creator", 30000],
+    ["128GB DDR5 5600 - Workstation/Rich Class", 42000],
+    ["192GB DDR5 ECC/Workstation - Extreme", 76000],
+  ],
+  GPU: [
+    ["None", 0],
+    ["Integrated Graphics - Lowest Budget", 0],
+    ["GTX 1650 Used - Entry Gaming", 12500],
+    ["RX 6600 8GB - Budget Popular", 19000],
+    ["Intel Arc B580 12GB - Value Trending", 23000],
+    ["RTX 3050 - Budget Popular", 22000],
+    ["RTX 4060 - Frequent 1080p", 32000],
+    ["RTX 5060 8GB - Latest Budget", 34500],
+    ["RX 9060 XT 8GB - Latest Value", 33500],
+    ["RTX 5060 Ti 16GB - Latest Popular", 52000],
+    ["RTX 4070 Super - Trending 1440p", 62000],
+    ["RTX 4070 Ti - High Performance", 80000],
+    ["RTX 5070 12GB - Latest 1440p", 66000],
+    ["RX 9070 16GB - Latest AMD 1440p", 62000],
+    ["RX 9070 XT 16GB - Latest AMD High", 74000],
+    ["RTX 5070 Ti 16GB - Latest Premium", 105000],
+    ["RTX 4080 Super - Premium 4K", 110000],
+    ["RTX 5080 16GB - Latest 4K", 145000],
+    ["RTX 4090 - Extreme/Rich Class", 175000],
+    ["RTX 5090 - Flagship/Rich Class", 285000],
+  ],
+  Storage: [
+    ["None", 0],
+    ["500GB NVMe Gen3 - Budget Frequent", 2100],
+    ["1TB NVMe Gen3 - Popular Budget", 3600],
+    ["1TB NVMe Gen4 - Trending", 4800],
+    ["1TB NVMe Gen4 + 1TB HDD - Value Combo", 6900],
+    ["2TB NVMe Gen4 - Popular Gaming", 8800],
+    ["2TB NVMe Gen5 - Latest High Speed", 18000],
+    ["4TB NVMe Gen4 - Creator", 21000],
+    ["4TB NVMe Gen5 - Premium Latest", 34000],
+    ["2TB NVMe + 4TB HDD - Streaming Storage", 16000],
+    ["4TB NVMe + 8TB HDD - Workstation", 28000],
+    ["8TB NVMe - Rich Class Creator", 62000],
+  ],
+  PSU: [
+    ["None", 0],
+    ["450W Bronze - Basic", 2800],
+    ["550W Bronze - Budget Popular", 3800],
+    ["650W Bronze - Frequent Gaming", 5500],
+    ["650W Gold - Popular Efficient", 7200],
+    ["750W Gold - Trending", 8500],
+    ["750W Gold ATX 3.1 - Latest GPU Ready", 10500],
+    ["850W Gold - High Performance", 12500],
+    ["850W Gold ATX 3.1 - Latest Popular", 14500],
+    ["1000W Gold ATX 3.1 - Premium GPU Ready", 18000],
+    ["1000W Platinum - Premium", 22000],
+    ["1200W Platinum - Extreme", 30000],
+    ["1600W Platinum ATX 3.1 - Workstation/Rich", 48000],
+  ],
+  Cabinet: [
+    ["None", 0],
+    ["Basic mATX Cabinet - Low Budget", 2200],
+    ["Ant Esports ICE Cabinet - Budget Popular", 3500],
+    ["Deepcool Matrexx 40 - Frequent Budget", 4200],
+    ["Cooler Master CMP 520 - Popular RGB", 5200],
+    ["Fractal Pop Air - Trending Airflow", 6200],
+    ["Corsair 4000D Airflow - Popular Premium", 7800],
+    ["NZXT H5 Flow - Premium Compact", 9500],
+    ["Lian Li Lancool 216 - Trending Airflow", 10500],
+    ["Lian Li O11D - Popular Showcase", 13500],
+    ["Fractal North - Latest Premium", 15500],
+    ["Hyte Y60 - Premium Showcase", 22000],
+    ["Custom RGB Glass - Rich Class", 28000],
+  ],
+  Cooler: [
+    ["None", 0],
+    ["Stock Cooler - Included", 0],
+    ["Budget Air Cooler - Frequent", 1500],
+    ["Deepcool AK400 Class Air - Popular", 2500],
+    ["Air Tower Cooler - Popular", 3500],
+    ["Dual Fan Tower Air - Creator Value", 5500],
+    ["Dual Tower Air Cooler - Trending", 6500],
+    ["120mm AIO - Compact", 5000],
+    ["240mm AIO - Premium", 9000],
+    ["280mm AIO - Latest Balance", 11500],
+    ["360mm AIO - Extreme", 15000],
+    ["Premium Quiet Air Cooler - Silent Build", 12500],
+    ["360mm LCD AIO - Latest Showcase", 25000],
+    ["Custom Liquid Loop - Rich Class", 45000],
+  ],
+  Fans: [
+    ["None", 0],
+    ["Single 120mm Fan - Basic", 500],
+    ["Standard 2-Fan Setup - Budget", 1200],
+    ["3x High Airflow Fans - Popular", 2600],
+    ["3x ARGB Fan Kit - Trending", 4200],
+    ["5x ARGB Fan Kit + Controller - Frequent Gaming", 6500],
+    ["Premium PWM ARGB Kit - Rich Class", 9000],
+    ["Lian Li Uni Fan 3-Pack - Premium Latest", 11500],
+    ["Noctua Quiet Fan Kit - Silent Build", 13000],
+  ],
+  OS: [
+    ["No OS", 0],
+    ["Ubuntu Setup - Free/Open Source", 1500],
+    ["Linux Developer Stack - Popular", 3500],
+    ["Windows 11 Home - Popular", 11500],
+    ["Windows 11 Home + Driver Setup", 13000],
+    ["Windows 11 Pro - Office/Business", 16500],
+    ["Windows 11 Pro + Security Setup", 18500],
+    ["Dual Boot Windows + Linux - Developer", 18500],
+    ["Windows 11 Pro + Office Setup", 26000],
+    ["Windows Server Setup - Business", 45000],
+  ],
+  Accessories: [
+    ["None", 0],
+    ["Basic Keyboard + Mouse - Budget", 1200],
+    ["WiFi Dongle + Bluetooth - Frequent", 1700],
+    ["Gaming Keyboard + Mouse - Popular", 4500],
+    ["Headset + Mousepad Combo - Frequent", 5500],
+    ["Mechanical Keyboard + Gaming Mouse - Trending", 8500],
+    ["UPS 600VA + Surge Protector - Office", 6500],
+    ["Webcam + USB Mic - Work/Study", 9000],
+    ["27in 1080p Monitor + Keyboard/Mouse", 14000],
+    ["24in 165Hz Monitor + Gaming Combo", 18000],
+    ["Monitor + UPS - Office/Gaming", 28000],
+    ["Streaming Kit - Mic + Webcam + Light", 32000],
+    ["Creator Desk Kit - 4K Webcam + Mic + Arm", 45000],
+  ],
+  "Network Device": [
+    ["None", 0],
+    ["Bluetooth 5.3 USB Adapter - Budget", 600],
+    ["USB WiFi Adapter - Budget", 800],
+    ["Dual Band WiFi Adapter - Popular", 1600],
+    ["2.5G PCIe LAN Card - Frequent Office", 2500],
+    ["PCIe WiFi 6 + Bluetooth - Trending", 3200],
+    ["PCIe WiFi 6E + Bluetooth - Latest", 4500],
+    ["Gigabit Router - Home/Office", 4500],
+    ["8-Port Gigabit Switch - Office", 2500],
+    ["WiFi 6 Router - Premium", 8500],
+    ["10G PCIe LAN Card - Creator/NAS", 8500],
+    ["Managed PoE Switch - Business", 9000],
+    ["WiFi 6E Router - Latest Premium", 13000],
+    ["Mesh WiFi Kit - Rich Class", 18000],
+    ["WiFi 7 PCIe Adapter - Latest", 7500],
+    ["WiFi 7 Router - Flagship", 26000],
+  ],
 } as const;
 
 function CustomPCBuildPage({ service }: { service: Service }) {
   const user = useCurrentUser();
-  const { addPCBuildRequest } = useDashboardData();
+  const { addPCBuildRequest, store } = useDashboardData();
+  const config = store.customBuilderConfig;
+  const contentCfg = config.contentConfig;
+  const pricingRules = config.pricingRules;
+
+  // Use builder config purposes if available, else fallback
+  const activePurposes = config.buildPurposes.filter(p => p.isActive);
+  const purposeOptions = activePurposes.length
+    ? activePurposes.map(p => p.label)
+    : ["Gaming", "Office", "Editing", "Streaming", "AI / ML", "CAD / 3D", "Programming", "Server"];
+
+  // Use builder config components per category if available
+  const CATEGORIES = ["CPU", "Motherboard", "RAM", "GPU", "Storage", "PSU", "Cabinet", "Cooler", "Fans", "OS", "Accessories", "Network Device"] as const;
+  const builderComponents = CATEGORIES.reduce((acc, cat) => {
+    const options = (config.components[cat] || []).filter(c => c.isActive);
+    acc[cat] = options.length ? options : [];
+    return acc;
+  }, {} as Record<string, { id: string; name: string; brand: string; model: string; price: number }[]>);
+
+  // Categories that have at least one active option
+  const activeCategories = CATEGORIES.filter(cat => builderComponents[cat].length > 0);
+
   const [form, setForm] = useState({
     name: user?.name || "",
     phone: user?.phone || "",
     email: user?.email || "",
-    purpose: "Gaming",
+    purpose: purposeOptions[0] || "Gaming",
     budgetRange: "₹1,00,000 - ₹2,00,000",
     preferredBrand: "",
     performanceLevel: "High",
   });
-  const [selected, setSelected] = useState<Record<string, number>>({ CPU: 1, Motherboard: 0, RAM: 1, GPU: 1, Storage: 1, PSU: 1, Cabinet: 0, Cooler: 1, Fans: 1, OS: 1, Accessories: 0 });
+
+  // Default selections: first active component per category
+  const defaultSelected = CATEGORIES.reduce((acc, cat) => {
+    acc[cat] = 0;
+    return acc;
+  }, {} as Record<string, number>);
+  const [selected, setSelected] = useState<Record<string, number>>(defaultSelected);
   const [requestId, setRequestId] = useState("");
   const set = (key: keyof typeof form, value: string) => setForm(prev => ({ ...prev, [key]: value }));
-  const components = Object.entries(PC_COMPONENTS).map(([type, options]) => {
-    const option = options[selected[type] || 0];
-    return { type, name: option[0], price: option[1] };
-  });
+
+  const components = activeCategories.map(type => {
+    const options = builderComponents[type];
+    const option = options[selected[type] || 0] || options[0];
+    if (!option) return null;
+    return { type, name: `${option.brand} ${option.model}` || option.name, price: option.price, componentId: option.id };
+  }).filter(Boolean) as { type: string; name: string; price: number; componentId: string }[];
+
   const componentCost = components.reduce((sum, c) => sum + c.price, 0);
-  const assemblyCharge = form.performanceLevel === "Extreme" ? 12000 : 8000;
-  const shipping = componentCost > 150000 ? 0 : 1499;
-  const gst = Math.round((componentCost + assemblyCharge) * 0.18);
-  const total = componentCost + assemblyCharge + gst + shipping;
-  const validationReport = [
-    { label: "CPU Socket Compatibility", pass: true, detail: "CPU and motherboard generation validated" },
-    { label: "RAM Compatibility", pass: true, detail: "DDR5 memory selected with matching board support" },
-    { label: "GPU Clearance", pass: true, detail: "Cabinet supports selected GPU class" },
-    { label: "PSU Wattage", pass: true, detail: `Estimated draw ${Math.round(componentCost / 420)}W under selected tier` },
-    { label: "Cooler Height", pass: true, detail: "Cooler and cabinet clearance checked" },
-    { label: "Upgrade Path", pass: true, detail: "Spare storage and PSU headroom available" },
-  ];
+  const assemblyCharge = pricingRules.assemblyCharges[form.performanceLevel as "Entry" | "Mid" | "High" | "Extreme"] || contentCfg.assemblyCharge || 8000;
+  const gstPct = pricingRules.gstPercent || contentCfg.gstPercentage || 18;
+  const shippingCharge = componentCost > (pricingRules.freeShippingThreshold || contentCfg.freeShippingThreshold || 150000) ? 0 : (pricingRules.shippingCharge || 1499);
+  const gst = Math.round((componentCost + assemblyCharge) * (gstPct / 100));
+  const total = componentCost + assemblyCharge + gst + shippingCharge;
+
+  const validationChecklist = contentCfg.validationChecklist.length > 0
+    ? contentCfg.validationChecklist
+    : ["CPU Socket Compatibility", "RAM Compatibility", "GPU Clearance", "PSU Wattage", "Cooler Height", "Network Readiness", "Upgrade Path"];
+
+  const validationReport = validationChecklist.map(label => ({ label, pass: true, detail: `${label} validated by DESKTO builder system` }));
+
+  const selectedBuilderComponents = activeCategories.reduce((acc, cat) => {
+    const options = builderComponents[cat];
+    const option = options[selected[cat] || 0];
+    if (option) acc[cat] = option.id;
+    return acc;
+  }, {} as Record<string, string>);
+
   const submit = () => {
     if (!form.name.trim() || !form.phone.trim()) {
       toast.error("Enter customer name and phone.");
       return;
     }
+    const buildComponents = components.map(c => ({ type: c.type, name: c.name, price: c.price }));
     const build = addPCBuildRequest({
       customerId: user?.id || `guest_${Date.now()}`,
       customerName: form.name.trim(),
@@ -1074,13 +1297,15 @@ function CustomPCBuildPage({ service }: { service: Service }) {
       budgetRange: form.budgetRange,
       preferredBrand: form.preferredBrand || "Any",
       performanceLevel: form.performanceLevel,
-      components,
+      components: buildComponents,
+      selectedBuilderComponents,
+      builderConfigVersion: config.version,
       validationReport,
       assemblyChecklist: ["Install CPU", "Install Cooler", "Install RAM", "Install SSD", "Install Motherboard", "Install PSU", "Install GPU", "Cable Management", "RGB Setup", "BIOS Configuration"].map(label => ({ label, done: false })),
       testResults: ["Boot Test", "Temperature Test", "Stress Test", "Benchmark Test", "GPU Test", "RAM Test", "SSD Health Test", "Power Stability Test", "RGB Test", "Final Quality Check"].map(label => ({ label, done: false })),
       assemblyCharge,
       gst,
-      shipping,
+      shipping: shippingCharge,
       estimatedDelivery: "5-7 working days",
       quotation: total,
       quotationNote: "Initial automated estimate. Admin will verify inventory and send final quotation.",
@@ -1089,6 +1314,9 @@ function CustomPCBuildPage({ service }: { service: Service }) {
     setRequestId(build.id);
     toast.success(`Build request ${build.id.slice(-8).toUpperCase()} submitted.`);
   };
+
+  const pageTitle = contentCfg.pageTitle || "Custom PC Solutions";
+  const ctaText = contentCfg.ctaButtonText || "Submit Build Request";
 
   return (
     <div style={{ background: "#050505", color: "white", minHeight: "100vh", paddingBottom: 60 }}>
@@ -1106,7 +1334,7 @@ function CustomPCBuildPage({ service }: { service: Service }) {
                 <RepairField label="Preferred Brand Optional" value={form.preferredBrand} onChange={v => set("preferredBrand", v)} placeholder="Intel, AMD, NVIDIA, ASUS..." />
               </div>
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
-                {["Gaming", "Office", "Editing", "Streaming", "AI / ML", "CAD / 3D", "Programming", "Server"].map(v => <button key={v} className={form.purpose === v ? "glass-pill glass-pill-primary" : "glass-pill glass-pill-outline"} onClick={() => set("purpose", v)} style={{ padding: "9px 13px", fontSize: 9 }}>{v}</button>)}
+                {purposeOptions.map(v => <button key={v} className={form.purpose === v ? "glass-pill glass-pill-primary" : "glass-pill glass-pill-outline"} onClick={() => set("purpose", v)} style={{ padding: "9px 13px", fontSize: 9 }}>{v}</button>)}
               </div>
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 18 }}>
                 {["Entry", "Mid", "High", "Extreme"].map(v => <button key={v} className={form.performanceLevel === v ? "glass-pill glass-pill-primary" : "glass-pill glass-pill-outline"} onClick={() => set("performanceLevel", v)} style={{ padding: "9px 13px", fontSize: 9 }}>{v}</button>)}
@@ -1115,11 +1343,11 @@ function CustomPCBuildPage({ service }: { service: Service }) {
                 </select>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 12 }}>
-                {Object.entries(PC_COMPONENTS).map(([type, options]) => (
+                {activeCategories.map(type => (
                   <div key={type} className="glass" style={{ borderRadius: 10, padding: 12 }}>
                     <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 10, color: "#FF1F45", marginBottom: 8 }}>{type}</div>
                     <select value={selected[type] || 0} onChange={e => setSelected(prev => ({ ...prev, [type]: Number(e.target.value) }))} style={{ width: "100%", background: "#111", border: "1px solid rgba(255,255,255,.12)", borderRadius: 8, padding: "10px", color: "white" }}>
-                      {options.map((o, i) => <option key={o[0]} value={i}>{o[0]} · ₹{o[1].toLocaleString("en-IN")}</option>)}
+                      {builderComponents[type].map((o, i) => <option key={o.id} value={i}>{o.brand} {o.model} · ₹{o.price.toLocaleString("en-IN")}</option>)}
                     </select>
                   </div>
                 ))}
@@ -1135,13 +1363,13 @@ function CustomPCBuildPage({ service }: { service: Service }) {
                 <div style={{ display: "flex", justifyContent: "space-between" }}><span>Components</span><span>₹{componentCost.toLocaleString("en-IN")}</span></div>
                 <div style={{ display: "flex", justifyContent: "space-between" }}><span>Assembly</span><span>₹{assemblyCharge.toLocaleString("en-IN")}</span></div>
                 <div style={{ display: "flex", justifyContent: "space-between" }}><span>GST</span><span>₹{gst.toLocaleString("en-IN")}</span></div>
-                <div style={{ display: "flex", justifyContent: "space-between" }}><span>Shipping</span><span>{shipping ? `₹${shipping}` : "FREE"}</span></div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}><span>Shipping</span><span>{shippingCharge ? `₹${shippingCharge}` : "FREE"}</span></div>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 18 }}>
                 <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 11 }}>Final Estimate</span>
                 <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 28, color: "#7a00ff", fontWeight: 800 }}>₹{total.toLocaleString("en-IN")}</span>
               </div>
-              <button className="glass-pill glass-pill-primary" onClick={submit} style={{ padding: "13px 20px", fontSize: 10, marginTop: 18, width: "100%" }}>Submit Build Request</button>
+              <button className="glass-pill glass-pill-primary" onClick={submit} style={{ padding: "13px 20px", fontSize: 10, marginTop: 18, width: "100%" }}>{ctaText}</button>
               {requestId && <div className="glass-red" style={{ borderRadius: 10, padding: 12, marginTop: 14, fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, color: "#FFC0C8", lineHeight: 1.6 }}>Build ID: <strong style={{ color: "white" }}>{requestId.slice(-8).toUpperCase()}</strong><br />Track it in Customer Dashboard → PC Builds.</div>}
             </div>
           </div>

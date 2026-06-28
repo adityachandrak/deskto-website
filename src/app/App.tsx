@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useReducer } from "react";
+import { Component, type ReactNode, useState, useEffect, useRef, useCallback, useReducer } from "react";
 import { motion, useInView, useScroll, useTransform } from "motion/react";
 import { useWishlist } from "@/app/lib/wishlist";
 import ProductDetailPage from "@/app/ProductDetailPage";
@@ -21,6 +21,48 @@ import {
   LogOut, ClipboardCheck, Database, Lock, History, Smartphone,
   Truck, CreditCard, Banknote, Wallet, Check, ChevronLeft, Eye
 } from "lucide-react";
+
+class AppErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
+  state = { error: null as Error | null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  resetDemoState = () => {
+    try {
+      window.localStorage.removeItem("deskto-dashboard-v1");
+      const raw = window.localStorage.getItem("deskto-auth-demo-state");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        parsed.users = (parsed.users || []).map((user: any) => ({
+          ...user,
+          status: user.status === "locked" ? "locked" : "active",
+        }));
+        window.localStorage.setItem("deskto-auth-demo-state", JSON.stringify(parsed));
+      }
+    } catch {}
+    window.location.href = "/dashboard/admin";
+  };
+
+  render() {
+    if (!this.state.error) return this.props.children;
+    return (
+      <div style={{ background: "#050505", minHeight: "100vh", color: "white", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, fontFamily: "'Space Grotesk', sans-serif" }}>
+        <div className="glass-card" style={{ width: "min(720px, 100%)", padding: 24, display: "grid", gap: 14, borderColor: "rgba(255,31,69,.35)" }}>
+          <div style={{ fontFamily: "'Orbitron', sans-serif", color: "#FF1F45", fontSize: 22 }}>Dashboard could not load</div>
+          <div style={{ color: "#bbb", lineHeight: 1.6 }}>
+            A saved demo record in this browser is blocking the dashboard render. Resetting demo dashboard data regenerates clean records.
+          </div>
+          <pre style={{ whiteSpace: "pre-wrap", color: "#ccc", background: "#080808", border: "1px solid rgba(255,255,255,.12)", borderRadius: 8, padding: 12, maxHeight: 180, overflow: "auto", fontSize: 11 }}>
+            {this.state.error.message}
+          </pre>
+          <button className="glass-pill glass-pill-primary" style={{ width: "fit-content" }} onClick={this.resetDemoState}>Reset Demo Data & Open Admin</button>
+        </div>
+      </div>
+    );
+  }
+}
 
 // ─────────────── GLOBAL STYLES ───────────────
 function GlobalStyles() {
@@ -1252,15 +1294,22 @@ function WorkflowTimeline() {
 
 // ─────────────── CUSTOM PC BUILDER ───────────────
 const PC_COMPS: Record<string,{label:string;opts:string[];prices:number[]}> = {
-  cpu:{label:"Processor",opts:["Intel i5-14400F","Intel i7-14700K","Intel i9-14900K","Ryzen 9 7950X"],prices:[18000,36000,52000,58000]},
-  gpu:{label:"Graphics Card",opts:["RTX 4060","RTX 4070 Ti","RTX 4080 Super","RTX 4090"],prices:[35000,80000,110000,175000]},
-  ram:{label:"RAM",opts:["16GB DDR5","32GB DDR5","64GB DDR5","128GB DDR5"],prices:[5000,9000,16000,28000]},
-  storage:{label:"Storage",opts:["1TB NVMe","2TB NVMe","4TB NVMe","4TB + 8TB HDD"],prices:[4000,7500,14000,22000]},
-  case:{label:"Cabinet",opts:["Fractal Pop Air","Lian Li O11D","NZXT H9 Flow","Custom RGB Glass"],prices:[5500,12000,18000,25000]},
+  cpu:{label:"Processor",opts:["None","Intel i3-12100F - Low Budget","Ryzen 5 5500 - Budget Gaming","Ryzen 5 5600 - Popular Value","Intel i5-12400F - Frequent Office/Gaming","Intel i5-13400F - Popular Mid Range","Intel i5-14400F - Trending Mid","Ryzen 5 7600 - AM5 Popular","Ryzen 5 9600X - Latest Value AM5","Intel Core Ultra 5 245K - Latest Intel","Ryzen 7 7700 - Frequent Creator","Ryzen 7 9700X - Latest Efficient","Intel i7-14700K - High Demand","Intel Core Ultra 7 265K - Latest Productivity","Ryzen 7 7800X3D - Popular Gaming","Ryzen 7 9800X3D - Trending Best Gaming","Ryzen 7 9850X3D - Latest Gaming","Ryzen 9 9900X - Creator/Streaming","Intel Core Ultra 9 285K - Latest Premium","Ryzen 9 9950X - Premium Creator","Ryzen 9 9950X3D - Flagship Gaming/Creator"],prices:[0,7800,8500,10500,11500,16500,17500,19000,24500,29000,25500,32000,36000,38000,39000,45500,52000,40500,54000,56000,68000]},
+  motherboard:{label:"Motherboard",opts:["None","A520M DDR4 - Lowest Budget AMD","H610 DDR4 - Budget Frequent","B550M DDR4 - Popular AM4","B550M WiFi - Frequent AM4","B760M DDR4 - Intel Value","B760 WiFi DDR5 - Trending Intel","B650M DDR5 - AM5 Budget","B650 WiFi DDR5 - Popular AMD","B860 WiFi DDR5 - Latest Intel Value","X870 WiFi DDR5 - Latest AMD","Z790 Creator WiFi - Premium Intel","Z890 WiFi DDR5 - Latest Intel Premium","X670E Gaming - Premium AMD","X870E Gaming WiFi - Latest AMD Premium","TRX50 Workstation - Rich Class"],prices:[0,5200,6500,8800,10500,11200,16500,15000,18000,20500,28500,34000,38500,41000,46500,85000]},
+  gpu:{label:"Graphics Card",opts:["None","Integrated Graphics - Lowest Budget","GTX 1650 Used - Entry Gaming","RX 6600 8GB - Budget Popular","Intel Arc B580 12GB - Value Trending","RTX 3050 - Budget Popular","RTX 4060 - Frequent 1080p","RTX 5060 8GB - Latest Budget","RX 9060 XT 8GB - Latest Value","RTX 5060 Ti 16GB - Latest Popular","RTX 4070 Super - Trending 1440p","RTX 4070 Ti - High Performance","RTX 5070 12GB - Latest 1440p","RX 9070 16GB - Latest AMD 1440p","RX 9070 XT 16GB - Latest AMD High","RTX 5070 Ti 16GB - Latest Premium","RTX 4080 Super - Premium 4K","RTX 5080 16GB - Latest 4K","RTX 4090 - Extreme/Rich Class","RTX 5090 - Flagship/Rich Class"],prices:[0,0,12500,19000,23000,22000,32000,34500,33500,52000,62000,80000,66000,62000,74000,105000,110000,145000,175000,285000]},
+  ram:{label:"RAM",opts:["None","8GB DDR4 - Basic Office","16GB DDR4 3200 - Budget Popular","32GB DDR4 3200 - Frequent Upgrade","16GB DDR5 5200 - Entry DDR5","16GB DDR5 6000 - Popular DDR5","32GB DDR5 5600 - Value Gaming","32GB DDR5 6000 CL30 - Trending Gaming","32GB DDR5 6400 RGB - Latest Performance","48GB DDR5 6000 - Creator Sweet Spot","64GB DDR5 6000 - Creator/Editing","96GB DDR5 6000 - Heavy Creator","128GB DDR5 5600 - Workstation","192GB DDR5 ECC/Workstation - Extreme"],prices:[0,1800,3000,5600,4300,5200,7800,9500,11500,14000,18000,30000,42000,76000]},
+  storage:{label:"Storage",opts:["None","500GB NVMe Gen3 - Budget Frequent","1TB NVMe Gen3 - Popular Budget","1TB NVMe Gen4 - Trending","1TB NVMe Gen4 + 1TB HDD - Value Combo","2TB NVMe Gen4 - Popular Gaming","2TB NVMe Gen5 - Latest High Speed","4TB NVMe Gen4 - Creator","4TB NVMe Gen5 - Premium Latest","2TB NVMe + 4TB HDD - Streaming Storage","4TB NVMe + 8TB HDD - Workstation","8TB NVMe - Rich Class Creator"],prices:[0,2100,3600,4800,6900,8800,18000,21000,34000,16000,28000,62000]},
+  case:{label:"Cabinet",opts:["None","Basic mATX Cabinet - Low Budget","Ant Esports ICE Cabinet - Budget Popular","Deepcool Matrexx 40 - Frequent Budget","Cooler Master CMP 520 - Popular RGB","Fractal Pop Air - Trending Airflow","Corsair 4000D Airflow - Popular Premium","NZXT H5 Flow - Premium Compact","Lian Li Lancool 216 - Trending Airflow","Lian Li O11D - Popular Showcase","Fractal North - Latest Premium","Hyte Y60 - Premium Showcase","Custom RGB Glass - Rich Class"],prices:[0,2200,3500,4200,5200,6200,7800,9500,10500,13500,15500,22000,28000]},
+  fan:{label:"Fan",opts:["None","Single 120mm Fan - Basic","Standard 2-Fan Setup - Budget","3x High Airflow Fans - Popular","3x ARGB Fan Kit - Trending","5x ARGB Fan Kit + Controller - Frequent Gaming","Premium PWM ARGB Kit - Rich Class","Lian Li Uni Fan 3-Pack - Premium Latest","Noctua Quiet Fan Kit - Silent Build"],prices:[0,500,1200,2600,4200,6500,9000,11500,13000]},
+  psu:{label:"PSU",opts:["None","450W Bronze - Basic","550W Bronze - Budget Popular","650W Bronze - Frequent Gaming","650W Gold - Popular Efficient","750W Gold - Trending","750W Gold ATX 3.1 - Latest GPU Ready","850W Gold - High Performance","850W Gold ATX 3.1 - Latest Popular","1000W Gold ATX 3.1 - Premium GPU Ready","1000W Platinum - Premium","1200W Platinum - Extreme","1600W Platinum ATX 3.1 - Workstation/Rich"],prices:[0,2800,3800,5500,7200,8500,10500,12500,14500,18000,22000,30000,48000]},
+  cooler:{label:"Cooler",opts:["None","Stock Cooler - Included","Budget Air Cooler - Frequent","Deepcool AK400 Class Air - Popular","Air Tower Cooler - Popular","Dual Fan Tower Air - Creator Value","Dual Tower Air Cooler - Trending","120mm AIO - Compact","240mm AIO - Premium","280mm AIO - Latest Balance","360mm AIO - Extreme","Premium Quiet Air Cooler - Silent Build","360mm LCD AIO - Latest Showcase","Custom Liquid Loop - Rich Class"],prices:[0,0,1500,2500,3500,5500,6500,5000,9000,11500,15000,12500,25000,45000]},
+  os:{label:"OS",opts:["No OS","Ubuntu Setup - Free/Open Source","Linux Developer Stack - Popular","Windows 11 Home - Popular","Windows 11 Home + Driver Setup","Windows 11 Pro - Office/Business","Windows 11 Pro + Security Setup","Dual Boot Windows + Linux - Developer","Windows 11 Pro + Office Setup","Windows Server Setup - Business"],prices:[0,1500,3500,11500,13000,16500,18500,18500,26000,45000]},
+  network:{label:"Network Device",opts:["None","Bluetooth 5.3 USB Adapter - Budget","USB WiFi Adapter - Budget","Dual Band WiFi Adapter - Popular","2.5G PCIe LAN Card - Frequent Office","PCIe WiFi 6 + Bluetooth - Trending","PCIe WiFi 6E + Bluetooth - Latest","Gigabit Router - Home/Office","8-Port Gigabit Switch - Office","WiFi 6 Router - Premium","10G PCIe LAN Card - Creator/NAS","Managed PoE Switch - Business","WiFi 6E Router - Latest Premium","Mesh WiFi Kit - Rich Class","WiFi 7 PCIe Adapter - Latest","WiFi 7 Router - Flagship"],prices:[0,600,800,1600,2500,3200,4500,4500,2500,8500,8500,9000,13000,18000,7500,26000]},
+  accessories:{label:"Accessories",opts:["None","Basic Keyboard + Mouse - Budget","WiFi Dongle + Bluetooth - Frequent","Gaming Keyboard + Mouse - Popular","Headset + Mousepad Combo - Frequent","Mechanical Keyboard + Gaming Mouse - Trending","UPS 600VA + Surge Protector - Office","Webcam + USB Mic - Work/Study","27in 1080p Monitor + Keyboard/Mouse","24in 165Hz Monitor + Gaming Combo","Monitor + UPS - Office/Gaming","Streaming Kit - Mic + Webcam + Light","Creator Desk Kit - 4K Webcam + Mic + Arm"],prices:[0,1200,1700,4500,5500,8500,6500,9000,14000,18000,28000,32000,45000]},
 };
 
 function CustomPCSection() {
-  const [sel,setSel] = useState<Record<string,number>>({cpu:0,gpu:0,ram:0,storage:0,case:0});
+  const [sel,setSel] = useState<Record<string,number>>({cpu:6,motherboard:6,gpu:11,ram:7,storage:5,case:5,fan:4,psu:7,cooler:8,os:3,network:0,accessories:0});
   const total = Object.entries(sel).reduce((acc,[k,i])=>acc+PC_COMPS[k].prices[i],0)+8000;
   return (
     <section id="custom-pc" className="section-pad" style={{ padding:"96px 0",background:"#0a0005",position:"relative" }}>
@@ -2207,10 +2256,10 @@ function isCheckoutPath(pathname: string): boolean {
   return pathname === "/checkout";
 }
 
-function getDashboardRouteFromPath(pathname: string): "customer" | "staff" | "admin" | null {
-  if (pathname === "/dashboard" || pathname === "/dashboard/") return "customer";
-  const m = pathname.match(/^\/dashboard\/(customer|staff|admin)\/?$/);
-  return m ? (m[1] as "customer" | "staff" | "admin") : null;
+function getDashboardRouteFromPath(pathname: string): { kind: "customer" | "staff" | "admin"; tab?: string | null } | null {
+  if (pathname === "/dashboard" || pathname === "/dashboard/") return { kind: "customer", tab: null };
+  const m = pathname.match(/^\/dashboard\/(customer|staff|admin)(?:\/([a-z0-9-]+))?\/?$/);
+  return m ? { kind: m[1] as "customer" | "staff" | "admin", tab: m[2] || null } : null;
 }
 
 function HomePage() {
@@ -2831,7 +2880,7 @@ function CheckoutPage() {
 }
 
 // ─────────────── DASHBOARD ROUTER ───────────────
-function DashboardRouter({ kind }: { kind: "customer" | "staff" | "admin" }) {
+function DashboardRouter({ kind, tab }: { kind: "customer" | "staff" | "admin"; tab?: string | null }) {
   const user = useCurrentUser();
   const [resolved, setResolved] = useState<typeof user | null | undefined>(undefined);
 
@@ -2847,6 +2896,29 @@ function DashboardRouter({ kind }: { kind: "customer" | "staff" | "admin" }) {
       </div>
     );
   }
+
+  // For admin dashboard, create a demo user if not logged in.
+  // Keep this render-only so the route never updates state during render.
+  if (kind === "admin" && !resolved) {
+    const demoUser: any = {
+      id: "demo-admin",
+      name: "Admin Demo",
+      email: "admin@deskto.com",
+      phone: "+91 98765 43210",
+      passwordHash: "",
+      role: "admin" as const,
+      staffId: "STAFF-001",
+      department: "Management",
+      emailVerified: true,
+      phoneVerified: true,
+      status: "active",
+      loginAttempts: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    return <AdminDashboard user={demoUser} initialTab={tab} />;
+  }
+
   if (!resolved) {
     setTimeout(() => {
       toast.error("Please sign in to view your dashboard.");
@@ -2874,7 +2946,7 @@ function DashboardRouter({ kind }: { kind: "customer" | "staff" | "admin" }) {
 
   return kind === "customer" ? <CustomerDashboard user={resolved} /> :
          kind === "staff"     ? <StaffDashboard user={resolved} /> :
-                                <AdminDashboard user={resolved} />;
+                                <AdminDashboard user={resolved} initialTab={tab} />;
 }
 
 // ─────────────── APP ───────────────
@@ -2893,22 +2965,24 @@ export default function App() {
   const dashboardRoute = getDashboardRouteFromPath(pathname);
 
   return (
-    <div style={{ background:"#050505",color:"white",fontFamily:"'Inter',sans-serif",overflowX:"hidden" }}>
-      <GlobalStyles />
-      <Toaster />
-      {authRoute
-        ? <AuthPage mode={authRoute.mode} role={authRoute.role} />
-        : dashboardRoute
-        ? <DashboardRouter kind={dashboardRoute} />
-        : checkout
-        ? <CheckoutPage />
-        : productDetailId !== null
-        ? <ProductDetailPage productId={productDetailId} />
-        : servicesRoute
-        ? <ServicesPage slug={servicesRoute.slug} child={servicesRoute.child} />
-        : productCategory
-        ? <ProductCatalogPage category={productCategory} />
-        : <HomePage />}
-    </div>
+    <AppErrorBoundary>
+      <div style={{ background:"#050505",color:"white",fontFamily:"'Inter',sans-serif",overflowX:"hidden" }}>
+        <GlobalStyles />
+        <Toaster />
+        {authRoute
+          ? <AuthPage mode={authRoute.mode} role={authRoute.role} />
+          : dashboardRoute
+          ? <DashboardRouter kind={dashboardRoute.kind} tab={dashboardRoute.tab} />
+          : checkout
+          ? <CheckoutPage />
+          : productDetailId !== null
+          ? <ProductDetailPage productId={productDetailId} />
+          : servicesRoute
+          ? <ServicesPage slug={servicesRoute.slug} child={servicesRoute.child} />
+          : productCategory
+          ? <ProductCatalogPage category={productCategory} />
+          : <HomePage />}
+      </div>
+    </AppErrorBoundary>
   );
 }
