@@ -1287,17 +1287,13 @@ function RepairQuoteEditor({ repair, patchRepair }: { repair: Repair; patchRepai
 }
 
 function ServiceTechnicianCell({ request, technicianOptions, technicianName, patchServiceRequest }: { request: ServiceRequest; technicianOptions: StaffOption[]; technicianName: (id?: string) => string; patchServiceRequest: (id: string, patch: Partial<ServiceRequest>) => void }) {
-  const done = request.timeline.filter(step => step.done).length;
-  const total = request.timeline.length || 1;
-  const percent = Math.round((done / total) * 100);
-  const assignmentStatus: ServiceRequest["status"] = request.kind === "upgrade" ? "technician-assigned" : "technician-assigned";
   return (
-    <div style={{ display: "grid", gap: 7, minWidth: 220 }} onClick={e => e.stopPropagation()}>
+    <div style={{ display: "grid", gap: 7, minWidth: 180 }} onClick={e => e.stopPropagation()}>
       <select value={request.technicianId || ""} onChange={e => {
         const staffId = e.target.value;
         patchServiceRequest(request.id, {
           technicianId: staffId || undefined,
-          status: staffId ? assignmentStatus : request.status,
+          status: staffId ? "technician-assigned" : request.status,
           technicianNotes: staffId ? `Assigned to ${technicianName(staffId)}` : "Technician assignment cleared",
         });
         toast.success(staffId ? `${technicianName(staffId)} notified in staff dashboard` : "Assignment cleared");
@@ -1306,13 +1302,36 @@ function ServiceTechnicianCell({ request, technicianOptions, technicianName, pat
         {technicianOptions.map(s => <option key={s.id} value={s.id}>{s.name}{s.department ? ` · ${s.department}` : ""}</option>)}
       </select>
       <div className="glass" style={{ borderRadius: 8, padding: 8, fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, color: "#CFCFCF" }}>
-        <strong style={{ color: "white" }}>{technicianName(request.technicianId)}</strong><br />
-        <span style={{ color: "#777" }}>Staff status: </span><StatusBadge status={request.status} />
-        <div style={{ marginTop: 7, height: 5, borderRadius: 999, background: "rgba(255,255,255,.08)", overflow: "hidden" }}>
-          <div style={{ width: `${percent}%`, height: "100%", background: "linear-gradient(90deg,#ffd700,#00b4ff)" }} />
-        </div>
-        <div style={{ color: "#777", marginTop: 5 }}>{done}/{total} steps · Updated {formatTime(request.technicianLastStatusAt || request.updatedAt || request.createdAt)}</div>
+        <strong style={{ color: "white" }}>{technicianName(request.technicianId)}</strong>
+        <div style={{ color: "#777", marginTop: 3 }}>{request.technicianId ? "Assigned" : "Awaiting assignment"}</div>
       </div>
+    </div>
+  );
+}
+
+// Dedicated column mirroring the live work progress the assigned staff updates
+// from their dashboard (status, current stage, % complete, last update, notes).
+function ServiceStaffProgressCell({ request, technicianName }: { request: ServiceRequest; technicianName: (id?: string) => string }) {
+  const steps = request.timeline || [];
+  const done = steps.filter(step => step.done).length;
+  const total = steps.length || 1;
+  const percent = Math.round((done / total) * 100);
+  const currentStage = [...steps].reverse().find(step => step.done)?.label || "Not started";
+  if (!request.technicianId) {
+    return <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, color: "#777" }}>No technician assigned</span>;
+  }
+  return (
+    <div className="glass" style={{ borderRadius: 8, padding: 9, minWidth: 200, fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, color: "#CFCFCF" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 6 }}>
+        <strong style={{ color: "white" }}>{technicianName(request.technicianId)}</strong>
+        <StatusBadge status={request.status} />
+      </div>
+      <div style={{ color: "#aaa" }}>Current stage: <span style={{ color: "white" }}>{currentStage}</span></div>
+      <div style={{ marginTop: 7, height: 6, borderRadius: 999, background: "rgba(255,255,255,.08)", overflow: "hidden" }}>
+        <div style={{ width: `${percent}%`, height: "100%", background: "linear-gradient(90deg,#ffd700,#00b4ff)" }} />
+      </div>
+      <div style={{ color: "#777", marginTop: 5 }}>{done}/{total} steps · {percent}% · Updated {formatTime(request.technicianLastStatusAt || request.updatedAt || request.createdAt)}</div>
+      {request.technicianNotes && <div style={{ color: "#9a9a9a", marginTop: 5, fontStyle: "italic" }}>{request.technicianNotes}</div>}
     </div>
   );
 }
@@ -1356,8 +1375,11 @@ function AdminServiceManagement({ store, kind, patchServiceRequest }: { store: D
           ) },
           { key: "details", label: "Requirements", render: r => <span style={{ maxWidth: 240, display: "inline-block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.requirements}</span> },
           { key: "media", label: "Media", render: r => <MediaCell files={r.uploads} /> },
-          { key: "technician", label: "Technician / Progress", render: r => (
+          { key: "technician", label: "Technician", render: r => (
             <ServiceTechnicianCell request={r} technicianOptions={technicianOptions} technicianName={technicianName} patchServiceRequest={patchServiceRequest} />
+          ) },
+          { key: "staffProgress", label: "Staff Work Progress", render: r => (
+            <ServiceStaffProgressCell request={r} technicianName={technicianName} />
           ) },
           { key: "quote", label: kind === "sell" ? "Offer Details" : "Quote Details", render: r => <ServiceQuoteEditor request={r} kind={kind} patchServiceRequest={patchServiceRequest} /> },
           { key: "status", label: "Status", render: r => <StatusBadge status={r.status} /> },
@@ -1528,8 +1550,11 @@ export function AdminCustomPC({ store, patchPCBuild }: { store: DashboardStore; 
             </div>
           ) },
           { key: "total", label: "Quote", align: "right", render: b => inr(b.quotation || b.total) },
-          { key: "tech", label: "Technician / Progress", render: b => (
+          { key: "tech", label: "Technician", render: b => (
             <PCBuildTechnicianCell build={b} builders={builders} builderName={builderName} patchPCBuild={patchPCBuild} />
+          ) },
+          { key: "staffProgress", label: "Staff Work Progress", render: b => (
+            <PCBuildStaffProgressCell build={b} builderName={builderName} />
           ) },
           { key: "status", label: "Status", render: b => <StatusBadge status={b.status} /> },
           { key: "action", label: "", render: b => (
@@ -1552,12 +1577,8 @@ export function AdminCustomPC({ store, patchPCBuild }: { store: DashboardStore; 
 }
 
 function PCBuildTechnicianCell({ build, builders, builderName, patchPCBuild }: { build: PCBuild; builders: StaffOption[]; builderName: (id?: string) => string; patchPCBuild: (id: string, patch: Partial<PCBuild>) => void }) {
-  const timeline = build.timeline || [];
-  const done = timeline.filter(step => step.done).length;
-  const total = timeline.length || 1;
-  const percent = Math.round((done / total) * 100);
   return (
-    <div style={{ display: "grid", gap: 7, minWidth: 220 }} onClick={e => e.stopPropagation()}>
+    <div style={{ display: "grid", gap: 7, minWidth: 180 }} onClick={e => e.stopPropagation()}>
       <select value={build.technicianId || ""} onChange={e => {
         const staffId = e.target.value;
         patchPCBuild(build.id, {
@@ -1571,13 +1592,36 @@ function PCBuildTechnicianCell({ build, builders, builderName, patchPCBuild }: {
         {builders.map(s => <option key={s.id} value={s.id}>{s.name}{s.department ? ` · ${s.department}` : ""}</option>)}
       </select>
       <div className="glass" style={{ borderRadius: 8, padding: 8, fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, color: "#CFCFCF" }}>
-        <strong style={{ color: "white" }}>{builderName(build.technicianId)}</strong><br />
-        <span style={{ color: "#777" }}>Staff status: </span><StatusBadge status={build.status} />
-        <div style={{ marginTop: 7, height: 5, borderRadius: 999, background: "rgba(255,255,255,.08)", overflow: "hidden" }}>
-          <div style={{ width: `${percent}%`, height: "100%", background: "linear-gradient(90deg,#a855f7,#00b4ff)" }} />
-        </div>
-        <div style={{ color: "#777", marginTop: 5 }}>{done}/{total} steps · Updated {formatTime(build.technicianLastStatusAt || build.updatedAt || build.createdAt)}</div>
+        <strong style={{ color: "white" }}>{builderName(build.technicianId)}</strong>
+        <div style={{ color: "#777", marginTop: 3 }}>{build.technicianId ? "Assigned" : "Awaiting assignment"}</div>
       </div>
+    </div>
+  );
+}
+
+// Dedicated column mirroring the live build progress the assigned builder updates
+// from their staff dashboard (status, current stage, % complete, last update).
+function PCBuildStaffProgressCell({ build, builderName }: { build: PCBuild; builderName: (id?: string) => string }) {
+  const steps = build.timeline || [];
+  const done = steps.filter(step => step.done).length;
+  const total = steps.length || 1;
+  const percent = Math.round((done / total) * 100);
+  const currentStage = [...steps].reverse().find(step => step.done)?.label || "Not started";
+  if (!build.technicianId) {
+    return <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, color: "#777" }}>No builder assigned</span>;
+  }
+  return (
+    <div className="glass" style={{ borderRadius: 8, padding: 9, minWidth: 200, fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, color: "#CFCFCF" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 6 }}>
+        <strong style={{ color: "white" }}>{builderName(build.technicianId)}</strong>
+        <StatusBadge status={build.status} />
+      </div>
+      <div style={{ color: "#aaa" }}>Current stage: <span style={{ color: "white" }}>{currentStage}</span></div>
+      <div style={{ marginTop: 7, height: 6, borderRadius: 999, background: "rgba(255,255,255,.08)", overflow: "hidden" }}>
+        <div style={{ width: `${percent}%`, height: "100%", background: "linear-gradient(90deg,#a855f7,#00b4ff)" }} />
+      </div>
+      <div style={{ color: "#777", marginTop: 5 }}>{done}/{total} steps · {percent}% · Updated {formatTime(build.technicianLastStatusAt || build.updatedAt || build.createdAt)}</div>
+      {build.technicianNotes && <div style={{ color: "#9a9a9a", marginTop: 5, fontStyle: "italic" }}>{build.technicianNotes}</div>}
     </div>
   );
 }
