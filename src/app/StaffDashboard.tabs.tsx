@@ -7,6 +7,19 @@ import { DataTable } from "./components/dashboard/DataTable";
 
 const formatDate = (value?: number) => value ? new Date(value).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "Pending";
 
+// Work-stage statuses a technician can set on an assigned repair. These sync to
+// the admin Repair Management dashboard via the shared dashboard store.
+const STAFF_REPAIR_STATUS_OPTIONS: [Repair["status"], string][] = [
+  ["assigned", "Technician Assigned"],
+  ["device-received", "Device Received"],
+  ["diagnosing", "Diagnosis Started"],
+  ["in-repair", "Repair Started"],
+  ["repair-progress", "Repair In Progress"],
+  ["qc", "Quality Testing"],
+  ["completed", "Repair Completed"],
+  ["ready", "Ready for Pickup"],
+];
+
 function staffOwns(staff: StaffMember, value?: string) {
   return !value || value === staff.id || value === staff.name || value === staff.email;
 }
@@ -51,15 +64,36 @@ export function StaffTasks({ staff, store, advanceTask }: { staff: StaffMember; 
   </QueueCard>;
 }
 
+function StaffRepairStatusControl({ repair, patchRepair }: { repair: Repair; patchRepair: (id: string, patch: Partial<Repair>) => void }) {
+  const done = (repair.timeline || []).filter(s => s.done).length;
+  const total = (repair.timeline || []).length || 1;
+  const percent = Math.round((done / total) * 100);
+  return (
+    <div style={{ display: "grid", gap: 6, minWidth: 200 }}>
+      <select
+        value={repair.status}
+        onChange={e => patchRepair(repair.id, { status: e.target.value as Repair["status"], technicianLastStatusAt: Date.now() })}
+        style={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 6, padding: "7px 8px", color: "white", fontSize: 11, fontFamily: "'Space Grotesk', sans-serif" }}
+      >
+        {STAFF_REPAIR_STATUS_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+      </select>
+      <div style={{ height: 5, borderRadius: 999, background: "rgba(255,255,255,.08)", overflow: "hidden" }}>
+        <div style={{ width: `${percent}%`, height: "100%", background: "linear-gradient(90deg,#00cc66,#00b4ff)" }} />
+      </div>
+      <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, color: "#777" }}>{done}/{total} steps synced to admin</div>
+    </div>
+  );
+}
+
 export function StaffRepairs({ staff, store, patchRepair }: { staff: StaffMember; store: DashboardStore; updateRepairStatus: any; patchRepair: (id: string, patch: Partial<Repair>) => void }) {
   const rows = store.repairs.filter(repair => staffOwns(staff, repair.technicianId));
-  return <QueueCard title="Assigned Repairs" subtitle={`${rows.length} repair job${rows.length === 1 ? "" : "s"}`}>
+  return <QueueCard title="Assigned Repairs" subtitle={`${rows.length} repair job${rows.length === 1 ? "" : "s"} · update status to sync with admin`}>
     {rows.length ? <DataTable rowKey={(r: Repair) => r.id} data={rows} columns={[
       { key: "device", label: "Device", render: r => <span>{r.device || `${r.brand || ""} ${r.model || ""}`}</span> },
       { key: "issue", label: "Issue" },
       { key: "status", label: "Status", render: r => <StatusBadge status={r.status} /> },
-      { key: "updated", label: "Updated", render: r => formatDate(r.updatedAt) },
-      { key: "action", label: "", render: r => <button className="glass-pill glass-pill-sm glass-pill-info" onClick={() => patchRepair(r.id, { status: "repair-progress" })}>Repair Progress</button> },
+      { key: "updated", label: "Updated", render: r => formatDate(r.technicianLastStatusAt || r.updatedAt) },
+      { key: "progress", label: "Update Work Status", render: r => <StaffRepairStatusControl repair={r} patchRepair={patchRepair} /> },
     ]} /> : <EmptyState title="No assigned repairs" />}
   </QueueCard>;
 }

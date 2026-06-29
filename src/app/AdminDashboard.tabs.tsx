@@ -1148,8 +1148,11 @@ export function AdminRepairs({ store, updateRepairStatus, patchRepair }: { store
           { key: "issue", label: "Issue", render: r => <span style={{ maxWidth: 220, display: "inline-block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.issue}</span> },
           { key: "service", label: "Service", render: r => <span>{r.serviceType || "-"}<br /><small style={{ color: "#777" }}>{r.preferredSlot || "Schedule pending"}</small></span> },
           { key: "media", label: "Media", render: r => <MediaCell files={r.uploadedFiles} /> },
-          { key: "technician", label: "Technician / Progress", render: r => (
+          { key: "technician", label: "Technician", render: r => (
             <RepairTechnicianCell repair={r} technicianOptions={technicianOptions} technicianName={technicianName} patchRepair={patchRepair} />
+          ) },
+          { key: "staffProgress", label: "Staff Work Progress", render: r => (
+            <RepairStaffProgressCell repair={r} technicianName={technicianName} />
           ) },
           { key: "quote", label: "Quote Details", render: r => <RepairQuoteEditor repair={r} patchRepair={patchRepair} /> },
           { key: "status", label: "Status", render: r => <StatusBadge status={r.status} /> },
@@ -1175,11 +1178,8 @@ export function AdminRepairs({ store, updateRepairStatus, patchRepair }: { store
 }
 
 function RepairTechnicianCell({ repair, technicianOptions, technicianName, patchRepair }: { repair: Repair; technicianOptions: StaffOption[]; technicianName: (id?: string) => string; patchRepair: (id: string, patch: Partial<Repair>) => void }) {
-  const done = repair.timeline.filter(step => step.done).length;
-  const total = repair.timeline.length || 1;
-  const percent = Math.round((done / total) * 100);
   return (
-    <div style={{ display: "grid", gap: 7, minWidth: 210 }} onClick={e => e.stopPropagation()}>
+    <div style={{ display: "grid", gap: 7, minWidth: 180 }} onClick={e => e.stopPropagation()}>
       <select value={repair.technicianId || ""} onChange={e => {
         const staffId = e.target.value;
         patchRepair(repair.id, {
@@ -1193,13 +1193,36 @@ function RepairTechnicianCell({ repair, technicianOptions, technicianName, patch
         {technicianOptions.map(s => <option key={s.id} value={s.id}>{s.name}{s.department ? ` · ${s.department}` : ""}</option>)}
       </select>
       <div className="glass" style={{ borderRadius: 8, padding: 8, fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, color: "#CFCFCF" }}>
-        <strong style={{ color: "white" }}>{technicianName(repair.technicianId)}</strong><br />
-        <span style={{ color: "#777" }}>Staff status: </span><StatusBadge status={repair.status} />
-        <div style={{ marginTop: 7, height: 5, borderRadius: 999, background: "rgba(255,255,255,.08)", overflow: "hidden" }}>
-          <div style={{ width: `${percent}%`, height: "100%", background: "linear-gradient(90deg,#00cc66,#00b4ff)" }} />
-        </div>
-        <div style={{ color: "#777", marginTop: 5 }}>{done}/{total} steps · Updated {formatTime(repair.technicianLastStatusAt || repair.updatedAt || repair.createdAt)}</div>
+        <strong style={{ color: "white" }}>{technicianName(repair.technicianId)}</strong>
+        <div style={{ color: "#777", marginTop: 3 }}>{repair.technicianId ? "Assigned" : "Awaiting assignment"}</div>
       </div>
+    </div>
+  );
+}
+
+// Dedicated column that mirrors the live work progress the technician updates
+// from their staff dashboard (status, % complete, current stage, last update).
+function RepairStaffProgressCell({ repair, technicianName }: { repair: Repair; technicianName: (id?: string) => string }) {
+  const steps = repair.timeline || [];
+  const done = steps.filter(step => step.done).length;
+  const total = steps.length || 1;
+  const percent = Math.round((done / total) * 100);
+  const currentStage = [...steps].reverse().find(step => step.done)?.label || "Not started";
+  if (!repair.technicianId) {
+    return <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, color: "#777" }}>No technician assigned</span>;
+  }
+  return (
+    <div className="glass" style={{ borderRadius: 8, padding: 9, minWidth: 200, fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, color: "#CFCFCF" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 6 }}>
+        <strong style={{ color: "white" }}>{technicianName(repair.technicianId)}</strong>
+        <StatusBadge status={repair.status} />
+      </div>
+      <div style={{ color: "#aaa" }}>Current stage: <span style={{ color: "white" }}>{currentStage}</span></div>
+      <div style={{ marginTop: 7, height: 6, borderRadius: 999, background: "rgba(255,255,255,.08)", overflow: "hidden" }}>
+        <div style={{ width: `${percent}%`, height: "100%", background: "linear-gradient(90deg,#00cc66,#00b4ff)" }} />
+      </div>
+      <div style={{ color: "#777", marginTop: 5 }}>{done}/{total} steps · {percent}% · Updated {formatTime(repair.technicianLastStatusAt || repair.updatedAt || repair.createdAt)}</div>
+      {repair.technicianNotes && <div style={{ color: "#9a9a9a", marginTop: 5, fontStyle: "italic" }}>{repair.technicianNotes}</div>}
     </div>
   );
 }
