@@ -426,6 +426,41 @@ function Area({ label, value, onChange, placeholder }: { label: string; value: a
   );
 }
 
+// Inputs for "pipe | separated" list fields. They keep the raw text the admin is
+// typing in local state so spaces and trailing "|" are preserved (the previous
+// approach re-split into an array every keystroke, which stripped them and made
+// the boxes feel impossible to type into). The parent still receives a clean
+// string array. External value changes (switching items) re-sync the text.
+function PipeListArea({ label, value, onChange, placeholder }: { label: string; value?: string[] | null; onChange: (list: string[]) => void; placeholder?: string }) {
+  const [text, setText] = useState<string>(() => csvList(value));
+  useEffect(() => {
+    const external = csvList(value);
+    if (external !== csvList(splitList(text))) setText(external);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+  return (
+    <label style={{ display: "grid", gap: 6, fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, color: "#888", letterSpacing: 1.2, textTransform: "uppercase" }}>
+      {label}
+      <textarea value={text} placeholder={placeholder} onChange={e => { setText(e.target.value); onChange(splitList(e.target.value)); }} rows={3} style={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,.12)", borderRadius: 8, padding: "9px 10px", color: "white", fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, resize: "vertical", letterSpacing: 0, textTransform: "none" }} />
+    </label>
+  );
+}
+
+function PipeListField({ label, value, onChange, placeholder }: { label: string; value?: string[] | null; onChange: (list: string[]) => void; placeholder?: string }) {
+  const [text, setText] = useState<string>(() => csvList(value));
+  useEffect(() => {
+    const external = csvList(value);
+    if (external !== csvList(splitList(text))) setText(external);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+  return (
+    <label style={{ display: "grid", gap: 6, fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, color: "#888", letterSpacing: 1.2, textTransform: "uppercase" }}>
+      {label}
+      <input type="text" value={text} placeholder={placeholder} onChange={e => { setText(e.target.value); onChange(splitList(e.target.value)); }} style={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,.12)", borderRadius: 8, padding: "9px 10px", color: "white", fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, letterSpacing: 0, textTransform: "none" }} />
+    </label>
+  );
+}
+
 function SelectField({ label, value, onChange, options }: { label: string; value: any; onChange: (value: string) => void; options: string[] }) {
   return (
     <label style={{ display: "grid", gap: 6, fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, color: "#888", letterSpacing: 1.2, textTransform: "uppercase" }}>
@@ -528,12 +563,12 @@ function AdminCatalogEditor({ draft, setDraft, onSave, onClose }: { draft: Parti
         </div>
       )}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 10 }}>
-        <Area label="Key Specs (pipe | separated)" value={csvList(draft.specs)} onChange={v => set({ specs: splitList(v) })} />
-        <Area label="Features (pipe | separated)" value={csvList(draft.features)} onChange={v => set({ features: splitList(v) })} />
-        <Area label="Box Contents (pipe | separated)" value={csvList(draft.boxContents)} onChange={v => set({ boxContents: splitList(v) })} />
-        <Area label="Compatibility (pipe | separated)" value={csvList(draft.compatibility)} onChange={v => set({ compatibility: splitList(v) })} />
-        <Area label="Upgrade Options (pipe | separated)" value={csvList(draft.upgradeOptions)} onChange={v => set({ upgradeOptions: splitList(v) })} />
-        <Area label="Recommended Accessories (pipe | separated)" value={csvList(draft.recommendedAccessories)} onChange={v => set({ recommendedAccessories: splitList(v) })} />
+        <PipeListArea label="Key Specs (pipe | separated)" value={draft.specs} onChange={list => set({ specs: list })} placeholder="Intel i9 | 64GB DDR5 | 4TB NVMe" />
+        <PipeListArea label="Features (pipe | separated)" value={draft.features} onChange={list => set({ features: list })} placeholder="RGB lighting | Liquid cooling | WiFi 6E" />
+        <PipeListArea label="Box Contents (pipe | separated)" value={draft.boxContents} onChange={list => set({ boxContents: list })} placeholder="PC | Power cable | Manual" />
+        <PipeListArea label="Compatibility (pipe | separated)" value={draft.compatibility} onChange={list => set({ compatibility: list })} placeholder="Windows 11 | Linux" />
+        <PipeListArea label="Upgrade Options (pipe | separated)" value={draft.upgradeOptions} onChange={list => set({ upgradeOptions: list })} placeholder="Add RAM | Add storage" />
+        <PipeListArea label="Recommended Accessories (pipe | separated)" value={draft.recommendedAccessories} onChange={list => set({ recommendedAccessories: list })} placeholder="Monitor | Keyboard | Mouse" />
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 10 }}>
         <Field label="Operating System / Compatibility" value={draft.operatingSystem} onChange={v => set({ operatingSystem: v })} />
@@ -563,7 +598,7 @@ function AdminCatalogEditor({ draft, setDraft, onSave, onClose }: { draft: Parti
         <Field label="SEO Slug" value={draft.seo?.slug} onChange={v => setSeo({ slug: v })} />
         <Field label="Meta Title" value={draft.seo?.metaTitle} onChange={v => setSeo({ metaTitle: v })} />
         <Field label="Meta Description" value={draft.seo?.metaDescription} onChange={v => setSeo({ metaDescription: v })} />
-        <Area label="Keywords / Tags (pipe | separated)" value={csvList([...(draft.seo?.keywords || []), ...(draft.seo?.tags || [])])} onChange={v => setSeo({ keywords: splitList(v), tags: splitList(v) })} />
+        <PipeListArea label="Keywords / Tags (pipe | separated)" value={[...(draft.seo?.keywords || []), ...(draft.seo?.tags || [])]} onChange={list => setSeo({ keywords: list, tags: list })} placeholder="gaming pc | rtx 5090 | custom build" />
       </div>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <button className="glass-pill glass-pill-outline" onClick={() => onSave("draft")}>Save Draft</button>
@@ -754,13 +789,13 @@ function AdminGamingHubEditor({ draft, setDraft, onSave, onClose }: {
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))", gap: 10 }}>
         <SelectField label="Content Type" value={draft.type} onChange={v => { const label = GAMING_TYPES.find(t => t.value === v)?.label || v; set({ type: v as GamingHubContentType, category: label }); }} options={GAMING_TYPES.map(t => t.value)} />
-        <Field label="Title" value={draft.title} onChange={v => set({ title: v, slug: draft.slug || gamingSlug(v), metaTitle: draft.metaTitle || v })} />
-        <Field label="Slug" value={draft.slug} onChange={v => set({ slug: gamingSlug(v) })} />
-        <Field label="Category" value={draft.category} onChange={v => set({ category: v })} />
-        <Field label="Author" value={draft.author} onChange={v => set({ author: v })} />
+        <Field label="Title (required)" value={draft.title} onChange={v => set({ title: v, slug: draft.slug || gamingSlug(v), metaTitle: draft.metaTitle || v })} placeholder="e.g. RTX 5090 Beast Build" />
+        <Field label="Slug (auto from title)" value={draft.slug} onChange={v => set({ slug: gamingSlug(v) })} placeholder="auto-generated, e.g. rtx-5090-beast-build" />
+        <Field label="Category" value={draft.category} onChange={v => set({ category: v })} placeholder="e.g. Signature Machines" />
+        <Field label="Author" value={draft.author} onChange={v => set({ author: v })} placeholder="e.g. DESKTO Editorial" />
         <Field label="Publish Date" type="date" value={new Date(draft.publishDate || Date.now()).toISOString().slice(0, 10)} onChange={v => set({ publishDate: new Date(v).getTime() || Date.now() })} />
       </div>
-      <Area label="Short Description" value={draft.shortDescription} onChange={v => set({ shortDescription: v, metaDescription: draft.metaDescription || v })} />
+      <Area label="Short Description (shown on the home card)" value={draft.shortDescription} onChange={v => set({ shortDescription: v, metaDescription: draft.metaDescription || v })} placeholder="One line shown under the title on the home page, e.g. A no-compromise 4K build tuned for silent performance." />
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 12 }}>
         <label style={{ display: "grid", gap: 8, color: "#888", fontSize: 11, letterSpacing: 1.2, textTransform: "uppercase" }}>
           Cover Image
@@ -795,22 +830,22 @@ function AdminGamingHubEditor({ draft, setDraft, onSave, onClose }: {
         </div>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 10 }}>
-        <Area label="Intro" value={draft.intro} onChange={v => set({ intro: v })} />
-        <Area label="Main Article Body" value={draft.body} onChange={v => set({ body: v })} />
-        <Area label="Specs" value={draft.specs} onChange={v => set({ specs: v })} />
-        <Area label="Benchmark Data" value={draft.benchmarkData} onChange={v => set({ benchmarkData: v })} />
-        <Area label="Tips (pipe | separated)" value={csvList(draft.tips)} onChange={v => set({ tips: splitList(v) })} />
-        <Area label="Pros (pipe | separated)" value={csvList(draft.pros)} onChange={v => set({ pros: splitList(v) })} />
-        <Area label="Cons (pipe | separated)" value={csvList(draft.cons)} onChange={v => set({ cons: splitList(v) })} />
-        <Area label="Tags (pipe | separated)" value={csvList(draft.tags)} onChange={v => set({ tags: splitList(v) })} />
+        <Area label="Intro (opening line on the details page)" value={draft.intro} onChange={v => set({ intro: v })} placeholder="Short intro paragraph for the details page." />
+        <Area label="Main Article Body (full details)" value={draft.body} onChange={v => set({ body: v })} placeholder="Full description shown on the details page. For testimonials/FAQ this is the review text / answer." />
+        <Area label="Specs (free text)" value={draft.specs} onChange={v => set({ specs: v })} placeholder="e.g. RTX 4090, Intel Core i9, 64GB DDR5, 4TB NVMe" />
+        <Area label="Benchmark Data (free text)" value={draft.benchmarkData} onChange={v => set({ benchmarkData: v })} placeholder="e.g. 4K Ultra 120+ FPS, Cinebench 38000" />
+        <PipeListArea label="Tips (pipe | separated)" value={draft.tips} onChange={list => set({ tips: list })} placeholder="Tip one | Tip two | Tip three" />
+        <PipeListArea label="Pros (pipe | separated)" value={draft.pros} onChange={list => set({ pros: list })} placeholder="Silent cooling | Clean cable management" />
+        <PipeListArea label="Cons (pipe | separated)" value={draft.cons} onChange={list => set({ cons: list })} placeholder="Premium price | Limited stock" />
+        <PipeListArea label="Tags (pipe | separated)" value={draft.tags} onChange={list => set({ tags: list })} placeholder="custom pc | signature build | 4k" />
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 10 }}>
-        <Field label="Offer Details" value={draft.offerDetails} onChange={v => set({ offerDetails: v })} />
-        <Field label="Discount" value={draft.discount} onChange={v => set({ discount: v })} />
-        <Field label="CTA Text" value={draft.ctaText} onChange={v => set({ ctaText: v })} />
-        <Field label="CTA Link" value={draft.ctaHref} onChange={v => set({ ctaHref: v })} />
-        <Field label="Related Services" value={csvList(draft.relatedServiceSlugs)} onChange={v => set({ relatedServiceSlugs: splitList(v) })} />
-        <Field label="Display Order" type="number" value={String(draft.order ?? 0)} onChange={v => set({ order: Number(v) || 0 })} />
+        <Field label="Offer Details" value={draft.offerDetails} onChange={v => set({ offerDetails: v })} placeholder="e.g. Save Rs. 35,000 on the RTX 4090 Beast Build" />
+        <Field label="Discount (badge on card)" value={draft.discount} onChange={v => set({ discount: v })} placeholder="e.g. 11% OFF" />
+        <Field label="CTA Text" value={draft.ctaText} onChange={v => set({ ctaText: v })} placeholder="e.g. Claim Offer" />
+        <Field label="CTA Link" value={draft.ctaHref} onChange={v => set({ ctaHref: v })} placeholder="e.g. /services/custom-pc" />
+        <PipeListField label="Related Services (pipe | separated)" value={draft.relatedServiceSlugs} onChange={list => set({ relatedServiceSlugs: list })} placeholder="custom-pc | repair" />
+        <Field label="Display Order" type="number" value={String(draft.order ?? 0)} onChange={v => set({ order: Number(v) || 0 })} placeholder="0 = first" />
       </div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 12, color: "#ccc", fontFamily: "'Space Grotesk', sans-serif", fontSize: 12 }}>
         {[
@@ -828,9 +863,9 @@ function AdminGamingHubEditor({ draft, setDraft, onSave, onClose }: {
         ))}
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 10 }}>
-        <Field label="Meta Title" value={draft.metaTitle} onChange={v => set({ metaTitle: v })} />
-        <Field label="Meta Description" value={draft.metaDescription} onChange={v => set({ metaDescription: v })} />
-        <Area label="Keywords (pipe | separated)" value={csvList(draft.keywords)} onChange={v => set({ keywords: splitList(v) })} />
+        <Field label="Meta Title" value={draft.metaTitle} onChange={v => set({ metaTitle: v })} placeholder="SEO title (defaults to Title)" />
+        <Field label="Meta Description" value={draft.metaDescription} onChange={v => set({ metaDescription: v })} placeholder="SEO description (defaults to Short Description)" />
+        <PipeListArea label="Keywords (pipe | separated)" value={draft.keywords} onChange={list => set({ keywords: list })} placeholder="rtx 5090 | gaming pc | 4k" />
       </div>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <button className="glass-pill glass-pill-outline" onClick={() => onSave("draft")}>Save Draft</button>
