@@ -1398,6 +1398,10 @@ const homepageDate = (ts?: number) => ts
   ? new Date(ts).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
   : "";
 
+const FEATURED_BUILD_WHATSAPP = "919893543312";
+const buildEnquiryHref = (name: string) =>
+  `https://wa.me/${FEATURED_BUILD_WHATSAPP}?text=${encodeURIComponent(`Hi DESKTO, I'm interested in the "${name}" build. Please share the details.`)}`;
+
 function FeaturedBuildsSection() {
   const published = usePublishedHomepageItems("featured-build");
   const builds = published.length
@@ -1407,16 +1411,16 @@ function FeaturedBuildsSection() {
         tag: it.shortDescription || it.category || "Signature Build",
         rgb: true,
         specs: it.specs || (it.tags || []).join(" · "),
-        price: it.discount || "Enquire",
+        detailsHref: it.slug ? `/services/gaming-hub/${it.slug}` : "/services/custom-pc",
       }))
-    : BUILDS;
+    : BUILDS.map(b => ({ name: b.name, img: b.img, tag: b.tag, rgb: b.rgb, specs: b.specs, detailsHref: "/services/custom-pc" }));
   return (
     <section id="builds" className="section-pad" style={{ padding:"96px 0",background:"#050505" }}>
       <div className="section-inner" style={{ maxWidth:1400,margin:"0 auto",padding:"0 32px" }}>
         <SectionHeader eyebrow="Featured Builds" title="Signature" accent="Machines" sub="Handcrafted builds that define the pinnacle of performance." />
         <div className="builds-grid" style={{ display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))",gap:22 }}>
           {builds.map((b,i)=>(
-            <Reveal key={b.name} delay={i*.1}>
+            <Reveal key={`${b.name}-${i}`} delay={i*.1}>
               <TiltCard>
                 <div className="card-hover glass-card" style={{ borderRadius:16,overflow:"hidden",border:"1px solid rgba(255,255,255,.07)" }}>
                   <div style={{ position:"relative",height:220 }}>
@@ -1433,11 +1437,10 @@ function FeaturedBuildsSection() {
                   </div>
                   <div style={{ padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap" }}>
                     <div style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:10,color:"#555" }}>{b.specs}</div>
-                    <div style={{ fontFamily:"'Rajdhani',sans-serif",fontSize:17,fontWeight:700,color:"#FF1F45" }}>{b.price}</div>
+                    <a href={buildEnquiryHref(b.name)} target="_blank" rel="noopener noreferrer" style={{ fontFamily:"'Rajdhani',sans-serif",fontSize:17,fontWeight:700,color:"#FF1F45",textDecoration:"none" }}>Enquire</a>
                   </div>
                   <div style={{ padding:"0 16px 16px",display:"flex",gap:8 }}>
-                    <button className="glass-pill glass-pill-primary glass-pill-sm" style={{ flex:1,justifyContent:"center" }}>Order Now</button>
-                    <button className="glass-pill glass-pill-outline glass-pill-sm">Details</button>
+                    <a href={b.detailsHref} className="glass-pill glass-pill-outline glass-pill-sm" style={{ flex:1,justifyContent:"center",textDecoration:"none" }}>Details</a>
                   </div>
                 </div>
               </TiltCard>

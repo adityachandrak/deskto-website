@@ -2226,7 +2226,7 @@ function GamingHubArticlePage({ item, related, track, patchGamingHubItem }: {
   track: (id: string, metric: "views" | "reads" | "shares" | "whatsappClicks" | "callClicks" | "offerClicks" | "ctaClicks") => void;
   patchGamingHubItem: (id: string, patch: Partial<GamingHubItem>) => void;
 }) {
-  const { user } = useCurrentUser();
+  const user = useCurrentUser();
   const [comment, setComment] = useState("");
 
   useEffect(() => {
@@ -2328,8 +2328,11 @@ function GamingHubArticlePage({ item, related, track, patchGamingHubItem }: {
 function GamingHubPage({ service, postSlug }: { service: Service; postSlug?: string | null }) {
   const { store, trackGamingHubMetric, patchGamingHubItem } = useDashboardData();
   const [selected, setSelected] = useState("All");
-  const published = (store.gamingHub || []).filter(item => item.status === "published" && item.showOnHub);
-  const target = postSlug ? published.find(item => item.slug === postSlug) : null;
+  const allPublished = (store.gamingHub || []).filter(item => item.status === "published");
+  const published = allPublished.filter(item => item.showOnHub);
+  // Resolve a direct article link against ALL published items (not only those
+  // flagged to show in the hub listing) so homepage "Details" links always open.
+  const target = postSlug ? allPublished.find(item => item.slug === postSlug) : null;
   const visible = published.filter(item => gamingCategoryMatches(item, selected));
   const news = published.filter(item => item.showInLatestNews || ["gaming-news", "latest-hardware", "gaming-tip"].includes(item.type)).slice(0, 3);
   const builds = published.filter(item => item.showInSignatureMachines || item.type === "featured-build").slice(0, 3);
