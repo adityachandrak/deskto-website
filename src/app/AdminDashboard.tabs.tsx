@@ -1145,23 +1145,80 @@ export const AdminFAQ = (props: Omit<Parameters<typeof TypeFilteredAdmin>[0], "t
 
 // ─── Categories ───────────────────────────────────────────────────────────
 
-const CATEGORIES = [
-  { name: "Gaming PC", icon: "🎮", count: 6, color: "#FF1F45" },
-  { name: "Desktop PC", icon: "🖥️", count: 4, color: "#00b4ff" },
-  { name: "Gaming Laptop", icon: "💻", count: 3, color: "#a855f7" },
-  { name: "Laptop", icon: "💼", count: 5, color: "#00cc66" },
-  { name: "Monitor", icon: "🖥️", count: 4, color: "#ffd700" },
-  { name: "Components", icon: "🔧", count: 9, color: "#ff6b00" },
+interface AdminCategory { id: string; name: string; icon: string; count: number; color: string; }
+const CATEGORIES_KEY = "deskto-admin-categories-v1";
+const DEFAULT_CATEGORIES: AdminCategory[] = [
+  { id: "cat_gaming_pc", name: "Gaming PC", icon: "🎮", count: 6, color: "#FF1F45" },
+  { id: "cat_desktop_pc", name: "Desktop PC", icon: "🖥️", count: 4, color: "#00b4ff" },
+  { id: "cat_gaming_laptop", name: "Gaming Laptop", icon: "💻", count: 3, color: "#a855f7" },
+  { id: "cat_laptop", name: "Laptop", icon: "💼", count: 5, color: "#00cc66" },
+  { id: "cat_monitor", name: "Monitor", icon: "🖥️", count: 4, color: "#ffd700" },
+  { id: "cat_components", name: "Components", icon: "🔧", count: 9, color: "#ff6b00" },
 ];
 
+function loadCategories(): AdminCategory[] {
+  if (typeof window === "undefined") return DEFAULT_CATEGORIES;
+  try {
+    const raw = window.localStorage.getItem(CATEGORIES_KEY);
+    if (!raw) return DEFAULT_CATEGORIES;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.length ? parsed : DEFAULT_CATEGORIES;
+  } catch { return DEFAULT_CATEGORIES; }
+}
+
 export function AdminCategories() {
+  const [categories, setCategories] = useState<AdminCategory[]>(() => loadCategories());
+  const [editing, setEditing] = useState<AdminCategory | null>(null);
+
+  const persist = (next: AdminCategory[]) => {
+    setCategories(next);
+    try { window.localStorage.setItem(CATEGORIES_KEY, JSON.stringify(next)); } catch {}
+  };
+
+  const startNew = () => setEditing({ id: "", name: "", icon: "🏷️", count: 0, color: "#FF1F45" });
+  const save = () => {
+    if (!editing) return;
+    const name = editing.name.trim();
+    if (!name) return toast.error("Category name is required.");
+    if (editing.id) {
+      persist(categories.map(c => c.id === editing.id ? { ...editing, name } : c));
+      toast.success(`Category "${name}" updated`);
+    } else {
+      const id = `cat_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
+      persist([...categories, { ...editing, id, name }]);
+      toast.success(`Category "${name}" added`);
+    }
+    setEditing(null);
+  };
+  const remove = (c: AdminCategory) => {
+    if (typeof window !== "undefined" && !window.confirm(`Delete category "${c.name}"?`)) return;
+    persist(categories.filter(x => x.id !== c.id));
+    if (editing?.id === c.id) setEditing(null);
+    toast.success(`Category "${c.name}" deleted`);
+  };
+
   return (
-    <SectionCard title="Categories" subtitle={`${CATEGORIES.length} active`}
-      action={<button className="glass-pill glass-pill-primary glass-pill-sm"><Plus size={12} /> New Category</button>}
+    <SectionCard title="Categories" subtitle={`${categories.length} active`}
+      action={<button className="glass-pill glass-pill-primary glass-pill-sm" onClick={startNew}><Plus size={12} /> New Category</button>}
     >
+      {editing && (
+        <div className="glass-card" style={{ padding: 16, marginBottom: 16, border: "1px solid rgba(255,31,69,.35)" }}>
+          <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 13, color: "white", marginBottom: 12 }}>{editing.id ? "Edit Category" : "New Category"}</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10 }}>
+            <Field label="Name" value={editing.name} onChange={v => setEditing({ ...editing, name: v })} placeholder="e.g. Keyboards" />
+            <Field label="Icon (emoji)" value={editing.icon} onChange={v => setEditing({ ...editing, icon: v })} placeholder="⌨️" />
+            <Field label="Product Count" type="number" value={String(editing.count)} onChange={v => setEditing({ ...editing, count: Number(v) || 0 })} placeholder="0" />
+            <Field label="Color (hex)" value={editing.color} onChange={v => setEditing({ ...editing, color: v })} placeholder="#FF1F45" />
+          </div>
+          <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+            <button className="glass-pill glass-pill-sm glass-pill-primary" onClick={save}>{editing.id ? "Save Changes" : "Add Category"}</button>
+            <button className="glass-pill glass-pill-sm glass-pill-outline" onClick={() => setEditing(null)}>Cancel</button>
+          </div>
+        </div>
+      )}
       <div className="dash-tab-grid">
-        {CATEGORIES.map(c => (
-          <div key={c.name} className="glass-card" style={{ padding: 16 }}>
+        {categories.map(c => (
+          <div key={c.id} className="glass-card" style={{ padding: 16 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
               <div style={{ width: 48, height: 48, borderRadius: 12, background: `${c.color}15`, border: `1px solid ${c.color}55`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>{c.icon}</div>
               <div>
@@ -1170,8 +1227,8 @@ export function AdminCategories() {
               </div>
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              <button className="glass-pill glass-pill-sm glass-pill-outline">Edit</button>
-              <button className="glass-pill glass-pill-sm glass-pill-red">Delete</button>
+              <button className="glass-pill glass-pill-sm glass-pill-outline" onClick={() => setEditing(c)}>Edit</button>
+              <button className="glass-pill glass-pill-sm glass-pill-red" onClick={() => remove(c)}>Delete</button>
             </div>
           </div>
         ))}
