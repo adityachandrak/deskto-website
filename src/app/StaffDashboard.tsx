@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import {
   Home, ClipboardCheck, Wrench, Cpu, Hammer, Headphones, Truck, Package,
-  Clock, TrendingUp, Bell, User, Zap, Database, Gamepad2,
+  Clock, TrendingUp, Bell, User, Zap, Database, Gamepad2, ShoppingBag,
 } from "lucide-react";
 import { DashboardLayout } from "./components/dashboard/DashboardLayout";
 import { useDashboardData, type StaffMember } from "./lib/dashboardData";
@@ -12,6 +12,7 @@ import {
   StaffRemoteSupport, StaffDeliveries, StaffInventoryRequests, StaffAttendance,
   StaffPerformance, StaffNotifications, StaffProfile, StaffUpgrades, StaffSoftwareServices,
   StaffRentalWorkflow, StaffSellRequests, StaffSupportWorkflow, StaffGamingHub,
+  StaffOrders,
 } from "./StaffDashboard.tabs";
 
 interface Props { user: AuthUser }
@@ -28,6 +29,7 @@ const TABS = [
   { key: "assembly", label: "Assembly", icon: Hammer, title: "Assembly Jobs" },
   { key: "support", label: "Remote Support", icon: Headphones, title: "Remote Support" },
   { key: "deliveries", label: "Deliveries", icon: Truck, title: "Delivery Tasks" },
+  { key: "orders", label: "Orders", icon: ShoppingBag, title: "My Orders" },
   { key: "gaming", label: "Gaming Hub", icon: Gamepad2, title: "Gaming Hub" },
   { key: "inventory", label: "Inventory Requests", icon: Package, title: "Inventory Requests" },
   { key: "attendance", label: "Attendance", icon: Clock, title: "Attendance" },
@@ -39,7 +41,7 @@ const TABS = [
 export default function StaffDashboard({ user }: Props) {
   const [tab, setTab] = useState<string>(() => window.location.hash.replace("#", "") || "overview");
   const data = useDashboardData();
-  const { store, updateRepairStatus, patchRepair, patchPCBuild, patchServiceRequest, advanceTask, clockIn, clockOut, submitInventoryRequest, addReplyToTicket, closeTicket, markNotificationRead, archiveNotification, patchGamingHubItem } = data;
+  const { store, updateRepairStatus, patchRepair, patchPCBuild, patchServiceRequest, advanceTask, clockIn, clockOut, submitInventoryRequest, approveInventoryRequest, rejectInventoryRequest, markInventoryReceived, approveGamingHubComment, rejectGamingHubComment, updateDeliveryStatus, assignDeliveryStaff, updateDelivery, addReplyToTicket, closeTicket, markNotificationRead, archiveNotification, patchGamingHubItem } = data;
 
   // Map current user to staff record by email match; staff signups can work before an admin creates a staff master record.
   const myStaff: StaffMember = store.staff.find(s => s.email === user.email) || {
@@ -63,7 +65,7 @@ export default function StaffDashboard({ user }: Props) {
     },
     {
       label: "Work",
-      items: TABS.filter(t => ["repairs", "upgrades", "software", "rentals", "sell", "builds", "assembly", "support", "deliveries", "gaming", "inventory"].includes(t.key)).map(t => ({ key: t.key, label: t.label, icon: t.icon })),
+      items: TABS.filter(t => ["repairs", "upgrades", "software", "rentals", "sell", "builds", "assembly", "support", "deliveries", "orders", "gaming", "inventory"].includes(t.key)).map(t => ({ key: t.key, label: t.label, icon: t.icon })),
     },
     {
       label: "Account",
@@ -85,9 +87,10 @@ export default function StaffDashboard({ user }: Props) {
       case "builds":         return <StaffPCBuilds staff={myStaff} store={store} patchPCBuild={patchPCBuild} />;
       case "assembly":       return <StaffAssembly staff={myStaff} store={store} patchServiceRequest={patchServiceRequest} />;
       case "support":        return <StaffSupportWorkflow staff={myStaff} store={store} patchServiceRequest={patchServiceRequest} />;
-      case "deliveries":     return <StaffDeliveries staff={myStaff} store={store} />;
-      case "gaming":         return <StaffGamingHub staff={myStaff} store={store} patchGamingHubItem={data.patchGamingHubItem} />;
-      case "inventory":      return <StaffInventoryRequests staff={myStaff} store={store} submitInventoryRequest={submitInventoryRequest} />;
+      case "deliveries":     return <StaffDeliveries staff={myStaff} store={store} updateDeliveryStatus={updateDeliveryStatus} assignDeliveryStaff={assignDeliveryStaff} updateDelivery={updateDelivery} />;
+      case "orders":         return <StaffOrders staff={myStaff} store={store} />;
+      case "gaming":         return <StaffGamingHub staff={myStaff} store={store} patchGamingHubItem={data.patchGamingHubItem} approveGamingHubComment={approveGamingHubComment} rejectGamingHubComment={rejectGamingHubComment} />;
+      case "inventory":      return <StaffInventoryRequests staff={myStaff} store={store} submitInventoryRequest={submitInventoryRequest} approveInventoryRequest={approveInventoryRequest} rejectInventoryRequest={rejectInventoryRequest} markInventoryReceived={markInventoryReceived} />;
       case "attendance":     return <StaffAttendance staff={myStaff} store={store} clockIn={clockIn} clockOut={clockOut} />;
       case "performance":    return <StaffPerformance staff={myStaff} />;
       case "notifications":  return <StaffNotifications user={user} store={store} markRead={markNotificationRead} archive={archiveNotification} />;
