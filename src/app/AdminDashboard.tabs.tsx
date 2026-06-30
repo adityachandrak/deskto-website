@@ -691,8 +691,11 @@ function emptyGamingDraft(): Partial<GamingHubItem> {
   };
 }
 
-function validateGamingHubItem(item: Partial<GamingHubItem>, publish: boolean) {
+function validateGamingHubItem(item: Partial<GamingHubItem>, publish: boolean, lenient = false) {
   if (!item.title?.trim()) return "Title is required.";
+  // Homepage content forms (Featured Builds, Offers, News, etc.) only need a
+  // title — slug/category are auto-generated and all other fields are optional.
+  if (lenient) return null;
   if (!item.slug?.trim()) return "Slug is required.";
   if (!item.category?.trim()) return "Category is required.";
   if (publish && !item.coverImage) return "Cover image is required before publishing.";
@@ -960,7 +963,7 @@ function TypeFilteredAdmin({
       coverImage: editing.coverImage || editing.gallery?.find(Boolean) || "",
       thumbnailImage: editing.thumbnailImage || editing.coverImage || editing.gallery?.find(Boolean) || "",
     } as GamingHubItem;
-    const error = validateGamingHubItem(prepared, status === "published");
+    const error = validateGamingHubItem(prepared, status === "published", true);
     if (error) return toast.error(error);
     if (prepared.id) patchGamingHubItem(prepared.id, prepared);
     else addGamingHubItem(prepared);
