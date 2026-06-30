@@ -1,4 +1,4 @@
-import { Component, type ReactNode, useState, useEffect, useRef, useCallback, useReducer } from "react";
+import { Component, type ReactNode, useState, useEffect, useRef, useCallback, useReducer, useMemo } from "react";
 import { motion, useInView, useScroll, useTransform } from "motion/react";
 import { useWishlist } from "@/app/lib/wishlist";
 import ProductDetailPage from "@/app/ProductDetailPage";
@@ -1381,13 +1381,41 @@ const BUILDS = [
   { name:"The Workstation",tag:"Creator & Dev Machine",specs:"RTX A4000 · Xeon · 128GB · 8TB",price:"₹4,50,000",img:"https://images.unsplash.com/photo-1547082299-de196ea013d6?w=600&h=400&fit=crop&auto=format",rgb:false },
 ];
 
+// Pull admin-managed homepage content from the dashboard store, showing ONLY
+// published items of the requested type (drafts/scheduled/archived are hidden),
+// ordered by display order then most-recent publish date.
+function usePublishedHomepageItems(type: string) {
+  const { store } = useDashboardData();
+  return useMemo(
+    () => (store.gamingHub || [])
+      .filter(item => item.type === type && item.status === "published")
+      .sort((a, b) => (a.order || 0) - (b.order || 0) || (b.publishDate || 0) - (a.publishDate || 0)),
+    [store.gamingHub, type],
+  );
+}
+
+const homepageDate = (ts?: number) => ts
+  ? new Date(ts).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
+  : "";
+
 function FeaturedBuildsSection() {
+  const published = usePublishedHomepageItems("featured-build");
+  const builds = published.length
+    ? published.map(it => ({
+        name: it.title,
+        img: it.coverImage || it.thumbnailImage || (it.gallery || [])[0] || "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=800&h=400&fit=crop&auto=format",
+        tag: it.shortDescription || it.category || "Signature Build",
+        rgb: true,
+        specs: it.specs || (it.tags || []).join(" · "),
+        price: it.discount || "Enquire",
+      }))
+    : BUILDS;
   return (
     <section id="builds" className="section-pad" style={{ padding:"96px 0",background:"#050505" }}>
       <div className="section-inner" style={{ maxWidth:1400,margin:"0 auto",padding:"0 32px" }}>
         <SectionHeader eyebrow="Featured Builds" title="Signature" accent="Machines" sub="Handcrafted builds that define the pinnacle of performance." />
         <div className="builds-grid" style={{ display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))",gap:22 }}>
-          {BUILDS.map((b,i)=>(
+          {builds.map((b,i)=>(
             <Reveal key={b.name} delay={i*.1}>
               <TiltCard>
                 <div className="card-hover glass-card" style={{ borderRadius:16,overflow:"hidden",border:"1px solid rgba(255,255,255,.07)" }}>
@@ -1446,7 +1474,34 @@ function BrandsSection() {
 }
 
 // ─────────────── OFFERS ───────────────
+const STATIC_OFFER_HERO = {
+  title: "RTX 4090 BEAST BUILD",
+  desc: "Save ₹35,000 on our flagship gaming PC",
+  discount: "11% OFF",
+  img: "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=800&h=400&fit=crop&auto=format",
+  cta: "Grab Deal",
+};
+const STATIC_OFFER_CARDS = [
+  { title:"PC Repair",off:"20% OFF",desc:"All repair services" },
+  { title:"Rentals",off:"Free 1st Day",desc:"Gaming rig rentals" },
+  { title:"Used PCs",off:"Up to 40%",desc:"Refurbished machines" },
+];
+const OFFER_CARD_COLORS = ["#7a00ff","#00b4ff","#00cc66","#ffcc00","#ff6b00"];
+
 function OffersSection() {
+  const published = usePublishedHomepageItems("offer");
+  const hero = published.length
+    ? {
+        title: published[0].title,
+        desc: published[0].offerDetails || published[0].shortDescription || published[0].intro || "",
+        discount: published[0].discount || "Limited Offer",
+        img: published[0].coverImage || published[0].thumbnailImage || (published[0].gallery || [])[0] || STATIC_OFFER_HERO.img,
+        cta: published[0].ctaText || "Grab Deal",
+      }
+    : STATIC_OFFER_HERO;
+  const cards = published.length > 1
+    ? published.slice(1, 6).map(it => ({ title: it.title, off: it.discount || "Offer", desc: it.shortDescription || it.category || "" }))
+    : STATIC_OFFER_CARDS;
   return (
     <section id="deals" className="section-pad" style={{ padding:"96px 0",background:"#050505" }}>
       <div className="section-inner" style={{ maxWidth:1400,margin:"0 auto",padding:"0 32px" }}>
@@ -1454,19 +1509,17 @@ function OffersSection() {
         <div className="offers-grid" style={{ display:"grid",gridTemplateColumns:"2fr 1fr",gap:18 }}>
           <Reveal dir="left">
             <div className="offers-hero glass-card" style={{ borderRadius:18,overflow:"hidden",position:"relative",height:280,background:"linear-gradient(135deg,#0a0005,#2A0008)",border:"1px solid rgba(255,31,69,.15)" }}>
-              <img src="https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=800&h=400&fit=crop&auto=format" alt="deal" style={{ position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:.22 }} />
+              <img src={hero.img} alt="deal" style={{ position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:.22 }} />
               <div style={{ position:"absolute",inset:0,background:"linear-gradient(90deg,rgba(5,5,5,.92) 0%,rgba(5,5,5,.2) 100%)" }} />
               <div style={{ position:"absolute",inset:0,padding:28,display:"flex",flexDirection:"column",justifyContent:"center" }}>
                 <span style={{ fontFamily:"'Orbitron',sans-serif",fontSize:9,color:"#FF1F45",letterSpacing:"3px",marginBottom:10,fontWeight:700 }}>LIMITED TIME OFFER</span>
-                <h3 className="offer-h3" style={{ fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(16px,3vw,26px)",fontWeight:900,color:"white",marginBottom:8,lineHeight:1.1 }}>RTX 4090 BEAST BUILD</h3>
-                <p style={{ fontFamily:"'Space Grotesk',sans-serif",color:"#CFCFCF",fontSize:13,marginBottom:18 }}>Save ₹35,000 on our flagship gaming PC</p>
+                <h3 className="offer-h3" style={{ fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(16px,3vw,26px)",fontWeight:900,color:"white",marginBottom:8,lineHeight:1.1 }}>{hero.title}</h3>
+                <p style={{ fontFamily:"'Space Grotesk',sans-serif",color:"#CFCFCF",fontSize:13,marginBottom:18 }}>{hero.desc}</p>
                 <div style={{ display:"flex",alignItems:"center",gap:12,marginBottom:20,flexWrap:"wrap" }}>
-                  <span style={{ fontFamily:"'Rajdhani',sans-serif",fontSize:"clamp(22px,4vw,30px)",fontWeight:700,color:"#FF1F45" }}>₹2,85,000</span>
-                  <span style={{ fontFamily:"'Rajdhani',sans-serif",fontSize:15,color:"#555",textDecoration:"line-through" }}>₹3,20,000</span>
-                  <span className="glass-red" style={{ padding:"3px 8px",borderRadius:3,fontFamily:"'Orbitron',sans-serif",fontSize:9,fontWeight:700,color:"#FF1F45" }}>11% OFF</span>
+                  <span className="glass-red" style={{ padding:"3px 8px",borderRadius:3,fontFamily:"'Orbitron',sans-serif",fontSize:9,fontWeight:700,color:"#FF1F45" }}>{hero.discount}</span>
                 </div>
                 <button className="glass-pill glass-pill-primary" style={{ alignSelf:"flex-start" }}>
-                  Grab Deal <ArrowRight size={12} />
+                  {hero.cta} <ArrowRight size={12} />
                 </button>
               </div>
               <div style={{ position:"absolute",top:16,right:16 }}>
@@ -1478,17 +1531,20 @@ function OffersSection() {
             </div>
           </Reveal>
           <div style={{ display:"flex",flexDirection:"column",gap:14 }}>
-            {[{title:"PC Repair",off:"20% OFF",desc:"All repair services",color:"#7a00ff"},{title:"Rentals",off:"Free 1st Day",desc:"Gaming rig rentals",color:"#00b4ff"},{title:"Used PCs",off:"Up to 40%",desc:"Refurbished machines",color:"#00cc66"}].map((o,i)=>(
-              <Reveal key={o.title} delay={i*.08} dir="right">
-                <div className="card-hover glass-card" style={{ borderRadius:12,padding:"17px 18px",border:`1px solid ${o.color}22`,display:"flex",alignItems:"center",justifyContent:"space-between",background:`${o.color}08` }}>
+            {cards.map((o,i)=>{
+              const color = OFFER_CARD_COLORS[i % OFFER_CARD_COLORS.length];
+              return (
+              <Reveal key={`${o.title}-${i}`} delay={i*.08} dir="right">
+                <div className="card-hover glass-card" style={{ borderRadius:12,padding:"17px 18px",border:`1px solid ${color}22`,display:"flex",alignItems:"center",justifyContent:"space-between",background:`${color}08` }}>
                   <div>
                     <div style={{ fontFamily:"'Orbitron',sans-serif",fontSize:11,color:"white",fontWeight:700,marginBottom:2 }}>{o.title}</div>
                     <div style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:11,color:"#CFCFCF" }}>{o.desc}</div>
                   </div>
-                  <div style={{ fontFamily:"'Rajdhani',sans-serif",fontSize:17,fontWeight:700,color:o.color }}>{o.off}</div>
+                  <div style={{ fontFamily:"'Rajdhani',sans-serif",fontSize:17,fontWeight:700,color:color }}>{o.off}</div>
                 </div>
               </Reveal>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
@@ -1504,12 +1560,21 @@ const NEWS = [
 ];
 
 function GamingNewsSection() {
+  const published = usePublishedHomepageItems("gaming-news");
+  const news = published.length
+    ? published.map(it => ({
+        tag: it.category || "News",
+        title: it.title,
+        date: homepageDate(it.publishDate),
+        img: it.coverImage || it.thumbnailImage || (it.gallery || [])[0] || "https://images.unsplash.com/photo-1591489378430-ef2f4c626b35?w=400&h=240&fit=crop&auto=format",
+      }))
+    : NEWS;
   return (
     <section id="news" className="section-pad" style={{ padding:"96px 0",background:"#0D0D0D" }}>
       <div className="section-inner" style={{ maxWidth:1400,margin:"0 auto",padding:"0 32px" }}>
         <SectionHeader eyebrow="Gaming News" title="Stay" accent="Updated" />
         <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))",gap:20 }}>
-          {NEWS.map((n,i)=>(
+          {news.map((n,i)=>(
             <Reveal key={n.title} delay={i*.1}>
               <div className="card-hover glass-card" style={{ borderRadius:14,overflow:"hidden",border:"1px solid rgba(255,255,255,.06)" }}>
                 <div style={{ position:"relative",height:170,overflow:"hidden" }}>
@@ -1546,12 +1611,22 @@ const REVIEWS = [
 ];
 
 function TestimonialsSection() {
+  const published = usePublishedHomepageItems("testimonial");
+  const reviews = published.length
+    ? published.map(it => ({
+        name: it.title,
+        role: it.category || "Verified Customer",
+        text: it.body || it.shortDescription || it.intro || "",
+        stars: 5,
+        avatar: it.coverImage || it.thumbnailImage || (it.gallery || [])[0] || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=60&h=60&fit=crop&auto=format",
+      }))
+    : REVIEWS;
   return (
     <section className="section-pad" style={{ padding:"96px 0",background:"#050505" }}>
       <div className="section-inner" style={{ maxWidth:1400,margin:"0 auto",padding:"0 32px" }}>
         <SectionHeader eyebrow="Testimonials" title="What Our" accent="Customers Say" />
         <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(250px,1fr))",gap:18 }}>
-          {REVIEWS.map((r,i)=>(
+          {reviews.map((r,i)=>(
             <Reveal key={r.name} delay={i*.08}>
               <div className="card-hover glass-card" style={{ borderRadius:16,padding:22,border:"1px solid rgba(255,255,255,.06)",position:"relative" }}>
                 <div style={{ display:"flex",gap:3,marginBottom:12 }}>
@@ -1587,12 +1662,16 @@ const FAQS = [
 
 function FAQSection() {
   const [open,setOpen] = useState<number|null>(null);
+  const published = usePublishedHomepageItems("faq");
+  const faqs = published.length
+    ? published.map(it => ({ q: it.title, a: it.body || it.shortDescription || it.intro || "" }))
+    : FAQS;
   return (
     <section id="support" className="section-pad" style={{ padding:"96px 0",background:"#0D0D0D" }}>
       <div className="section-inner" style={{ maxWidth:860,margin:"0 auto",padding:"0 32px" }}>
         <SectionHeader eyebrow="FAQ" title="Common" accent="Questions" />
         <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
-          {FAQS.map((f,i)=>(
+          {faqs.map((f,i)=>(
             <Reveal key={i} delay={i*.04}>
               <div className="glass-card" style={{ borderRadius:12,border:open===i?"1px solid rgba(255,31,69,.35)":"1px solid rgba(255,255,255,.06)",transition:"border-color .3s",overflow:"hidden" }}>
                 <button onClick={()=>setOpen(open===i?null:i)} className="faq-btn"
