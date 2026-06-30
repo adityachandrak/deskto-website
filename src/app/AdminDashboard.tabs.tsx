@@ -26,6 +26,7 @@ import type {
   GamingHubItem, GamingHubContentType, GamingHubStatus,
   CustomBuilderConfig, ComponentCategory, MarketTag, BuildPurpose,
   PerformanceTier, BuilderComponent, BuilderContentConfig,
+  Delivery,
 } from "./lib/dashboardData";
 
 const inr = (n: number) => `₹${(n || 0).toLocaleString("en-IN")}`;
@@ -682,9 +683,11 @@ function emptyGamingDraft(): Partial<GamingHubItem> {
     showInLatestNews: false,
     showInExclusiveOffers: false,
     showInSignatureMachines: false,
+    bannerImage: "",
     metaTitle: "",
     metaDescription: "",
     keywords: [],
+    order: 0,
   };
 }
 
@@ -716,12 +719,12 @@ function AdminGamingHubEditor({ draft, setDraft, onSave, onClose }: {
   onClose: () => void;
 }) {
   const set = (patch: Partial<GamingHubItem>) => setDraft(prev => ({ ...prev, ...patch }));
-  const uploadSingle = async (file: File | undefined, key: "coverImage" | "thumbnailImage") => {
+  const uploadSingle = async (file: File | undefined, key: "coverImage" | "thumbnailImage" | "bannerImage") => {
     if (!file) return;
     try {
       const img = await readGamingImage(file);
       setDraft(prev => ({ ...prev, [key]: img, ...(key === "coverImage" && !prev.thumbnailImage ? { thumbnailImage: img } : {}) }));
-      toast.success(`${key === "coverImage" ? "Cover" : "Thumbnail"} image added`);
+      toast.success(`${key === "coverImage" ? "Cover" : key === "thumbnailImage" ? "Thumbnail" : "Banner"} image added`);
     } catch (error: any) {
       toast.error(error?.message || "Image upload failed");
     }
@@ -766,6 +769,16 @@ function AdminGamingHubEditor({ draft, setDraft, onSave, onClose }: {
           <input type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" onChange={e => uploadSingle(e.target.files?.[0], "thumbnailImage")} style={{ color: "white" }} />
           {draft.thumbnailImage && <img src={draft.thumbnailImage} alt="thumbnail" style={{ width: "100%", aspectRatio: "16/9", objectFit: "cover", borderRadius: 8, border: "1px solid rgba(255,255,255,.12)" }} />}
         </label>
+        <label style={{ display: "grid", gap: 8, color: "#888", fontSize: 11, letterSpacing: 1.2, textTransform: "uppercase" }}>
+          Banner Image (Homepage)
+          <input type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" onChange={e => uploadSingle(e.target.files?.[0], "bannerImage")} style={{ color: "white" }} />
+          <input className="glass-input" placeholder="Or paste image URL" value={draft.bannerImage || ""} onChange={e => set({ bannerImage: e.target.value })} style={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 6, padding: "6px 10px", color: "white", fontSize: 11 }} />
+          {draft.bannerImage && <img src={draft.bannerImage} alt="banner" style={{ width: "100%", aspectRatio: "16/9", objectFit: "cover", borderRadius: 8, border: "1px solid rgba(255,31,69,0.3)" }} />}
+        </label>
+        <label style={{ display: "grid", gap: 8, color: "#888", fontSize: 11, letterSpacing: 1.2, textTransform: "uppercase" }}>
+          Cover Image URL
+          <input className="glass-input" placeholder="Paste cover image URL" value={draft.coverImage || ""} onChange={e => set({ coverImage: e.target.value })} style={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 6, padding: "6px 10px", color: "white", fontSize: 11 }} />
+        </label>
       </div>
       <div>
         <div style={{ color: "#888", fontSize: 11, letterSpacing: 1.2, textTransform: "uppercase", marginBottom: 8 }}>Gallery Images (5 max)</div>
@@ -794,6 +807,7 @@ function AdminGamingHubEditor({ draft, setDraft, onSave, onClose }: {
         <Field label="CTA Text" value={draft.ctaText} onChange={v => set({ ctaText: v })} />
         <Field label="CTA Link" value={draft.ctaHref} onChange={v => set({ ctaHref: v })} />
         <Field label="Related Services" value={csvList(draft.relatedServiceSlugs)} onChange={v => set({ relatedServiceSlugs: splitList(v) })} />
+        <Field label="Display Order" type="number" value={String(draft.order ?? 0)} onChange={v => set({ order: Number(v) || 0 })} />
       </div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 12, color: "#ccc", fontFamily: "'Space Grotesk', sans-serif", fontSize: 12 }}>
         {[
@@ -916,6 +930,84 @@ export function AdminGamingHub({ store, addGamingHubItem, patchGamingHubItem, de
     </div>
   );
 }
+
+// ─── Homepage Content Management (Filtered Views) ─────────────────────────────
+
+function TypeFilteredAdmin({
+  typeFilter, title, helpText, store, addGamingHubItem, patchGamingHubItem, deleteGamingHubItem
+}: {
+  typeFilter: GamingHubContentType;
+  title: string;
+  helpText: string;
+  store: DashboardStore;
+  addGamingHubItem: (item: Omit<GamingHubItem, "id" | "createdAt" | "updatedAt" | "views" | "reads" | "shares" | "whatsappClicks" | "callClicks" | "offerClicks" | "ctaClicks" | "comments"> & Partial<Pick<GamingHubItem, "id" | "createdAt" | "updatedAt" | "views" | "reads" | "shares" | "whatsappClicks" | "callClicks" | "offerClicks" | "ctaClicks" | "comments">>) => GamingHubItem;
+  patchGamingHubItem: (id: string, patch: Partial<GamingHubItem>) => void;
+  deleteGamingHubItem: (id: string) => void;
+}) {
+  const [editing, setEditing] = useState<Partial<GamingHubItem> | null>(null);
+  const items = (store.gamingHub || []).filter(item => item.type === typeFilter).sort((a, b) => (a.order || 0) - (b.order || 0));
+  const save = (status: GamingHubStatus) => {
+    if (!editing) return;
+    const prepared = {
+      ...emptyGamingDraft(),
+      ...editing,
+      type: typeFilter,
+      status,
+      slug: editing.slug || gamingSlug(editing.title || ""),
+      category: editing.category || GAMING_TYPES.find(t => t.value === typeFilter)?.label || title,
+      publishDate: Number(editing.publishDate || Date.now()),
+      gallery: (editing.gallery || []).filter(Boolean).slice(0, 5),
+      coverImage: editing.coverImage || editing.gallery?.find(Boolean) || "",
+      thumbnailImage: editing.thumbnailImage || editing.coverImage || editing.gallery?.find(Boolean) || "",
+    } as GamingHubItem;
+    const error = validateGamingHubItem(prepared, status === "published");
+    if (error) return toast.error(error);
+    if (prepared.id) patchGamingHubItem(prepared.id, prepared);
+    else addGamingHubItem(prepared);
+    toast.success(`${title} ${status === "published" ? "published" : "saved"}`);
+    setEditing(null);
+  };
+  return (
+    <div style={{ display: "grid", gap: 16 }}>
+      <SectionCard
+        title={title}
+        subtitle={`${items.length} items`}
+        action={<button className="glass-pill glass-pill-primary glass-pill-sm" onClick={() => setEditing({ ...emptyGamingDraft(), type: typeFilter })}><Plus size={12} /> Add New</button>}
+      >
+        {items.length === 0 ? <EmptyState title={`No ${title.toLowerCase()} yet`} subtitle={helpText} /> : (
+          <div style={{ display: "grid", gap: 12 }}>
+            {items.map(item => (
+              <div key={item.id} className="glass-card" style={{ padding: 16, display: "grid", gridTemplateColumns: "140px 1fr auto auto", gap: 16, alignItems: "center", border: item.status === "published" ? "1px solid #00cc66" : "1px solid rgba(255,255,255,0.1)" }}>
+                {item.coverImage || item.bannerImage ? <img src={item.bannerImage || item.coverImage} alt={item.title} style={{ width: 140, height: 90, objectFit: "cover", borderRadius: 8 }} /> : <div style={{ width: 140, height: 90, borderRadius: 8, background: "rgba(255,255,255,0.05)", display: "grid", placeItems: "center", color: "#666" }}>No image</div>}
+                <div>
+                  <div style={{ color: "white", fontWeight: 600, marginBottom: 4 }}>{item.title}</div>
+                  {typeFilter === "featured-build" && <div style={{ color: "#888", fontSize: 12, marginBottom: 4 }}>{item.specs}</div>}
+                  {typeFilter === "offer" && <div style={{ color: "#FF1F45", fontSize: 13, fontWeight: 600 }}>{item.discount}</div>}
+                  <div style={{ color: "#666", fontSize: 11 }}>{formatDate(item.publishDate || item.createdAt)}</div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <StatusBadge status={item.status} />
+                  <div style={{ color: "#888", fontSize: 11, marginTop: 4 }}>Order: {item.order || 0}</div>
+                </div>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button className="glass-pill glass-pill-sm glass-pill-outline" onClick={() => setEditing(item)}>Edit</button>
+                  <button className="glass-pill glass-pill-sm glass-pill-red" onClick={() => { if (confirm("Delete this item?")) { deleteGamingHubItem(item.id); toast.success("Deleted"); } }}>Delete</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </SectionCard>
+      {editing && <AdminGamingHubEditor draft={editing} setDraft={setEditing} onSave={save} onClose={() => setEditing(null)} />}
+    </div>
+  );
+}
+
+export const AdminFeaturedBuilds = (props: Omit<Parameters<typeof TypeFilteredAdmin>[0], "typeFilter">) => <TypeFilteredAdmin {...props} typeFilter="featured-build" title="Featured Builds" helpText="Create featured PC builds that appear on the homepage Signature Machines section. Add cover image, specs, and pricing." />;
+export const AdminExclusiveOffers = (props: Omit<Parameters<typeof TypeFilteredAdmin>[0], "typeFilter">) => <TypeFilteredAdmin {...props} typeFilter="offer" title="Exclusive Offers" helpText="Create exclusive offers and promotions that appear on the homepage. Add banner image, discount details, and CTA button." />;
+export const AdminGamingNews = (props: Omit<Parameters<typeof TypeFilteredAdmin>[0], "typeFilter">) => <TypeFilteredAdmin {...props} typeFilter="gaming-news" title="Gaming News" helpText="Publish gaming news articles that appear in the Latest News section." />;
+export const AdminTestimonials = (props: Omit<Parameters<typeof TypeFilteredAdmin>[0], "typeFilter">) => <TypeFilteredAdmin {...props} typeFilter="testimonial" title="Testimonials" helpText="Add customer testimonials that appear on the homepage. Include customer name, review text, and photo." />;
+export const AdminFAQ = (props: Omit<Parameters<typeof TypeFilteredAdmin>[0], "typeFilter">) => <TypeFilteredAdmin {...props} typeFilter="faq" title="FAQ" helpText="Create FAQ items for the homepage. Add question and answer pairs to help customers." />;
 
 // ─── Categories ───────────────────────────────────────────────────────────
 
@@ -1111,6 +1203,354 @@ export function AdminOrders({ store, updateOrderStatus }: { store: DashboardStor
                     {step.done && <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, color: "#666" }}>{formatDate(step.at)}</div>}
                   </div>
                 ))}
+              </div>
+            </SectionCard>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Deliveries ─────────────────────────────────────────────────────────────
+
+export function AdminDeliveries({
+  store, updateDeliveryStatus, assignDeliveryStaff, updateDelivery,
+}: {
+  store: DashboardStore;
+  updateDeliveryStatus: (id: string, status: Delivery["status"], actor?: string) => void;
+  assignDeliveryStaff: (deliveryId: string, staffId: string, staffName: string, staffPhone: string, actor?: string) => void;
+  updateDelivery: (id: string, patch: Partial<Delivery>, actor?: string) => void;
+}) {
+  const DELIVERY_STATUS_OPTIONS: Delivery["status"][] = ["pending", "ready", "dispatched", "delivered", "cancelled"];
+  const STATUS_COLORS: Record<Delivery["status"], string> = {
+    pending: "#ffd700", ready: "#ff6b00", dispatched: "#00b4ff", delivered: "#00cc66", cancelled: "#888",
+  };
+  const DELIVERY_STEPS: Delivery["status"][] = ["pending", "ready", "dispatched", "delivered"];
+
+  const [filter, setFilter] = useState<Delivery["status"] | "all">("all");
+  const [open, setOpen] = useState<Delivery | null>(null);
+  const [assignModal, setAssignModal] = useState<Delivery | null>(null);
+  const [selectedStaffId, setSelectedStaffId] = useState("");
+
+  const deliveries = [...store.deliveries].sort((a, b) => b.createdAt - a.createdAt);
+  const filtered = filter === "all" ? deliveries : deliveries.filter(d => d.status === filter);
+  const active = open ? store.deliveries.find(d => d.id === open.id) || open : null;
+
+  const deliveryStaff = store.staff.filter(s =>
+    s.role === "delivery" || s.role === "admin" || s.role === "manager"
+  );
+
+  const getOrder = (d: Delivery) => store.orders.find(o => o.id === d.orderId);
+
+  const getStepIndex = (status: Delivery["status"]) => DELIVERY_STEPS.indexOf(status);
+
+  const advanceDelivery = (d: Delivery) => {
+    const map: Partial<Record<Delivery["status"], Delivery["status"]>> = {
+      pending: "ready", ready: "dispatched", dispatched: "delivered",
+    };
+    const next = map[d.status];
+    if (next) {
+      updateDeliveryStatus(d.id, next, "admin");
+      toast.success(`Delivery ${d.id.slice(-8).toUpperCase()} → ${next}`);
+    }
+  };
+
+  const handleAssign = () => {
+    if (!assignModal || !selectedStaffId) return;
+    const staff = store.staff.find(s => s.id === selectedStaffId);
+    if (!staff) return;
+    assignDeliveryStaff(assignModal.id, staff.id, staff.name, staff.phone || staff.contact || "", "admin");
+    toast.success(`Delivery assigned to ${staff.name}`);
+    setAssignModal(null);
+    setSelectedStaffId("");
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {/* KPI Row */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(140px,1fr))", gap: 12 }}>
+        <KPICard label="Total" value={deliveries.length} icon={<Truck size={14} />} color="#00b4ff" />
+        <KPICard label="Pending" value={deliveries.filter(d => d.status === "pending").length} icon={<Clock size={14} />} color="#ffd700" />
+        <KPICard label="Ready" value={deliveries.filter(d => d.status === "ready").length} icon={<Package size={14} />} color="#ff6b00" />
+        <KPICard label="Dispatched" value={deliveries.filter(d => d.status === "dispatched").length} icon={<Truck size={14} />} color="#00b4ff" />
+        <KPICard label="Delivered" value={deliveries.filter(d => d.status === "delivered").length} icon={<CheckCircle size={14} />} color="#00cc66" />
+        <KPICard label="Cancelled" value={deliveries.filter(d => d.status === "cancelled").length} icon={<AlertCircle size={14} />} color="#888" />
+      </div>
+
+      {/* Filters */}
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+        {(["all", ...DELIVERY_STATUS_OPTIONS] as const).map(status => (
+          <button key={status} className={`glass-pill ${filter === status ? "glass-pill-primary" : "glass-pill-outline"} glass-pill-sm`} onClick={() => setFilter(status)}>
+            {status === "all" ? "All" : status.charAt(0).toUpperCase() + status.slice(1)}
+            {status !== "all" && ` (${deliveries.filter(d => d.status === status).length})`}
+          </button>
+        ))}
+      </div>
+
+      <SectionCard title="Delivery Management" subtitle={`${filtered.length} deliveries shown`}>
+        <DataTable
+          rowKey={d => d.id}
+          data={filtered}
+          onRowClick={d => setOpen(d)}
+          columns={[
+            {
+              key: "id", label: "Delivery ID", render: d => (
+                <div>
+                  <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 10, color: "#00b4ff" }}>{d.id.slice(-8).toUpperCase()}</span>
+                  <div style={{ fontSize: 10, color: "#555" }}>Order: {d.orderId.slice(-8).toUpperCase()}</div>
+                </div>
+              ),
+            },
+            {
+              key: "customer", label: "Customer", render: d => (
+                <div>
+                  <strong style={{ color: "white" }}>{d.customerName}</strong>
+                  <div style={{ color: "#777", fontSize: 11 }}>{d.customerPhone}</div>
+                </div>
+              ),
+            },
+            {
+              key: "address", label: "Delivery Address", render: d => (
+                <div>
+                  <span style={{ color: "#ccc", fontSize: 12 }}>{d.address}</span>
+                  <div style={{ color: "#555", fontSize: 11 }}>{d.city}, {d.state} {d.pincode}</div>
+                </div>
+              ),
+            },
+            {
+              key: "staff", label: "Assigned Staff", render: d => (
+                <div>
+                  {d.staffName ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <div style={{ width: 24, height: 24, borderRadius: "50%", background: "#FF1F45", display: "grid", placeItems: "center", fontSize: 10, color: "white", fontWeight: 700 }}>{d.staffName.charAt(0)}</div>
+                      <div>
+                        <div style={{ color: "white", fontSize: 12, fontWeight: 600 }}>{d.staffName}</div>
+                        {d.staffPhone && <div style={{ color: "#777", fontSize: 11 }}>{d.staffPhone}</div>}
+                      </div>
+                    </div>
+                  ) : (
+                    <span style={{ color: "#666", fontSize: 12 }}>Unassigned</span>
+                  )}
+                </div>
+              ),
+            },
+            {
+              key: "orderTotal", label: "Order Value", render: d => {
+                const order = getOrder(d);
+                return order ? inr(order.total) : "—";
+              },
+            },
+            {
+              key: "status", label: "Status", render: d => (
+                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 999, background: `${STATUS_COLORS[d.status]}22`, border: `1px solid ${STATUS_COLORS[d.status]}55`, fontSize: 11, color: STATUS_COLORS[d.status], fontWeight: 600, textTransform: "capitalize" }}>
+                    {d.status}
+                  </div>
+                  {d.dispatchedAt && <div style={{ fontSize: 10, color: "#555" }}>Dispatched: {formatDate(d.dispatchedAt)}</div>}
+                  {d.deliveredAt && <div style={{ fontSize: 10, color: "#555" }}>Delivered: {formatDate(d.deliveredAt)}</div>}
+                </div>
+              ),
+            },
+            {
+              key: "actions", label: "", render: d => (
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }} onClick={e => e.stopPropagation()}>
+                  <button className="glass-pill glass-pill-sm glass-pill-outline" onClick={() => { setOpen(d); }}>View</button>
+                  <button className="glass-pill glass-pill-sm glass-pill-primary" onClick={() => { setAssignModal(d); setSelectedStaffId(d.staffId || ""); }}>
+                    {d.staffId ? "Reassign" : "Assign"}
+                  </button>
+                  {d.status !== "delivered" && d.status !== "cancelled" && (
+                    <button className="glass-pill glass-pill-sm glass-pill-info" onClick={() => advanceDelivery(d)}>Advance</button>
+                  )}
+                </div>
+              ),
+            },
+          ]}
+        />
+      </SectionCard>
+
+      {/* Assignment Modal */}
+      {assignModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", backdropFilter: "blur(12px)", zIndex: 150, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => setAssignModal(null)}>
+          <div className="glass-card" style={{ width: "min(480px, 95vw)", padding: 28 }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
+              <div>
+                <h3 style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 14, color: "white", margin: 0 }}>Assign Delivery Staff</h3>
+                <p style={{ fontSize: 11, color: "#888", margin: "4px 0 0" }}>Delivery #{assignModal.id.slice(-8).toUpperCase()}</p>
+              </div>
+              <button className="glass-pill glass-pill-icon" onClick={() => setAssignModal(null)}><X size={13} /></button>
+            </div>
+
+            {deliveryStaff.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "24px 0", color: "#888" }}>
+                <Users size={32} style={{ marginBottom: 12, opacity: 0.4 }} />
+                <p>No delivery staff available. Add staff with "Delivery" role in the Staff section.</p>
+              </div>
+            ) : (
+              <div style={{ display: "grid", gap: 10 }}>
+                <div>
+                  <label style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, color: "#888", display: "block", marginBottom: 6 }}>Select Staff Member</label>
+                  <select value={selectedStaffId} onChange={e => setSelectedStaffId(e.target.value)} style={{ width: "100%", background: "#0d0d0d", color: "white", border: "1px solid rgba(255,255,255,.15)", borderRadius: 10, padding: "12px 14px", fontFamily: "'Space Grotesk', sans-serif", fontSize: 13 }}>
+                    <option value="">— Choose staff —</option>
+                    {deliveryStaff.map(s => <option key={s.id} value={s.id}>{s.name} ({s.role})</option>)}
+                  </select>
+                </div>
+                {selectedStaffId && (() => {
+                  const staff = store.staff.find(s => s.id === selectedStaffId);
+                  return staff ? (
+                    <div className="glass" style={{ borderRadius: 10, padding: 14 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#FF1F45", display: "grid", placeItems: "center", fontSize: 16, color: "white", fontWeight: 700 }}>{staff.name.charAt(0)}</div>
+                        <div>
+                          <div style={{ color: "white", fontWeight: 600 }}>{staff.name}</div>
+                          <div style={{ color: "#888", fontSize: 12 }}>{staff.role} · {staff.email || staff.contact || ""}</div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null;
+                })()}
+                <button className="glass-pill glass-pill-primary" style={{ width: "100%", padding: "12px", marginTop: 8 }} onClick={handleAssign} disabled={!selectedStaffId}>
+                  Assign & Set Ready
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Detail Slide-over */}
+      {active && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.72)", backdropFilter: "blur(10px)", zIndex: 120, display: "flex", justifyContent: "flex-end" }} onClick={() => setOpen(null)}>
+          <div className="glass-card" style={{ width: "min(640px, 100%)", height: "100vh", overflowY: "auto", padding: 24, borderRadius: 0 }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", marginBottom: 20 }}>
+              <div>
+                <h3 style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 15, color: "white", margin: 0 }}>Delivery #{active.id.slice(-8).toUpperCase()}</h3>
+                <p style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, color: "#888", margin: "6px 0 0" }}>
+                  Created {formatDate(active.createdAt)} · Order #{active.orderId.slice(-8).toUpperCase()}
+                </p>
+              </div>
+              <button className="glass-pill glass-pill-icon" onClick={() => setOpen(null)}><X size={13} /></button>
+            </div>
+
+            {/* Delivery Progress */}
+            <SectionCard title="Delivery Progress" padded={false}>
+              <div style={{ padding: "16px 14px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
+                  {DELIVERY_STEPS.map((step, i) => {
+                    const currentIdx = getStepIndex(active.status);
+                    const isDone = i < currentIdx;
+                    const isCurrent = i === currentIdx;
+                    const color = isDone || isCurrent ? STATUS_COLORS[step] : "#333";
+                    return (
+                      <div key={step} style={{ display: "flex", alignItems: "center", flex: i < DELIVERY_STEPS.length - 1 ? 1 : "none" }}>
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                          <div style={{ width: 32, height: 32, borderRadius: "50%", background: isDone || isCurrent ? color : "rgba(255,255,255,0.05)", border: `2px solid ${isDone || isCurrent ? color : "#444"}`, display: "grid", placeItems: "center" }}>
+                            {isDone ? <CheckCircle size={14} color="white" /> : <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 10, color: isCurrent ? "white" : "#555" }}>{i + 1}</span>}
+                          </div>
+                          <span style={{ fontSize: 10, color: isDone || isCurrent ? color : "#444", textTransform: "capitalize", fontWeight: isCurrent ? 700 : 400, whiteSpace: "nowrap" }}>{step}</span>
+                        </div>
+                        {i < DELIVERY_STEPS.length - 1 && (
+                          <div style={{ flex: 1, height: 2, background: i < currentIdx ? color : "rgba(255,255,255,0.1)", margin: "0 4px", marginBottom: 20 }} />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </SectionCard>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, margin: "10px 0" }}>
+              <div className="glass" style={{ borderRadius: 10, padding: 12 }}>
+                <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 9, color: "#777", marginBottom: 6 }}>STATUS</div>
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 999, background: `${STATUS_COLORS[active.status]}22`, border: `1px solid ${STATUS_COLORS[active.status]}55`, fontSize: 12, color: STATUS_COLORS[active.status], fontWeight: 600, textTransform: "capitalize" }}>{active.status}</div>
+              </div>
+              <div className="glass" style={{ borderRadius: 10, padding: 12 }}>
+                <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 9, color: "#777", marginBottom: 6 }}>ORDER VALUE</div>
+                <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 20, color: "#FF1F45", fontWeight: 700 }}>{(() => { const o = getOrder(active); return o ? inr(o.total) : "—"; })()}</div>
+              </div>
+            </div>
+
+            {/* Customer Details */}
+            <SectionCard title="Customer Details" padded={false}>
+              <div style={{ padding: 14, fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, color: "#CFCFCF", lineHeight: 1.9 }}>
+                <strong style={{ color: "white", fontSize: 13 }}>{active.customerName}</strong><br />
+                <span style={{ color: "#aaa" }}>📞 {active.customerPhone}</span><br />
+                <span style={{ color: "#888", fontSize: 11 }}>Ordered: {formatDate(active.createdAt)}</span>
+              </div>
+            </SectionCard>
+
+            {/* Delivery Address */}
+            <SectionCard title="Delivery Address" padded={false}>
+              <div style={{ padding: 14, fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, color: "#CFCFCF", lineHeight: 1.9 }}>
+                <span>{active.address}</span><br />
+                <span>{active.city}, {active.state} {active.pincode}</span>
+                {active.deliveryNotes && <><br /><em style={{ color: "#888" }}>Note: {active.deliveryNotes}</em></>}
+              </div>
+            </SectionCard>
+
+            {/* Assigned Staff */}
+            <SectionCard title="Assigned Staff" padded={false}>
+              <div style={{ padding: 14 }}>
+                {active.staffName ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#FF1F45", display: "grid", placeItems: "center", fontSize: 16, color: "white", fontWeight: 700 }}>{active.staffName.charAt(0)}</div>
+                    <div>
+                      <div style={{ color: "white", fontWeight: 600, fontSize: 13 }}>{active.staffName}</div>
+                      {active.staffPhone && <div style={{ color: "#888", fontSize: 12 }}>{active.staffPhone}</div>}
+                    </div>
+                    <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
+                      <button className="glass-pill glass-pill-sm glass-pill-outline" onClick={() => { setAssignModal(active); setSelectedStaffId(active.staffId || ""); setOpen(null); }}>Reassign</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ color: "#666" }}>No staff assigned yet</span>
+                    <button className="glass-pill glass-pill-sm glass-pill-primary" onClick={() => { setAssignModal(active); setSelectedStaffId(""); setOpen(null); }}>Assign Staff</button>
+                  </div>
+                )}
+              </div>
+            </SectionCard>
+
+            {/* Linked Order Items */}
+            {(() => {
+              const order = getOrder(active);
+              return order ? (
+                <SectionCard title="Order Items" subtitle={`${order.items.length} item${order.items.length !== 1 ? "s" : ""} · ${inr(order.total)}`} padded={false}>
+                  <div style={{ padding: 14 }}>
+                    {order.items.map(item => (
+                      <div key={item.productId} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,.06)", fontFamily: "'Space Grotesk', sans-serif", fontSize: 12 }}>
+                        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                          {item.img && <img src={item.img} alt={item.name} style={{ width: 36, height: 36, objectFit: "cover", borderRadius: 6 }} />}
+                          <span style={{ color: "#ddd" }}>{item.name} × {item.qty}</span>
+                        </div>
+                        <span style={{ color: "white" }}>{inr(item.price * item.qty)}</span>
+                      </div>
+                    ))}
+                    <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 12, fontFamily: "'Rajdhani', sans-serif", fontSize: 16, color: "white" }}>
+                      <span>Total</span><span style={{ color: "#FF1F45", fontWeight: 700 }}>{inr(order.total)}</span>
+                    </div>
+                  </div>
+                </SectionCard>
+              ) : null;
+            })()}
+
+            {/* Admin Actions */}
+            <SectionCard title="Admin Controls" padded={false}>
+              <div style={{ padding: 14, display: "grid", gap: 10 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                  <select value={active.status} onChange={e => { updateDeliveryStatus(active.id, e.target.value as Delivery["status"], "admin"); }} style={{ background: "#0d0d0d", color: "white", border: "1px solid rgba(255,255,255,.15)", borderRadius: 8, padding: "10px 12px", fontFamily: "'Space Grotesk', sans-serif", fontSize: 13 }}>
+                    {DELIVERY_STATUS_OPTIONS.map(s => <option key={s} value={s}>{s.toUpperCase()}</option>)}
+                  </select>
+                  <button className="glass-pill glass-pill-info" onClick={() => advanceDelivery(active)} disabled={active.status === "delivered" || active.status === "cancelled"}>
+                    Advance Status
+                  </button>
+                </div>
+                {active.status === "delivered" && (
+                  <div className="glass" style={{ borderRadius: 8, padding: 10, border: "1px solid #00cc6633", background: "#00cc6611" }}>
+                    <CheckCircle size={14} color="#00cc66" style={{ marginRight: 8 }} />
+                    <span style={{ color: "#00cc66", fontSize: 12 }}>Delivery completed on {active.deliveredAt ? formatDate(active.deliveredAt) : "—"}</span>
+                  </div>
+                )}
               </div>
             </SectionCard>
           </div>

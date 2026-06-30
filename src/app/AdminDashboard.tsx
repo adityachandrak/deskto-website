@@ -2,7 +2,7 @@ import { Component, type ReactNode, useState, useMemo } from "react";
 import {
   Home, Package, Tag, Award, Database, ShoppingBag, Wrench, Truck, Cpu, Hammer,
   Headphones, Store, Users, UserCog, Truck as TruckIcon, Receipt, Ticket,
-  TrendingUp, Bell, Settings, History, RefreshCcw, BarChart3, Zap, Gamepad2,
+  TrendingUp, Bell, Settings, History, RefreshCcw, BarChart3, Zap, Gamepad2, Star, HelpCircle,
 } from "lucide-react";
 import { DashboardLayout } from "./components/dashboard/DashboardLayout";
 import { useDashboardData } from "./lib/dashboardData";
@@ -16,6 +16,8 @@ import {
   AdminNotifications, AdminSettings, AdminAuditLogs, AdminBackup,
   AdminUpgrades, AdminSoftwareServices, AdminRentalWorkflow, AdminSellRequests, AdminSupportWorkflow,
   AdminAssemblyService, AdminGamingHub, AdminCustomBuilder,
+  AdminFeaturedBuilds, AdminExclusiveOffers, AdminGamingNews, AdminTestimonials, AdminFAQ,
+  AdminDeliveries,
 } from "./AdminDashboard.tabs";
 
 interface Props { user: AuthUser; initialTab?: string | null }
@@ -62,6 +64,7 @@ const TABS = [
   { key: "upgrades", label: "Upgrades", icon: Zap, group: "Operations" },
   { key: "software", label: "Software", icon: Database, group: "Operations" },
   { key: "rentals", label: "Rentals", icon: Truck, group: "Operations" },
+  { key: "deliveries", label: "Deliveries", icon: TruckIcon, group: "Operations" },
   { key: "support", label: "Remote Support", icon: Headphones, group: "Operations" },
   { key: "marketplace", label: "Sell Used", icon: Store, group: "Operations" },
   { key: "crm", label: "CRM", icon: UserCog, group: "People" },
@@ -72,6 +75,11 @@ const TABS = [
   { key: "coupons", label: "Coupons", icon: Ticket, group: "Marketing" },
   { key: "offers", label: "Offers", icon: Tag, group: "Marketing" },
   { key: "gaming", label: "Gaming Hub Management", icon: Gamepad2, group: "Marketing" },
+  { key: "featured-builds", label: "Featured Builds", icon: Star, group: "Homepage" },
+  { key: "exclusive-offers", label: "Exclusive Offers", icon: Tag, group: "Homepage" },
+  { key: "gaming-news", label: "Gaming News", icon: Zap, group: "Homepage" },
+  { key: "testimonials", label: "Testimonials", icon: Star, group: "Homepage" },
+  { key: "faq", label: "FAQ", icon: HelpCircle, group: "Homepage" },
   { key: "reports", label: "Reports", icon: BarChart3, group: "Insights" },
   { key: "notifications", label: "Notifications", icon: Bell, group: "System" },
   { key: "settings", label: "Settings", icon: Settings, group: "System" },
@@ -79,7 +87,7 @@ const TABS = [
   { key: "backup", label: "Backup & Restore", icon: RefreshCcw, group: "System" },
 ];
 
-const GROUP_ORDER = ["Overview", "Catalog", "Operations", "People", "Procurement", "Marketing", "Insights", "System"];
+const GROUP_ORDER = ["Overview", "Catalog", "Operations", "People", "Procurement", "Marketing", "Homepage", "Insights", "System"];
 
 function normalizeAdminTab(value?: string | null) {
   const raw = String(value || "").trim().toLowerCase();
@@ -115,6 +123,9 @@ export default function AdminDashboard({ user, initialTab }: Props) {
     patchCoupon,
     addOffer,
     patchOffer,
+    updateDeliveryStatus,
+    assignDeliveryStaff,
+    updateDelivery,
     updateSettings,
     addNotification,
     markNotificationRead,
@@ -164,6 +175,7 @@ export default function AdminDashboard({ user, initialTab }: Props) {
       case "upgrades":          return <AdminUpgrades store={store} patchServiceRequest={patchServiceRequest} />;
       case "software":          return <AdminSoftwareServices store={store} patchServiceRequest={patchServiceRequest} />;
       case "rentals":           return <AdminRentalWorkflow store={store} patchServiceRequest={patchServiceRequest} />;
+      case "deliveries":        return <AdminDeliveries store={store} updateDeliveryStatus={updateDeliveryStatus} assignDeliveryStaff={assignDeliveryStaff} updateDelivery={updateDelivery} />;
       case "builds":            return <AdminCustomPC store={store} patchPCBuild={patchPCBuild} />;
       case "assembly":          return <AdminAssemblyService store={store} patchServiceRequest={patchServiceRequest} />;
       case "support":           return <AdminSupportWorkflow store={store} patchServiceRequest={patchServiceRequest} />;
@@ -176,7 +188,12 @@ export default function AdminDashboard({ user, initialTab }: Props) {
       case "coupons":           return <AdminCoupons store={store} addCoupon={addCoupon} patchCoupon={patchCoupon} />;
       case "offers":            return <AdminOffers store={store} addOffer={addOffer} patchOffer={patchOffer} />;
       case "gaming":            return <AdminGamingHub store={store} addGamingHubItem={addGamingHubItem} patchGamingHubItem={patchGamingHubItem} deleteGamingHubItem={deleteGamingHubItem} />;
-      case "reports":           return <AdminReports store={store} />;
+      case "featured-builds":   return <AdminFeaturedBuilds store={store} addGamingHubItem={addGamingHubItem} patchGamingHubItem={patchGamingHubItem} deleteGamingHubItem={deleteGamingHubItem} />;
+      case "exclusive-offers": return <AdminExclusiveOffers store={store} addGamingHubItem={addGamingHubItem} patchGamingHubItem={patchGamingHubItem} deleteGamingHubItem={deleteGamingHubItem} />;
+      case "gaming-news":      return <AdminGamingNews store={store} addGamingHubItem={addGamingHubItem} patchGamingHubItem={patchGamingHubItem} deleteGamingHubItem={deleteGamingHubItem} />;
+      case "testimonials":     return <AdminTestimonials store={store} addGamingHubItem={addGamingHubItem} patchGamingHubItem={patchGamingHubItem} deleteGamingHubItem={deleteGamingHubItem} />;
+      case "faq":              return <AdminFAQ store={store} addGamingHubItem={addGamingHubItem} patchGamingHubItem={patchGamingHubItem} deleteGamingHubItem={deleteGamingHubItem} />;
+      case "reports":          return <AdminReports store={store} />;
       case "notifications":     return <AdminNotifications store={store} addNotification={addNotification} markNotificationRead={markNotificationRead} archiveNotification={archiveNotification} />;
       case "settings":          return <AdminSettings store={store} updateSettings={updateSettings} />;
       case "audit":             return <AdminAuditLogs store={store} />;

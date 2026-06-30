@@ -193,6 +193,10 @@ export interface Order {
     country: string;
   };
   status: OrderStatus;
+  deliveryStatus?: "pending" | "ready" | "dispatched" | "delivered" | "cancelled";
+  deliveryId?: string;
+  assignedStaffId?: string;
+  assignedStaffName?: string;
   createdAt: number;
   updatedAt?: number;
   addressId: string;
@@ -454,12 +458,23 @@ export interface InventoryRequest {
 
 export interface Delivery {
   id: string;
-  staffId: string;
+  staffId?: string;
+  staffName?: string;
+  staffPhone?: string;
   orderId: string;
+  order?: Order;
   customerName: string;
+  customerPhone: string;
   address: string;
-  status: "ready" | "dispatched" | "delivered";
+  city: string;
+  state: string;
+  pincode: string;
+  status: "pending" | "ready" | "dispatched" | "delivered" | "cancelled";
+  deliveryNotes?: string;
+  dispatchedAt?: number;
+  deliveredAt?: number;
   createdAt: number;
+  updatedAt?: number;
 }
 
 export interface Supplier {
@@ -632,6 +647,7 @@ export interface GamingHubItem {
   showInLatestNews: boolean;
   showInExclusiveOffers: boolean;
   showInSignatureMachines: boolean;
+  bannerImage?: string;
   metaTitle?: string;
   metaDescription?: string;
   keywords?: string[];
@@ -645,6 +661,7 @@ export interface GamingHubItem {
   comments: GamingHubComment[];
   createdAt: number;
   updatedAt: number;
+  order?: number;
 }
 
 // ── ROOT STATE ────────────────────────────────────────────────────────────
@@ -2170,24 +2187,47 @@ export function useDashboardData() {
 
   const addOrder = useCallback((input: AddOrderInput) => {
     const createdAt = input.createdAt || Date.now();
+    const orderId = input.id || rid("ord");
     const order: Order = {
       ...input,
-      id: input.id || rid("ord"),
+      id: orderId,
       createdAt,
       updatedAt: createdAt,
+      deliveryStatus: input.deliveryMethod === "ship" ? "pending" as const : undefined,
       trackingSteps: input.trackingSteps?.length ? input.trackingSteps : orderTimelineThrough(input.status, createdAt),
     };
+
+    // Auto-create delivery record for ship orders
+    const delivery: Delivery | null = input.deliveryMethod === "ship" && input.shippingAddress ? {
+      id: rid("del"),
+      orderId,
+      order,
+      customerName: input.customerName || input.shippingAddress.name,
+      customerPhone: input.shippingAddress.phone,
+      address: [input.shippingAddress.line1, input.shippingAddress.line2].filter(Boolean).join(", "),
+      city: input.shippingAddress.city,
+      state: input.shippingAddress.state,
+      pincode: input.shippingAddress.pincode,
+      status: "pending",
+      createdAt,
+    } : null;
+
+    if (delivery) {
+      order.deliveryId = delivery.id;
+    }
+
     setStore(prev => {
       const exists = prev.orders.some(o => o.id === order.id);
       const next = {
         ...prev,
         orders: exists ? prev.orders.map(o => o.id === order.id ? order : o) : [order, ...prev.orders],
+        deliveries: delivery ? [delivery, ...prev.deliveries] : prev.deliveries,
         notifications: [
           {
             id: rid("ntf"),
             customerId: order.customerId,
-            title: "Order placed",
-            detail: `${order.items.length} item${order.items.length > 1 ? "s" : ""} order ${order.id} is now synced to your dashboard.`,
+            title: "🛒 New Order Received",
+            detail: `Order ${order.id} — ${order.items.length} item${order.items.length !== 1 ? "s" : ""} · ₹${(order.total || 0).toLocaleString()} · ${order.deliveryMethod === "ship" ? "🚚 Delivery" : "📦 Pickup"}`,
             type: "order" as const,
             createdAt,
             read: false,
@@ -2199,7 +2239,7 @@ export function useDashboardData() {
       saveStore(next);
       return next;
     });
-    addLog("order_created", `Order ${order.id} created`, order.customerName || order.customerEmail || "customer");
+    addLog("order_created", `Order ${order.id} created — ${order.deliveryMethod === "ship" ? "delivery" : "pickup"}`, order.customerName || order.customerEmail || "customer");
     return order;
   }, [addLog]);
 
@@ -2544,6 +2584,119 @@ export function useDashboardData() {
     addLog("inventory_requested", `${req.qty}× ${req.component}`, req.staffId);
   }, [addLog]);
 
+  const approveInventoryRequest = useCallback((id: string, actor?: string) => {
+    setStore(prev => {
+      const next = { ...prev, inventoryRequests: prev.inventoryRequests.map(r => r.id === id ? { ...r, status: "approved" as const } : r) };
+      saveStore(next);
+      return next;
+    });
+    addLog("inventory_approved", `Inventory request ${id} approved`, actor);
+  }, [addLog]);
+
+  const rejectInventoryRequest = useCallback((id: string, actor?: string) => {
+    setStore(prev => {
+      const next = { ...prev, inventoryRequests: prev.inventoryRequests.map(r => r.id === id ? { ...r, status: "rejected" as const } : r) };
+      saveStore(next);
+      return next;
+    });
+    addLog("inventory_rejected", `Inventory request ${id} rejected`, actor);
+  }, [addLog]);
+
+  const markInventoryReceived = useCallback((id: string, actor?: string) => {
+    setStore(prev => {
+      const next = { ...prev, inventoryRequests: prev.inventoryRequests.map(r => r.id === id ? { ...r, status: "received" as const } : r) };
+      saveStore(next);
+      return next;
+    });
+    addLog("inventory_received", `Inventory request ${id} marked received`, actor);
+  }, [addLog]);
+
+  const approveGamingHubComment = useCallback((itemId: string, commentId: string, actor?: string) => {
+    setStore(prev => {
+      const next = {
+        ...prev,
+        gamingHub: (prev.gamingHub || []).map(item =>
+          item.id === itemId
+            ? { ...item, comments: item.comments.map(c => c.id === commentId ? { ...c, status: "approved" as const } : c) }
+            : item
+        ),
+      };
+      saveStore(next);
+      return next;
+    });
+    addLog("gaming_comment_approved", `Comment ${commentId} on ${itemId} approved`, actor);
+  }, [addLog]);
+
+  const rejectGamingHubComment = useCallback((itemId: string, commentId: string, actor?: string) => {
+    setStore(prev => {
+      const next = {
+        ...prev,
+        gamingHub: (prev.gamingHub || []).map(item =>
+          item.id === itemId
+            ? { ...item, comments: item.comments.map(c => c.id === commentId ? { ...c, status: "rejected" as const } : c) }
+            : item
+        ),
+      };
+      saveStore(next);
+      return next;
+    });
+    addLog("gaming_comment_rejected", `Comment ${commentId} on ${itemId} rejected`, actor);
+  }, [addLog]);
+
+  const updateDeliveryStatus = useCallback((id: string, status: Delivery["status"], actor?: string) => {
+    setStore(prev => {
+      const delivery = prev.deliveries.find(d => d.id === id);
+      const updates: Partial<Delivery> = { status, updatedAt: Date.now() };
+      if (status === "dispatched") updates.dispatchedAt = Date.now();
+      if (status === "delivered") updates.deliveredAt = Date.now();
+      const next = {
+        ...prev,
+        deliveries: prev.deliveries.map(d => d.id === id ? { ...d, ...updates } : d),
+        // Sync deliveryStatus back to the linked order
+        orders: delivery?.orderId
+          ? prev.orders.map(o => o.id === delivery.orderId ? { ...o, deliveryStatus: status, updatedAt: Date.now() } : o)
+          : prev.orders,
+      };
+      saveStore(next);
+      return next;
+    });
+    addLog("delivery_status", `Delivery ${id} → ${status}`, actor);
+  }, [addLog]);
+
+  const assignDeliveryStaff = useCallback((deliveryId: string, staffId: string, staffName: string, staffPhone: string, actor?: string) => {
+    setStore(prev => {
+      const delivery = prev.deliveries.find(d => d.id === deliveryId);
+      const next = {
+        ...prev,
+        deliveries: prev.deliveries.map(d => d.id === deliveryId ? { ...d, staffId, staffName, staffPhone, status: "ready" as Delivery["status"], updatedAt: Date.now() } : d),
+        // Sync assigned staff back to the linked order
+        orders: delivery?.orderId
+          ? prev.orders.map(o => o.id === delivery.orderId ? { ...o, assignedStaffId: staffId, assignedStaffName: staffName, deliveryStatus: "ready", updatedAt: Date.now() } : o)
+          : prev.orders,
+      };
+      saveStore(next);
+      return next;
+    });
+    addLog("delivery_staff_assigned", `Delivery ${deliveryId} assigned to ${staffName}`, actor);
+  }, [addLog]);
+
+  const updateDelivery = useCallback((id: string, patch: Partial<Delivery>, actor?: string) => {
+    setStore(prev => {
+      const delivery = prev.deliveries.find(d => d.id === id);
+      const updated = { ...delivery, ...patch, updatedAt: Date.now() };
+      const next = {
+        ...prev,
+        deliveries: prev.deliveries.map(d => d.id === id ? updated : d),
+        orders: delivery?.orderId
+          ? prev.orders.map(o => o.id === delivery.orderId ? { ...o, ...patch, updatedAt: Date.now() } : o)
+          : prev.orders,
+      };
+      saveStore(next);
+      return next;
+    });
+    addLog("delivery_updated", `Delivery ${id} updated`, actor);
+  }, [addLog]);
+
   const addReplyToTicket = useCallback((ticketId: string, text: string, from: "customer" | "agent") => {
     setStore(prev => {
       const next = {
@@ -2745,6 +2898,7 @@ export function useDashboardData() {
 
   const addGamingHubItem = useCallback((input: Omit<GamingHubItem, "id" | "createdAt" | "updatedAt" | "views" | "reads" | "shares" | "whatsappClicks" | "callClicks" | "offerClicks" | "ctaClicks" | "comments"> & Partial<Pick<GamingHubItem, "id" | "createdAt" | "updatedAt" | "views" | "reads" | "shares" | "whatsappClicks" | "callClicks" | "offerClicks" | "ctaClicks" | "comments">>) => {
     const now = Date.now();
+    const maxOrder = Math.max(0, ...(store.gamingHub || []).map(h => h.order || 0));
     const item: GamingHubItem = {
       ...input,
       id: input.id || rid("gh"),
@@ -2758,6 +2912,7 @@ export function useDashboardData() {
       offerClicks: input.offerClicks || 0,
       ctaClicks: input.ctaClicks || 0,
       comments: input.comments || [],
+      order: input.order ?? maxOrder + 1,
     };
     setStore(prev => {
       const next = { ...prev, gamingHub: [item, ...(prev.gamingHub || []).filter(existing => existing.id !== item.id)] };
@@ -2766,7 +2921,7 @@ export function useDashboardData() {
     });
     addLog("gaming_hub_created", `Gaming Hub content "${item.title}" saved`, "admin");
     return item;
-  }, [addLog]);
+  }, [addLog, store.gamingHub]);
 
   const patchGamingHubItem = useCallback((itemId: string, patch: Partial<GamingHubItem>) => {
     setStore(prev => {
@@ -3147,6 +3302,14 @@ export function useDashboardData() {
     clockIn,
     clockOut,
     submitInventoryRequest,
+    approveInventoryRequest,
+    rejectInventoryRequest,
+    markInventoryReceived,
+    approveGamingHubComment,
+    rejectGamingHubComment,
+    updateDeliveryStatus,
+    assignDeliveryStaff,
+    updateDelivery,
     addReplyToTicket,
     closeTicket,
     redeemCoupon,
