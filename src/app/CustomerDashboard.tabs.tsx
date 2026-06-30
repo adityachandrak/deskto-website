@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   ShoppingBag, Wrench, CalendarDays, Headphones, Gift, Bell, LogOut as LogOutIcon,
   Package, Truck, ShieldCheck, Heart, Plus, X, ArrowRight, CheckCircle, Clock,
   ShoppingCart, MapPin, Star, Upload, Trash2, Edit, FileText, Download, AlertCircle,
-  Calendar, Award, MessageSquare, Zap, Database, Hammer,
+  Calendar, Award, MessageSquare, Zap, Database, Hammer, Minus,
 } from "lucide-react";
 import { KPICard } from "./components/dashboard/KPICard";
 import { StatusBadge } from "./components/dashboard/StatusBadge";
@@ -828,7 +828,12 @@ export function CustomerWishlist() {
               <h4 style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 12, color: "white", margin: "0 0 6px" }}>{p.name}</h4>
               <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 14, color: "#FF1F45" }}>{inr(p.price)}</div>
               <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
-                <button className="glass-pill glass-pill-sm glass-pill-primary"><ShoppingCart size={10} /> Move to Cart</button>
+                <button className="glass-pill glass-pill-sm glass-pill-primary" onClick={() => {
+                  const cart = readCart();
+                  const existing = cart.find(l => l.productId === p.id);
+                  writeCart(existing ? cart.map(l => l.productId === p.id ? { ...l, qty: l.qty + 1 } : l) : [...cart, { productId: p.id, qty: 1 }]);
+                  toast.success(`${p.name} added to cart`);
+                }}><ShoppingCart size={10} /> Move to Cart</button>
                 <button className="glass-pill glass-pill-sm glass-pill-outline" onClick={() => toggle(p.id)}><Trash2 size={10} /></button>
               </div>
             </div>
@@ -842,13 +847,53 @@ export function CustomerWishlist() {
 // ─── Cart ─────────────────────────────────────────────────────────────────
 
 interface CartLine { productId: number; qty: number; }
+const CART_KEY = "deskto_cart_v1";
+
+// The shop stores the cart as an object map { productId: qty } (see App.tsx
+// loadCart/saveCart). Read it tolerantly and normalize to lines so this view
+// never crashes on the object shape (the previous code assumed an array).
 function readCart(): CartLine[] {
   if (typeof window === "undefined") return [];
-  try { return JSON.parse(window.localStorage.getItem("deskto_cart_v1") || "[]"); } catch { return []; }
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(CART_KEY) || "{}");
+    if (Array.isArray(parsed)) {
+      return parsed.filter(l => l && typeof l.productId === "number" && Number(l.qty) > 0).map(l => ({ productId: l.productId, qty: Number(l.qty) }));
+    }
+    if (parsed && typeof parsed === "object") {
+      return Object.entries(parsed).map(([id, qty]) => ({ productId: Number(id), qty: Number(qty) || 0 })).filter(l => l.productId && l.qty > 0);
+    }
+    return [];
+  } catch { return []; }
+}
+
+function writeCart(lines: CartLine[]) {
+  if (typeof window === "undefined") return;
+  const map: Record<number, number> = {};
+  lines.forEach(l => { if (l.qty > 0) map[l.productId] = l.qty; });
+  try {
+    window.localStorage.setItem(CART_KEY, JSON.stringify(map));
+    window.dispatchEvent(new Event("deskto-cart-changed"));
+  } catch {}
+}
+
+function goTo(path: string) {
+  window.history.pushState(null, "", path);
+  window.dispatchEvent(new PopStateEvent("popstate"));
 }
 
 export function CustomerCart() {
   const [lines, setLines] = useState<CartLine[]>(() => readCart());
+  // Stay in sync if the cart changes elsewhere (product page, navbar, another tab).
+  useEffect(() => {
+    const sync = () => setLines(readCart());
+    window.addEventListener("deskto-cart-changed", sync);
+    window.addEventListener("storage", sync);
+    return () => { window.removeEventListener("deskto-cart-changed", sync); window.removeEventListener("storage", sync); };
+  }, []);
+  const update = (next: CartLine[]) => { writeCart(next); setLines(next); };
+  const setQty = (productId: number, qty: number) => update(lines.map(l => l.productId === productId ? { ...l, qty: Math.max(1, qty) } : l));
+  const remove = (productId: number) => update(lines.filter(l => l.productId !== productId));
+
   const items = lines.map(l => {
     const p = PRODUCTS.find(x => x.id === l.productId);
     return p ? { ...p, qty: l.qty } : null;
@@ -856,28 +901,33 @@ export function CustomerCart() {
   const total = items.reduce((s, i) => s + i.price * i.qty, 0);
 
   return (
-    <SectionCard title="Shopping Cart" subtitle={`${items.length} items`}>
-      {items.length === 0 ? <EmptyState icon={<ShoppingCart size={24} />} title="Your cart is empty" action={<button className="glass-pill glass-pill-primary">Browse Products</button>} /> : (
+    <SectionCard title="Shopping Cart" subtitle={`${items.length} item${items.length === 1 ? "" : "s"}`}>
+      {items.length === 0 ? <EmptyState icon={<ShoppingCart size={24} />} title="Your cart is empty" hint="Add products from the shop to see them here." action={<button className="glass-pill glass-pill-primary" onClick={() => goTo("/products")}>Browse Products</button>} /> : (
         <>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {items.map(i => (
-              <div key={i.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: 12, background: "rgba(255,255,255,0.03)", borderRadius: 10 }}>
-                <div>
+              <div key={i.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, padding: 12, background: "rgba(255,255,255,0.03)", borderRadius: 10, flexWrap: "wrap" }}>
+                <div style={{ minWidth: 160 }}>
                   <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 12, color: "white" }}>{i.name}</div>
-                  <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, color: "#888", marginTop: 2 }}>Qty: {i.qty}</div>
+                  <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, color: "#888", marginTop: 2 }}>{inr(i.price)} each</div>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                  <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 13, color: "#FF1F45" }}>{inr(i.price * i.qty)}</span>
-                  <button className="glass-pill glass-pill-icon glass-pill-sm" onClick={() => { const next = lines.filter(l => l.productId !== i.id); window.localStorage.setItem("deskto_cart_v1", JSON.stringify(next)); setLines(next); }} style={{ width: 26, height: 26 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <button className="glass-pill glass-pill-icon glass-pill-sm" onClick={() => setQty(i.id, i.qty - 1)} style={{ width: 26, height: 26 }} aria-label="Decrease quantity"><Minus size={11} /></button>
+                    <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 12, color: "white", minWidth: 18, textAlign: "center" }}>{i.qty}</span>
+                    <button className="glass-pill glass-pill-icon glass-pill-sm" onClick={() => setQty(i.id, i.qty + 1)} style={{ width: 26, height: 26 }} aria-label="Increase quantity"><Plus size={11} /></button>
+                  </div>
+                  <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 13, color: "#FF1F45", minWidth: 80, textAlign: "right" }}>{inr(i.price * i.qty)}</span>
+                  <button className="glass-pill glass-pill-icon glass-pill-sm" onClick={() => remove(i.id)} style={{ width: 26, height: 26 }} aria-label="Remove item">
                     <Trash2 size={11} />
                   </button>
                 </div>
               </div>
             ))}
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 18, paddingTop: 16, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 18, paddingTop: 16, borderTop: "1px solid rgba(255,255,255,0.06)", gap: 12, flexWrap: "wrap" }}>
             <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 18, color: "white" }}>Total: {inr(total)}</div>
-            <button className="glass-pill glass-pill-primary" onClick={() => toast.success("Checkout coming soon")}>Proceed to Checkout <ArrowRight size={12} /></button>
+            <button className="glass-pill glass-pill-primary" onClick={() => goTo("/checkout")}>Proceed to Checkout <ArrowRight size={12} /></button>
           </div>
         </>
       )}
