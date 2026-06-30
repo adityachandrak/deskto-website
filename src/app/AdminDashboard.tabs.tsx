@@ -1239,21 +1239,80 @@ export function AdminCategories() {
 
 // ─── Brands ───────────────────────────────────────────────────────────────
 
-const BRANDS = ["DESKTO", "ASUS", "Dell", "MSI", "Lenovo", "Intel", "NVIDIA", "AMD", "Samsung", "Corsair", "Logitech", "Razer", "HyperX", "LG", "TP-Link"];
+interface AdminBrand { id: string; name: string; }
+const BRANDS_KEY = "deskto-admin-brands-v1";
+const DEFAULT_BRANDS: AdminBrand[] = ["DESKTO", "ASUS", "Dell", "MSI", "Lenovo", "Intel", "NVIDIA", "AMD", "Samsung", "Corsair", "Logitech", "Razer", "HyperX", "LG", "TP-Link"]
+  .map(name => ({ id: `brand_${name.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`, name }));
+
+function loadBrands(): AdminBrand[] {
+  if (typeof window === "undefined") return DEFAULT_BRANDS;
+  try {
+    const raw = window.localStorage.getItem(BRANDS_KEY);
+    if (!raw) return DEFAULT_BRANDS;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.length ? parsed : DEFAULT_BRANDS;
+  } catch { return DEFAULT_BRANDS; }
+}
 
 export function AdminBrands() {
+  const [brands, setBrands] = useState<AdminBrand[]>(() => loadBrands());
+  const [editing, setEditing] = useState<AdminBrand | null>(null);
+
+  const persist = (next: AdminBrand[]) => {
+    setBrands(next);
+    try { window.localStorage.setItem(BRANDS_KEY, JSON.stringify(next)); } catch {}
+  };
+
+  const startNew = () => setEditing({ id: "", name: "" });
+  const save = () => {
+    if (!editing) return;
+    const name = editing.name.trim();
+    if (!name) return toast.error("Brand name is required.");
+    if (brands.some(b => b.name.toLowerCase() === name.toLowerCase() && b.id !== editing.id)) return toast.error(`"${name}" already exists.`);
+    if (editing.id) {
+      persist(brands.map(b => b.id === editing.id ? { ...b, name } : b));
+      toast.success(`Brand "${name}" updated`);
+    } else {
+      const id = `brand_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
+      persist([...brands, { id, name }]);
+      toast.success(`Brand "${name}" added`);
+    }
+    setEditing(null);
+  };
+  const remove = (b: AdminBrand) => {
+    if (typeof window !== "undefined" && !window.confirm(`Delete brand "${b.name}"?`)) return;
+    persist(brands.filter(x => x.id !== b.id));
+    if (editing?.id === b.id) setEditing(null);
+    toast.success(`Brand "${b.name}" deleted`);
+  };
+
   return (
-    <SectionCard title="Brands" subtitle={`${BRANDS.length} active`}
-      action={<button className="glass-pill glass-pill-primary glass-pill-sm"><Plus size={12} /> New Brand</button>}
+    <SectionCard title="Brands" subtitle={`${brands.length} active`}
+      action={<button className="glass-pill glass-pill-primary glass-pill-sm" onClick={startNew}><Plus size={12} /> New Brand</button>}
     >
+      {editing && (
+        <div className="glass-card" style={{ padding: 16, marginBottom: 16, border: "1px solid rgba(255,31,69,.35)" }}>
+          <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 13, color: "white", marginBottom: 12 }}>{editing.id ? "Edit Brand" : "New Brand"}</div>
+          <div style={{ display: "grid", gridTemplateColumns: "minmax(200px, 1fr)", gap: 10, maxWidth: 360 }}>
+            <Field label="Brand Name" value={editing.name} onChange={v => setEditing({ ...editing, name: v })} placeholder="e.g. Gigabyte" />
+          </div>
+          <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+            <button className="glass-pill glass-pill-sm glass-pill-primary" onClick={save}>{editing.id ? "Save Changes" : "Add Brand"}</button>
+            <button className="glass-pill glass-pill-sm glass-pill-outline" onClick={() => setEditing(null)}>Cancel</button>
+          </div>
+        </div>
+      )}
       <div className="dash-tab-grid">
-        {BRANDS.map(b => (
-          <div key={b} className="glass-card" style={{ padding: 16, display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 48, height: 48, borderRadius: 8, background: "linear-gradient(135deg, #FF1F45, #5a0008)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Orbitron', sans-serif", fontSize: 14, color: "white", fontWeight: 800 }}>{b[0]}</div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 13, color: "white" }}>{b}</div>
+        {brands.map(b => (
+          <div key={b.id} className="glass-card" style={{ padding: 16, display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ width: 48, height: 48, borderRadius: 8, background: "linear-gradient(135deg, #FF1F45, #5a0008)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Orbitron', sans-serif", fontSize: 14, color: "white", fontWeight: 800 }}>{b.name[0]}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 13, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b.name}</div>
             </div>
-            <button className="glass-pill glass-pill-icon glass-pill-sm" style={{ width: 28, height: 28 }}><Settings size={12} /></button>
+            <div style={{ display: "flex", gap: 6 }}>
+              <button className="glass-pill glass-pill-sm glass-pill-outline" onClick={() => setEditing(b)}>Edit</button>
+              <button className="glass-pill glass-pill-sm glass-pill-red" onClick={() => remove(b)}>Delete</button>
+            </div>
           </div>
         ))}
       </div>
