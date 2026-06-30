@@ -7,11 +7,19 @@ export interface KPICardProps {
   color?: string;
   delta?: { value: number; positive: boolean };
   hint?: string;
+  onClick?: () => void;
 }
 
-export function KPICard({ label, value, icon, color = "#FF1F45", delta, hint }: KPICardProps) {
+export function KPICard({ label, value, icon, color = "#FF1F45", delta, hint, onClick }: KPICardProps) {
   return (
-    <div className="glass-card" style={{ padding: 18, display: "flex", flexDirection: "column", gap: 8, position: "relative", overflow: "hidden" }}>
+    <div
+      className="glass-card"
+      onClick={onClick}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } }) : undefined}
+      style={{ padding: 18, display: "flex", flexDirection: "column", gap: 8, position: "relative", overflow: "hidden", cursor: onClick ? "pointer" : undefined }}
+    >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, color: "#888", letterSpacing: 1.4, textTransform: "uppercase" }}>{label}</span>
         <div

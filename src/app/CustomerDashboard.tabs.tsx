@@ -39,25 +39,49 @@ async function openMedia(file: string) {
 
 // ─── Overview ─────────────────────────────────────────────────────────────
 
+const SERVICE_KIND_META: Record<string, { label: string; tab: string }> = {
+  upgrade: { label: "Upgrade", tab: "upgrades" },
+  software: { label: "Software", tab: "software" },
+  rental: { label: "Rental", tab: "rentals" },
+  sell: { label: "Sell Used", tab: "sell" },
+  assembly: { label: "Assembly", tab: "assembly" },
+  support: { label: "Support", tab: "support" },
+};
+
 export function CustomerOverview({ user, data, onTab }: { user: AuthUser; data: ReturnType<typeof import("./lib/dashboardData").useDashboardData>; onTab: (k: string) => void }) {
   const { store } = data;
-  const myOrders = store.orders.filter(o => o.customerId === user.id);
+  const mine = <T extends { customerId: string }>(rows: T[]) => rows.filter(r => r.customerId === user.id);
+  const myOrders = mine(store.orders);
+  const myRepairs = mine(store.repairs);
+  const myServices = mine(store.serviceRequests || []);
+  const myBuilds = mine(store.pcBuilds || []);
+
   const activeOrders = myOrders.filter(o => !["delivered", "cancelled"].includes(o.status)).length;
-  const openRepairs = store.repairs.filter(r => r.customerId === user.id && !["ready", "delivered"].includes(r.status)).length;
-  const activeRentals = store.rentals.filter(r => r.customerId === user.id && r.status === "active").length;
-  const openTickets = store.tickets.filter(t => t.customerId === user.id && !["resolved", "closed"].includes(t.status)).length;
+  const openRepairs = myRepairs.filter(r => !["ready", "delivered", "closed", "review-requested"].includes(r.status)).length;
+  // Active service requests + custom PC builds still in progress (synced from admin).
+  const closedServiceStatuses = ["delivered", "completed", "closed", "review-requested", "refunded", "published", "rejected"];
+  const activeServices = myServices.filter(s => !closedServiceStatuses.includes(s.status)).length
+    + myBuilds.filter(b => !["delivered", "closed", "review-requested"].includes(b.status)).length;
   const points = store.rewards.find(r => r.customerId === user.id)?.points || 0;
   const unread = store.notifications.filter(n => !n.read && !n.archived && n.customerId === user.id).length;
+
+  // Unified live activity feed across every request type, newest first. The status
+  // badges reflect exactly what admin/staff set on each item (synced via the store).
+  const activity = [
+    ...myOrders.map(o => ({ id: o.id, type: "Order", title: o.items.map(i => i.name).join(", ") || "Order", status: o.status, at: o.updatedAt || o.createdAt, tab: "orders" })),
+    ...myRepairs.map(r => ({ id: r.id, type: "Repair", title: r.device || `${r.brand || ""} ${r.model || ""}`.trim() || "Repair", status: r.status, at: r.updatedAt || r.createdAt, tab: "repairs" })),
+    ...myServices.map(s => ({ id: s.id, type: SERVICE_KIND_META[s.kind]?.label || "Service", title: s.title, status: s.status, at: s.updatedAt || s.createdAt, tab: SERVICE_KIND_META[s.kind]?.tab || "upgrades" })),
+    ...myBuilds.map(b => ({ id: b.id, type: "PC Build", title: b.name, status: b.status, at: b.updatedAt || b.createdAt, tab: "builds" })),
+  ].sort((a, b) => (b.at || 0) - (a.at || 0)).slice(0, 8);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
       <div className="dash-kpi-grid">
-        <KPICard label="Active Orders" value={activeOrders} icon={<ShoppingBag size={14} />} color="#FF1F45" hint={`${myOrders.length} total`} />
-        <KPICard label="Open Repairs" value={openRepairs} icon={<Wrench size={14} />} color="#ff6b00" hint={`${store.repairs.filter(r => r.customerId === user.id).length} total`} />
-        <KPICard label="Active Rentals" value={activeRentals} icon={<CalendarDays size={14} />} color="#00b4ff" hint="Rental in progress" />
-        <KPICard label="Support Tickets" value={openTickets} icon={<Headphones size={14} />} color="#a855f7" hint="Open or in-progress" />
-        <KPICard label="Loyalty Points" value={points} icon={<Gift size={14} />} color="#00cc66" hint="Redeem anytime" />
-        <KPICard label="Notifications" value={unread} icon={<Bell size={14} />} color="#ffd700" hint="Unread" />
+        <KPICard label="Active Orders" value={activeOrders} icon={<ShoppingBag size={14} />} color="#FF1F45" hint={`${myOrders.length} total`} onClick={() => onTab("orders")} />
+        <KPICard label="Open Repairs" value={openRepairs} icon={<Wrench size={14} />} color="#ff6b00" hint={`${myRepairs.length} total`} onClick={() => onTab("repairs")} />
+        <KPICard label="Active Services" value={activeServices} icon={<Zap size={14} />} color="#00b4ff" hint="Upgrades, builds & more" onClick={() => onTab("upgrades")} />
+        <KPICard label="Loyalty Points" value={points} icon={<Gift size={14} />} color="#00cc66" hint="Redeem anytime" onClick={() => onTab("rewards")} />
+        <KPICard label="Notifications" value={unread} icon={<Bell size={14} />} color="#ffd700" hint="Unread" onClick={() => onTab("notifications")} />
       </div>
 
       <SectionCard title="Quick Actions" subtitle="Jump into the most common flows">
@@ -69,11 +93,29 @@ export function CustomerOverview({ user, data, onTab }: { user: AuthUser; data: 
         </div>
       </SectionCard>
 
+      <SectionCard title="Recent Activity" subtitle="Live status across your orders, repairs, services and builds — synced from DESKTO">
+        {activity.length === 0 ? <EmptyState icon={<Package size={24} />} title="No activity yet" hint="Place an order or submit a service request to see live updates here." /> : (
+          <DataTable
+            rowKey={a => `${a.type}-${a.id}`}
+            data={activity}
+            onRowClick={a => onTab(a.tab)}
+            columns={[
+              { key: "type", label: "Type", render: a => <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 10, color: "#FF1F45" }}>{a.type}</span> },
+              { key: "id", label: "Ref", render: a => <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 10 }}>{a.id.slice(-8).toUpperCase()}</span> },
+              { key: "title", label: "Item", render: a => <span style={{ maxWidth: 260, display: "inline-block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.title}</span> },
+              { key: "status", label: "Status", render: a => <StatusBadge status={a.status} /> },
+              { key: "date", label: "Updated", render: a => formatDate(a.at) },
+            ]}
+          />
+        )}
+      </SectionCard>
+
       <SectionCard title="Recent Orders" subtitle="Your latest purchases">
         {myOrders.length === 0 ? <EmptyState icon={<Package size={24} />} title="No orders yet" /> : (
           <DataTable
             rowKey={o => o.id}
             data={myOrders.slice(0, 5)}
+            onRowClick={() => onTab("orders")}
             columns={[
               { key: "id", label: "Order ID", render: o => <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 10 }}>{o.id.slice(-8).toUpperCase()}</span> },
               { key: "items", label: "Items", render: o => o.items.map(i => i.name).join(", ").slice(0, 50) },
