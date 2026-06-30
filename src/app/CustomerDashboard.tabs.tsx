@@ -3,7 +3,7 @@ import {
   ShoppingBag, Wrench, CalendarDays, Headphones, Gift, Bell, LogOut as LogOutIcon,
   Package, Truck, ShieldCheck, Heart, Plus, X, ArrowRight, CheckCircle, Clock,
   ShoppingCart, MapPin, Star, Upload, Trash2, Edit, FileText, Download, AlertCircle,
-  Calendar, Award, MessageSquare, Zap, Database, Hammer, Minus,
+  Calendar, Award, MessageSquare, Zap, Database, Hammer, Minus, Cpu,
 } from "lucide-react";
 import { KPICard } from "./components/dashboard/KPICard";
 import { StatusBadge } from "./components/dashboard/StatusBadge";
@@ -55,6 +55,8 @@ export function CustomerOverview({ user, data, onTab }: { user: AuthUser; data: 
   const myRepairs = mine(store.repairs);
   const myServices = mine(store.serviceRequests || []);
   const myBuilds = mine(store.pcBuilds || []);
+  const myRentals = mine(store.rentals || []);
+  const myTickets = mine(store.tickets || []);
 
   const activeOrders = myOrders.filter(o => !["delivered", "cancelled"].includes(o.status)).length;
   const openRepairs = myRepairs.filter(r => !["ready", "delivered", "closed", "review-requested"].includes(r.status)).length;
@@ -62,8 +64,13 @@ export function CustomerOverview({ user, data, onTab }: { user: AuthUser; data: 
   const closedServiceStatuses = ["delivered", "completed", "closed", "review-requested", "refunded", "published", "rejected"];
   const activeServices = myServices.filter(s => !closedServiceStatuses.includes(s.status)).length
     + myBuilds.filter(b => !["delivered", "closed", "review-requested"].includes(b.status)).length;
+  const activeRentals = myRentals.filter(r => r.status === "active").length;
+  const openTickets = myTickets.filter(t => !["resolved", "closed"].includes(t.status)).length;
   const points = store.rewards.find(r => r.customerId === user.id)?.points || 0;
   const unread = store.notifications.filter(n => !n.read && !n.archived && n.customerId === user.id).length;
+  const pendingPayments = myOrders.filter(o => o.status === "verified" || o.status === "packing").length
+    + myRepairs.filter(r => r.status === "quotation" || r.status === "payment-pending").length
+    + myBuilds.filter(b => b.status === "quotation" || b.status === "approved").length;
 
   // Unified live activity feed across every request type, newest first. The status
   // badges reflect exactly what admin/staff set on each item (synced via the store).
@@ -72,28 +79,59 @@ export function CustomerOverview({ user, data, onTab }: { user: AuthUser; data: 
     ...myRepairs.map(r => ({ id: r.id, type: "Repair", title: r.device || `${r.brand || ""} ${r.model || ""}`.trim() || "Repair", status: r.status, at: r.updatedAt || r.createdAt, tab: "repairs" })),
     ...myServices.map(s => ({ id: s.id, type: SERVICE_KIND_META[s.kind]?.label || "Service", title: s.title, status: s.status, at: s.updatedAt || s.createdAt, tab: SERVICE_KIND_META[s.kind]?.tab || "upgrades" })),
     ...myBuilds.map(b => ({ id: b.id, type: "PC Build", title: b.name, status: b.status, at: b.updatedAt || b.createdAt, tab: "builds" })),
-  ].sort((a, b) => (b.at || 0) - (a.at || 0)).slice(0, 8);
+    ...myRentals.map(r => ({ id: r.id, type: "Rental", title: r.productName, status: r.status, at: r.updatedAt || r.createdAt, tab: "rentals" })),
+    ...myTickets.map(t => ({ id: t.id, type: "Ticket", title: t.subject, status: t.status, at: t.updatedAt || t.createdAt, tab: "support" })),
+  ].sort((a, b) => (b.at || 0) - (a.at || 0)).slice(0, 10);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
       <div className="dash-kpi-grid">
-        <KPICard label="Active Orders" value={activeOrders} icon={<ShoppingBag size={14} />} color="#FF1F45" hint={`${myOrders.length} total`} onClick={() => onTab("orders")} />
-        <KPICard label="Open Repairs" value={openRepairs} icon={<Wrench size={14} />} color="#ff6b00" hint={`${myRepairs.length} total`} onClick={() => onTab("repairs")} />
-        <KPICard label="Active Services" value={activeServices} icon={<Zap size={14} />} color="#00b4ff" hint="Upgrades, builds & more" onClick={() => onTab("upgrades")} />
-        <KPICard label="Loyalty Points" value={points} icon={<Gift size={14} />} color="#00cc66" hint="Redeem anytime" onClick={() => onTab("rewards")} />
-        <KPICard label="Notifications" value={unread} icon={<Bell size={14} />} color="#ffd700" hint="Unread" onClick={() => onTab("notifications")} />
+        <KPICard label="Active Orders" value={activeOrders} icon={<ShoppingBag size={14} />} color="#FF1F45" hint={`${myOrders.length} total orders`} onClick={() => onTab("orders")} />
+        <KPICard label="Open Repairs" value={openRepairs} icon={<Wrench size={14} />} color="#ff6b00" hint={`${myRepairs.length} repair tickets`} onClick={() => onTab("repairs")} />
+        <KPICard label="Active Services" value={activeServices + activeRentals} icon={<Zap size={14} />} color="#00b4ff" hint="Upgrades, builds & rentals" onClick={() => onTab("upgrades")} />
+        <KPICard label="Pending Payments" value={pendingPayments} icon={<Clock size={14} />} color="#ffd700" hint="Awaiting your action" onClick={() => onTab("orders")} />
+        <KPICard label="Loyalty Points" value={points} icon={<Gift size={14} />} color="#00cc66" hint="Redeem for coupons" onClick={() => onTab("rewards")} />
+        <KPICard label="Notifications" value={unread} icon={<Bell size={14} />} color="#a855f7" hint="Unread alerts" onClick={() => onTab("notifications")} />
       </div>
 
-      <SectionCard title="Quick Actions" subtitle="Jump into the most common flows">
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
+      <SectionCard title="Quick Actions" subtitle="Jump into the most common workflows">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
           <button onClick={() => onTab("orders")} className="glass-pill glass-pill-primary"><ShoppingBag size={13} /> Track Order</button>
           <button onClick={() => onTab("repairs")} className="glass-pill glass-pill-outline"><Wrench size={13} /> File Repair</button>
-          <button onClick={() => onTab("rentals")} className="glass-pill glass-pill-outline"><Truck size={13} /> Book Rental</button>
-          <button onClick={() => { window.history.pushState(null, "", "/"); window.dispatchEvent(new PopStateEvent("popstate")); }} className="glass-pill glass-pill-outline"><ShoppingCart size={13} /> Browse Products</button>
+          <button onClick={() => onTab("rentals")} className="glass-pill glass-pill-outline"><Truck size={13} /> Rentals</button>
+          <button onClick={() => onTab("builds")} className="glass-pill glass-pill-outline"><Cpu size={13} /> PC Builds</button>
+          <button onClick={() => onTab("support")} className="glass-pill glass-pill-outline"><Headphones size={13} /> Support</button>
+          <button onClick={() => { window.history.pushState(null, "", "/"); window.dispatchEvent(new PopStateEvent("popstate")); }} className="glass-pill glass-pill-outline"><ShoppingCart size={13} /> Shop</button>
         </div>
       </SectionCard>
 
-      <SectionCard title="Recent Activity" subtitle="Live status across your orders, repairs, services and builds — synced from DESKTO">
+      {/* Pending Actions Section - Shows items needing customer attention */}
+      {(pendingPayments > 0 || openTickets > 0) && (
+        <SectionCard title="⚡ Requires Your Action" subtitle="Items waiting for your response or payment" style={{ borderColor: "rgba(255,215,0,.3)" }}>
+          <div style={{ display: "grid", gap: 10 }}>
+            {myOrders.filter(o => o.status === "verified" || o.status === "packing").map(o => (
+              <div key={o.id} className="glass" style={{ padding: 12, borderRadius: 8, display: "flex", justifyContent: "space-between", alignItems: "center", borderColor: "rgba(255,215,0,.2)" }}>
+                <div><span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 11, color: "#ffd700" }}>ORDER</span><br/><span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 12 }}>{o.items[0]?.name || "Order"}</span></div>
+                <div style={{ textAlign: "right" }}><StatusBadge status={o.status} /><br/><span style={{ fontFamily: "'Rajdhani', sans-serif", color: "#FF1F45" }}>{inr(o.total)}</span></div>
+              </div>
+            ))}
+            {myRepairs.filter(r => r.status === "quotation").map(r => (
+              <div key={r.id} className="glass" style={{ padding: 12, borderRadius: 8, display: "flex", justifyContent: "space-between", alignItems: "center", borderColor: "rgba(255,215,0,.2)" }}>
+                <div><span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 11, color: "#ffd700" }}>REPAIR</span><br/><span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 12 }}>{r.device}</span></div>
+                <div style={{ textAlign: "right" }}><StatusBadge status={r.status} /><br/><span style={{ fontFamily: "'Rajdhani', sans-serif", color: "#00b4ff" }}>Review Quotation</span></div>
+              </div>
+            ))}
+            {myBuilds.filter(b => b.status === "quotation" || b.status === "approved").map(b => (
+              <div key={b.id} className="glass" style={{ padding: 12, borderRadius: 8, display: "flex", justifyContent: "space-between", alignItems: "center", borderColor: "rgba(255,215,0,.2)" }}>
+                <div><span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 11, color: "#ffd700" }}>PC BUILD</span><br/><span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 12 }}>{b.name}</span></div>
+                <div style={{ textAlign: "right" }}><StatusBadge status={b.status} /><br/><span style={{ fontFamily: "'Rajdhani', sans-serif", color: "#00cc66" }}>{inr(b.quotation || b.total)}</span></div>
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+      )}
+
+      <SectionCard title="Live Activity Feed" subtitle="Real-time status updates across all your orders, repairs, services and builds — synced from DESKTO admin">
         {activity.length === 0 ? <EmptyState icon={<Package size={24} />} title="No activity yet" hint="Place an order or submit a service request to see live updates here." /> : (
           <DataTable
             rowKey={a => `${a.type}-${a.id}`}

@@ -274,12 +274,18 @@ function MediaCell({ files }: { files?: string[] }) {
 
 // ─── Overview ─────────────────────────────────────────────────────────────
 
-export function AdminOverview({ data }: { data: ReturnType<typeof import("./lib/dashboardData").useDashboardData> }) {
+export function AdminOverview({ data, onTab }: { data: ReturnType<typeof import("./lib/dashboardData").useDashboardData>; onTab?: (tab: string) => void }) {
   const { store } = data;
+  const go = (tab: string) => onTab && onTab(tab);
   const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
   const todaysOrders = store.orders.filter(o => o.createdAt >= todayStart.getTime());
   const totalRevenue = store.orders.filter(o => o.status === "delivered").reduce((s, o) => s + o.total, 0);
   const lowStock = store.products.filter(p => p.stock < 5).length;
+  
+  const activeBuilds = store.pcBuilds.filter(b => !["delivered", "cancelled"].includes(b.status)).length;
+  const openServices = store.serviceRequests.filter(s => !["completed", "cancelled"].includes(s.status)).length;
+  const pendingDeliveries = store.orders.filter(o => ["packing", "shipped"].includes(o.status)).length;
+  const staffOnline = store.staff.length; // Mock, real impl would check last active
 
   // 7-day revenue chart (mock — derived from orders)
   const dayBuckets: Record<string, number> = {};
@@ -303,18 +309,27 @@ export function AdminOverview({ data }: { data: ReturnType<typeof import("./lib/
     byCat[p?.category || "other"] = (byCat[p?.category || "other"] || 0) + i.qty * i.price;
   }));
   const pieData = Object.entries(byCat).map(([name, value]) => ({ name, value }));
+  
+  // Pipeline counts
+  const orderCounts = {
+    placed: store.orders.filter(o => o.status === "placed").length,
+    verified: store.orders.filter(o => o.status === "verified").length,
+    packing: store.orders.filter(o => o.status === "packing").length,
+    shipped: store.orders.filter(o => o.status === "shipped").length,
+    delivered: store.orders.filter(o => o.status === "delivered").length,
+  };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-      <div className="dash-kpi-grid">
-        <KPICard label="Today's Sales" value={inr(todaysOrders.reduce((s, o) => s + o.total, 0))} icon={<TrendingUp size={14} />} color="#00cc66" delta={{ value: 8, positive: true }} />
-        <KPICard label="Orders Today" value={todaysOrders.length} icon={<ShoppingBag size={14} />} color="#FF1F45" hint={`${store.orders.length} total`} />
-        <KPICard label="Revenue (Delivered)" value={inr(totalRevenue)} icon={<TrendingUp size={14} />} color="#00b4ff" delta={{ value: 14, positive: true }} />
-        <KPICard label="Open Repairs" value={store.repairs.filter(r => !["ready", "delivered"].includes(r.status)).length} icon={<Wrench size={14} />} color="#ff6b00" />
-        <KPICard label="Active Rentals" value={store.rentals.filter(r => r.status === "active").length} icon={<Truck size={14} />} color="#a855f7" />
-        <KPICard label="Open Tickets" value={store.tickets.filter(t => !["resolved", "closed"].includes(t.status)).length} icon={<Bell size={14} />} color="#ffd700" />
-        <KPICard label="Low-Stock Items" value={lowStock} icon={<AlertCircle size={14} />} color="#FF1F45" hint="Restock soon" />
-        <KPICard label="Audit Events" value={store.auditLogs.length} icon={<History size={14} />} color="#888" hint="Last 200 logged" />
+      <div className="dash-kpi-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
+        <KPICard label="Today's Sales" value={inr(todaysOrders.reduce((s, o) => s + o.total, 0))} icon={<TrendingUp size={14} />} color="#00cc66" delta={{ value: 8, positive: true }} onClick={() => go("orders")} />
+        <KPICard label="Orders Today" value={todaysOrders.length} icon={<ShoppingBag size={14} />} color="#FF1F45" hint={`${store.orders.length} total`} onClick={() => go("orders")} />
+        <KPICard label="Revenue (Delivered)" value={inr(totalRevenue)} icon={<TrendingUp size={14} />} color="#00b4ff" delta={{ value: 14, positive: true }} onClick={() => go("orders")} />
+        <KPICard label="Open Repairs" value={store.repairs.filter(r => !["ready", "delivered"].includes(r.status)).length} icon={<Wrench size={14} />} color="#ff6b00" onClick={() => go("repairs")} />
+        <KPICard label="Active PC Builds" value={activeBuilds} icon={<Cpu size={14} />} color="#a855f7" onClick={() => go("builds")} />
+        <KPICard label="Open Services" value={openServices} icon={<Zap size={14} />} color="#ffd700" onClick={() => go("upgrades")} />
+        <KPICard label="Pending Deliveries" value={pendingDeliveries} icon={<TruckIcon size={14} />} color="#00cc66" onClick={() => go("deliveries")} />
+        <KPICard label="Staff Online" value={staffOnline} icon={<Users size={14} />} color="#00b4ff" onClick={() => go("staff")} />
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 14 }}>
@@ -341,6 +356,87 @@ export function AdminOverview({ data }: { data: ReturnType<typeof import("./lib/
                 <Tooltip contentStyle={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 11 }} />
               </PieChart>
             </ResponsiveContainer>
+          </div>
+        </SectionCard>
+      </div>
+      
+      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 14 }}>
+        <SectionCard title="Order Status Pipeline" subtitle="Current snapshot of all active orders">
+          <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "space-between", overflowX: "auto", paddingBottom: 10 }}>
+            {[
+              { label: "Placed", count: orderCounts.placed, color: "#aaa" },
+              { label: "Verified", count: orderCounts.verified, color: "#00b4ff" },
+              { label: "Packing", count: orderCounts.packing, color: "#ff6b00" },
+              { label: "Shipped", count: orderCounts.shipped, color: "#a855f7" },
+              { label: "Delivered", count: orderCounts.delivered, color: "#00cc66" }
+            ].map((stage, i, arr) => (
+              <div key={stage.label} style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, minWidth: 120 }}>
+                <div className="glass" style={{ flex: 1, padding: "12px 16px", borderRadius: 8, display: "flex", flexDirection: "column", gap: 4, borderTop: `2px solid ${stage.color}` }}>
+                  <div style={{ fontSize: 11, color: "#aaa", textTransform: "uppercase", letterSpacing: "1px" }}>{stage.label}</div>
+                  <div style={{ fontSize: 24, fontWeight: 700, color: "white" }}>{stage.count}</div>
+                </div>
+                {i < arr.length - 1 && <ChevronRight size={16} color="#444" style={{ flexShrink: 0 }} />}
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+        <SectionCard title="Pending Actions" subtitle="Items that require admin attention">
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 300, overflowY: "auto" }}>
+            {store.repairs.filter(r => r.status === "submitted").map(r => (
+              <div key={r.id} className="glass" style={{ padding: 12, borderRadius: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: 13, color: "white", fontWeight: 600 }}>Unassigned Repair: {r.device}</div>
+                  <div style={{ fontSize: 11, color: "#aaa", marginTop: 2 }}>Customer: {r.customerName}</div>
+                </div>
+                <button className="glass-pill glass-pill-primary" style={{ fontSize: 10 }}>Assign</button>
+              </div>
+            ))}
+            {store.pcBuilds.filter(b => b.status === "submitted").map(b => (
+              <div key={b.id} className="glass" style={{ padding: 12, borderRadius: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: 13, color: "white", fontWeight: 600 }}>New Build Request: {b.name}</div>
+                  <div style={{ fontSize: 11, color: "#aaa", marginTop: 2 }}>Customer: {b.customerName}</div>
+                </div>
+                <button className="glass-pill glass-pill-info" style={{ fontSize: 10 }}>Review</button>
+              </div>
+            ))}
+            {store.serviceRequests.filter(s => s.status === "submitted").map(s => (
+              <div key={s.id} className="glass" style={{ padding: 12, borderRadius: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: 13, color: "white", fontWeight: 600 }}>New {s.kind} Request</div>
+                  <div style={{ fontSize: 11, color: "#aaa", marginTop: 2 }}>{s.device || s.productName}</div>
+                </div>
+                <button className="glass-pill glass-pill-outline" style={{ fontSize: 10 }}>Process</button>
+              </div>
+            ))}
+            {store.repairs.filter(r => r.status === "submitted").length === 0 && store.pcBuilds.filter(b => b.status === "submitted").length === 0 && store.serviceRequests.filter(s => s.status === "submitted").length === 0 && (
+              <div style={{ padding: 24, textAlign: "center", color: "#666", fontSize: 12 }}>You're all caught up! No pending items.</div>
+            )}
+          </div>
+        </SectionCard>
+        
+        <SectionCard title="Recent Activity" subtitle="Real-time audit log of system events">
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: 300, overflowY: "auto" }}>
+            {store.auditLogs.slice(0, 15).map(log => (
+              <div key={log.id} style={{ display: "flex", gap: 12, alignItems: "flex-start", padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,.05)" }}>
+                <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#111", border: "1px solid rgba(255,255,255,.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <History size={14} color="#aaa" />
+                </div>
+                <div>
+                  <div style={{ fontSize: 12, color: "#eee" }}>
+                    <span style={{ color: "#a855f7", fontWeight: 600 }}>{log.actor || "System"}</span> {log.event.replace(/_/g, " ")}
+                  </div>
+                  <div style={{ fontSize: 11, color: "#777", marginTop: 2 }}>{log.detail}</div>
+                  <div style={{ fontSize: 10, color: "#555", marginTop: 4 }}>{new Date(log.at).toLocaleString()}</div>
+                </div>
+              </div>
+            ))}
+            {store.auditLogs.length === 0 && (
+              <div style={{ padding: 24, textAlign: "center", color: "#666", fontSize: 12 }}>No recent activity.</div>
+            )}
           </div>
         </SectionCard>
       </div>
@@ -1148,9 +1244,17 @@ export function AdminInventory({ store }: { store: DashboardStore }) {
 export function AdminOrders({ store, updateOrderStatus }: { store: DashboardStore; updateOrderStatus: any }) {
   const STATUS_OPTIONS: Order["status"][] = ["placed", "verified", "packing", "shipped", "delivered", "cancelled"];
   const [filter, setFilter] = useState<Order["status"] | "all">("all");
+  const [search, setSearch] = useState("");
   const [open, setOpen] = useState<Order | null>(null);
+  
   const orders = [...store.orders].sort((a, b) => b.createdAt - a.createdAt);
-  const filtered = filter === "all" ? orders : orders.filter(o => o.status === filter);
+  const filtered = orders.filter(o => {
+    const matchesStatus = filter === "all" || o.status === filter;
+    const searchString = `${o.id} ${o.customerName || ""} ${o.customerEmail || ""} ${o.customerPhone || ""}`.toLowerCase();
+    const matchesSearch = searchString.includes(search.toLowerCase());
+    return matchesStatus && matchesSearch;
+  });
+  
   const active = open ? store.orders.find(o => o.id === open.id) || open : null;
   const customerName = (order: Order) => order.customerName || readDemoUsers().find(u => u.id === order.customerId)?.name || "Customer";
   const customerContact = (order: Order) => order.customerPhone || order.customerEmail || readDemoUsers().find(u => u.id === order.customerId)?.email || order.customerId;
@@ -1158,15 +1262,48 @@ export function AdminOrders({ store, updateOrderStatus }: { store: DashboardStor
     updateOrderStatus(order.id, status);
     toast.success(`Order ${order.id.slice(-8).toUpperCase()} synced to ${status}`);
   };
+
+  const totalRevenue = filtered.reduce((sum, o) => sum + o.total, 0);
+  const deliveredRevenue = filtered.filter(o => o.status === "delivered").reduce((sum, o) => sum + o.total, 0);
+  const pendingRevenue = filtered.filter(o => !["delivered", "cancelled"].includes(o.status)).reduce((sum, o) => sum + o.total, 0);
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        {(["all", ...STATUS_OPTIONS] as const).map(status => (
-          <button key={status} className={`glass-pill ${filter === status ? "glass-pill-primary" : "glass-pill-outline"} glass-pill-sm`} onClick={() => setFilter(status)}>
-            {status === "all" ? "All" : status.toUpperCase()}
-          </button>
-        ))}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginBottom: 8 }}>
+        <div className="glass" style={{ padding: "16px", borderRadius: 8, borderLeft: "4px solid #00b4ff" }}>
+          <div style={{ fontSize: 11, color: "#aaa", textTransform: "uppercase", letterSpacing: "1px" }}>Selected Revenue</div>
+          <div style={{ fontSize: 24, fontWeight: 700, color: "white", marginTop: 4 }}>{inr(totalRevenue)}</div>
+        </div>
+        <div className="glass" style={{ padding: "16px", borderRadius: 8, borderLeft: "4px solid #00cc66" }}>
+          <div style={{ fontSize: 11, color: "#aaa", textTransform: "uppercase", letterSpacing: "1px" }}>Delivered Revenue</div>
+          <div style={{ fontSize: 24, fontWeight: 700, color: "white", marginTop: 4 }}>{inr(deliveredRevenue)}</div>
+        </div>
+        <div className="glass" style={{ padding: "16px", borderRadius: 8, borderLeft: "4px solid #ff6b00" }}>
+          <div style={{ fontSize: 11, color: "#aaa", textTransform: "uppercase", letterSpacing: "1px" }}>Pending Revenue</div>
+          <div style={{ fontSize: 24, fontWeight: 700, color: "white", marginTop: 4 }}>{inr(pendingRevenue)}</div>
+        </div>
       </div>
+
+      <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {(["all", ...STATUS_OPTIONS] as const).map(status => (
+            <button key={status} className={`glass-pill ${filter === status ? "glass-pill-primary" : "glass-pill-outline"} glass-pill-sm`} onClick={() => setFilter(status)}>
+              {status === "all" ? "All" : status.toUpperCase()}
+            </button>
+          ))}
+        </div>
+        <div className="search-bar" style={{ display: "flex", alignItems: "center", gap: 8, background: "#111", padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", minWidth: 250 }}>
+          <Search size={14} color="#777" />
+          <input 
+            type="text" 
+            placeholder="Search orders..." 
+            value={search} 
+            onChange={e => setSearch(e.target.value)}
+            style={{ background: "transparent", border: "none", color: "white", outline: "none", width: "100%", fontSize: 12 }} 
+          />
+        </div>
+      </div>
+      
       <SectionCard title="Orders" subtitle={`${filtered.length} shown · ${orders.length} total`}>
         <DataTable
           rowKey={o => o.id}
@@ -1176,7 +1313,11 @@ export function AdminOrders({ store, updateOrderStatus }: { store: DashboardStor
             { key: "id", label: "Order ID", render: o => <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 10 }}>{o.id.slice(-8).toUpperCase()}</span> },
             { key: "customer", label: "Customer", render: o => <div><strong style={{ color: "white" }}>{customerName(o)}</strong><br /><span style={{ color: "#777", fontSize: 11 }}>{customerContact(o)}</span></div> },
             { key: "items", label: "Items", render: o => <div><strong style={{ color: "white" }}>{o.items.length} item{o.items.length > 1 ? "s" : ""}</strong><br /><span style={{ color: "#777", fontSize: 11 }}>{o.items[0]?.name}{o.items.length > 1 ? ` +${o.items.length - 1}` : ""}</span></div> },
-            { key: "fulfillment", label: "Delivery", render: o => <div><strong style={{ color: "white" }}>{o.deliveryMethod === "pickup" ? "Store Pickup" : "Home Delivery"}</strong><br /><span style={{ color: "#777", fontSize: 11 }}>{o.paymentMethod?.toUpperCase() || "Payment"}{o.invoiceId ? ` · ${o.invoiceId}` : ""}</span></div> },
+            { key: "fulfillment", label: "Delivery", render: o => <div>
+                <strong style={{ color: "white" }}>{o.deliveryMethod === "pickup" ? "Store Pickup" : "Home Delivery"}</strong><br />
+                <span style={{ color: "#777", fontSize: 11 }}>{o.shippingAddress && o.deliveryMethod !== "pickup" ? `${o.shippingAddress.city}, ${o.shippingAddress.state}` : o.paymentMethod?.toUpperCase() || "Payment"}</span>
+              </div> 
+            },
             { key: "total", label: "Total", align: "right", render: o => inr(o.total) },
             { key: "status", label: "Status", render: o => <StatusBadge status={o.status} /> },
             { key: "date", label: "Date", render: o => formatDate(o.createdAt) },
@@ -1602,56 +1743,124 @@ export function AdminDeliveries({
 
 export function AdminRepairs({ store, updateRepairStatus, patchRepair }: { store: DashboardStore; updateRepairStatus: any; patchRepair: (id: string, patch: Partial<Repair>) => void }) {
   useAuthStaffRefresh();
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedRepairId, setSelectedRepairId] = useState<string | null>(null);
+  
   const technicianOptions = getAllStaffOptions(store);
   const technicianName = (id?: string) => technicianOptions.find(s => s.id === id)?.name || store.staff.find(s => s.id === id)?.name || "Unassigned";
+  
+  const filteredRepairs = store.repairs.filter(r => {
+    const matchesSearch = (r.customerName || "").toLowerCase().includes(search.toLowerCase()) || 
+                          (r.device || "").toLowerCase().includes(search.toLowerCase()) ||
+                          r.id.toLowerCase().includes(search.toLowerCase());
+    const matchesFilter = statusFilter === "all" || 
+                         (statusFilter === "open" && !["ready", "delivered", "closed"].includes(r.status)) ||
+                         r.status === statusFilter;
+    return matchesSearch && matchesFilter;
+  });
+
+  const selectedRepair = store.repairs.find(r => r.id === selectedRepairId);
+
   return (
-    <SectionCard title="Repair Management" subtitle="Validate requests, approve work, assign technicians, and schedule service">
-      <DataTable
-        rowKey={r => r.id}
-        data={store.repairs}
-        columns={[
-          { key: "id", label: "Ticket", render: r => <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 10 }}>#{r.id.slice(-8).toUpperCase()}</span> },
-          { key: "customer", label: "Customer", render: r => (
-            <div>
-              <div style={{ color: "white" }}>{r.customerName || r.customerId}</div>
-              <div style={{ fontSize: 10, color: "#777" }}>{r.contactPhone || "No phone"}</div>
+    <div style={{ display: "flex", gap: 16 }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <SectionCard title="Repair Management" subtitle="Validate requests, approve work, assign technicians, and schedule service">
+          <div style={{ display: "flex", gap: 12, marginBottom: 16, alignItems: "center", flexWrap: "wrap" }}>
+            <div className="search-bar" style={{ flex: 1, minWidth: 200, display: "flex", alignItems: "center", gap: 8, background: "#111", padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)" }}>
+              <Search size={14} color="#777" />
+              <input 
+                type="text" 
+                placeholder="Search repairs by ID, customer, or device..." 
+                value={search} 
+                onChange={e => setSearch(e.target.value)}
+                style={{ background: "transparent", border: "none", color: "white", outline: "none", width: "100%", fontSize: 12 }} 
+              />
             </div>
-          ) },
-          { key: "device", label: "Device", render: r => (
-            <div>
-              <div style={{ color: "white" }}>{r.device}</div>
-              <div style={{ fontSize: 10, color: "#777" }}>{r.deviceType || "Device"} · {r.serialNumber || "No serial"}</div>
+            <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4 }}>
+              <button onClick={() => setStatusFilter("all")} className={`glass-pill ${statusFilter === "all" ? "glass-pill-primary" : "glass-pill-outline"}`} style={{ fontSize: 11 }}>All</button>
+              <button onClick={() => setStatusFilter("open")} className={`glass-pill ${statusFilter === "open" ? "glass-pill-warning" : "glass-pill-outline"}`} style={{ fontSize: 11 }}>Open</button>
+              <button onClick={() => setStatusFilter("submitted")} className={`glass-pill ${statusFilter === "submitted" ? "glass-pill-info" : "glass-pill-outline"}`} style={{ fontSize: 11 }}>New Requests</button>
+              <button onClick={() => setStatusFilter("ready")} className={`glass-pill ${statusFilter === "ready" ? "glass-pill-success" : "glass-pill-outline"}`} style={{ fontSize: 11 }}>Ready</button>
             </div>
-          ) },
-          { key: "issue", label: "Issue", render: r => <span style={{ maxWidth: 220, display: "inline-block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.issue}</span> },
-          { key: "service", label: "Service", render: r => <span>{r.serviceType || "-"}<br /><small style={{ color: "#777" }}>{r.preferredSlot || "Schedule pending"}</small></span> },
-          { key: "media", label: "Media", render: r => <MediaCell files={r.uploadedFiles} /> },
-          { key: "technician", label: "Technician", render: r => (
-            <RepairTechnicianCell repair={r} technicianOptions={technicianOptions} technicianName={technicianName} patchRepair={patchRepair} />
-          ) },
-          { key: "staffProgress", label: "Staff Work Progress", render: r => (
-            <RepairStaffProgressCell repair={r} technicianName={technicianName} />
-          ) },
-          { key: "quote", label: "Quote Details", render: r => <RepairQuoteEditor repair={r} patchRepair={patchRepair} /> },
-          { key: "status", label: "Status", render: r => <StatusBadge status={r.status} /> },
-          { key: "action", label: "", render: r => (
-            <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 170 }}>
-              <select value={r.status} onChange={e => {
-                patchRepair(r.id, { status: e.target.value as Repair["status"] });
-                toast.success("Status synced to customer dashboard");
-              }} style={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "6px 8px", color: "white", fontSize: 11 }}>
-                {REPAIR_STATUS_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-              </select>
-              <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                <button className="glass-pill glass-pill-sm glass-pill-success" onClick={() => { patchRepair(r.id, { adminVerified: true, status: "admin-approved" }); toast.success("Request approved"); }}>Approve</button>
-                <button className="glass-pill glass-pill-sm glass-pill-red" onClick={() => { patchRepair(r.id, { status: "rejected" }); toast.error("Request rejected"); }}>Reject</button>
+          </div>
+          
+          <DataTable
+            rowKey={r => r.id}
+            data={filteredRepairs}
+            columns={[
+              { key: "id", label: "Ticket", render: r => <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 10, cursor: "pointer", color: "#00b4ff", textDecoration: "underline" }} onClick={() => setSelectedRepairId(r.id)}>#{r.id.slice(-8).toUpperCase()}</span> },
+              { key: "customer", label: "Customer", render: r => (
+                <div>
+                  <div style={{ color: "white" }}>{r.customerName || r.customerId}</div>
+                  <div style={{ fontSize: 10, color: "#777" }}>{r.contactPhone || "No phone"}</div>
+                </div>
+              ) },
+              { key: "device", label: "Device", render: r => (
+                <div>
+                  <div style={{ color: "white" }}>{r.device}</div>
+                  <div style={{ fontSize: 10, color: "#777" }}>{r.deviceType || "Device"} · {r.serialNumber || "No serial"}</div>
+                </div>
+              ) },
+              { key: "issue", label: "Issue", render: r => <span style={{ maxWidth: 150, display: "inline-block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.issue}</span> },
+              { key: "technician", label: "Technician", render: r => (
+                <RepairTechnicianCell repair={r} technicianOptions={technicianOptions} technicianName={technicianName} patchRepair={patchRepair} />
+              ) },
+              { key: "staffProgress", label: "Staff Progress", render: r => (
+                <RepairStaffProgressCell repair={r} technicianName={technicianName} />
+              ) },
+              { key: "status", label: "Status", render: r => <StatusBadge status={r.status} /> },
+              { key: "action", label: "", render: r => (
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 150 }}>
+                  <select value={r.status} onChange={e => {
+                    patchRepair(r.id, { status: e.target.value as Repair["status"] });
+                    toast.success("Status synced to customer dashboard");
+                  }} style={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "6px 8px", color: "white", fontSize: 11 }}>
+                    {REPAIR_STATUS_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                  </select>
+                  <button className="glass-pill glass-pill-sm glass-pill-outline" onClick={() => setSelectedRepairId(r.id)}>View Details</button>
+                </div>
+              ) },
+            ]}
+          />
+        </SectionCard>
+      </div>
+      
+      {selectedRepair && (
+        <div style={{ width: 320, flexShrink: 0, display: "flex", flexDirection: "column", gap: 12 }}>
+          <SectionCard title="Repair Details" subtitle={`#${selectedRepair.id.slice(-8).toUpperCase()}`}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <StatusBadge status={selectedRepair.status} />
+              <button className="glass-pill glass-pill-sm glass-pill-outline" onClick={() => setSelectedRepairId(null)}>Close</button>
+            </div>
+            
+            <div style={{ fontSize: 12, color: "#ccc", marginBottom: 16 }}>
+              <div style={{ marginBottom: 4 }}><strong>Device:</strong> {selectedRepair.device}</div>
+              <div style={{ marginBottom: 4 }}><strong>Type:</strong> {selectedRepair.serviceType}</div>
+              <div style={{ marginBottom: 4 }}><strong>Customer:</strong> {selectedRepair.customerName}</div>
+              <div style={{ marginBottom: 4 }}><strong>Issue:</strong> {selectedRepair.issue}</div>
+            </div>
+            
+            <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: 16, marginBottom: 16 }}>
+              <h4 style={{ fontSize: 12, color: "white", marginBottom: 8 }}>Timeline Progress</h4>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {selectedRepair.timeline?.map((step, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ width: 12, height: 12, borderRadius: "50%", background: step.done ? "#00cc66" : "#333", border: "2px solid #111" }} />
+                    <div style={{ fontSize: 11, color: step.done ? "white" : "#777" }}>{step.label}</div>
+                  </div>
+                ))}
               </div>
-              <button className="glass-pill glass-pill-sm glass-pill-info" onClick={() => { updateRepairStatus(r.id, r.technicianId ? "device-received" : "received"); toast.success("Customer notification sent"); }}>Schedule / Notify</button>
             </div>
-          ) },
-        ]}
-      />
-    </SectionCard>
+            
+            <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: 16 }}>
+              <h4 style={{ fontSize: 12, color: "white", marginBottom: 8 }}>Quotation</h4>
+              <RepairQuoteEditor repair={selectedRepair} patchRepair={patchRepair} />
+            </div>
+          </SectionCard>
+        </div>
+      )}
+    </div>
   );
 }
 

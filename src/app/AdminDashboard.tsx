@@ -57,6 +57,7 @@ const TABS = [
   { key: "categories", label: "Categories", icon: Tag, group: "Catalog" },
   { key: "brands", label: "Brands", icon: Award, group: "Catalog" },
   { key: "inventory", label: "Inventory", icon: Database, group: "Catalog" },
+  { key: "orders", label: "Orders", icon: ShoppingBag, group: "Operations" },
   { key: "repairs", label: "Repairs", icon: Wrench, group: "Operations" },
   { key: "builder", label: "Custom Builder", icon: Cpu, group: "Operations" },
   { key: "builds", label: "PC Builds", icon: Cpu, group: "Operations" },
@@ -164,7 +165,7 @@ export default function AdminDashboard({ user, initialTab }: Props) {
 
   const renderTab = () => {
     switch (normalizedTab) {
-      case "overview":          return <AdminOverview data={data} />;
+      case "overview":          return <AdminOverview data={data} onTab={handleTabChange} />;
       case "products":          return <AdminProducts store={store} addCatalogProduct={addCatalogProduct} patchCatalogProduct={patchCatalogProduct} deleteCatalogProduct={deleteCatalogProduct} />;
       case "categories":        return <AdminCategories />;
       case "brands":            return <AdminBrands />;
