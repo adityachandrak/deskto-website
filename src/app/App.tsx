@@ -264,6 +264,9 @@ function GlobalStyles() {
       .animate-glow{animation:glow-pulse 3s ease-in-out infinite;}
       .animate-rotate-slow{animation:rotate-slow 22s linear infinite;}
       .animate-rotate-reverse{animation:rotate-reverse 28s linear infinite;}
+      .animate-fan-1{animation:rotate-slow 1.4s linear infinite;transform-box:fill-box;transform-origin:50% 50%;}
+      .animate-fan-2{animation:rotate-reverse 1.7s linear infinite;transform-box:fill-box;transform-origin:50% 50%;}
+      .animate-fan-3{animation:rotate-slow 2s linear infinite;transform-box:fill-box;transform-origin:50% 50%;}
       .animate-glitch{animation:glitch 9s infinite;}
       .animate-marquee{animation:marquee 32s linear infinite;}
       .rgb-bar{background:linear-gradient(90deg,#f00,#ff6b00,#ff0,#0f0,#00f,#f0f,#f00);background-size:400% 100%;animation:rgb-bar 4s linear infinite;}
@@ -283,7 +286,7 @@ function GlobalStyles() {
 
         /* Hero */
         .hero-content{padding:86px 20px 136px!important;}
-        .hero-floating,.hero-rings{display:none!important;}
+        .hero-floating,.hero-rings,.hero-gpu-visual{display:none!important;}
         .hero-stats{grid-template-columns:repeat(2,1fr)!important;padding:14px 20px!important;}
         .hero-stats-num{font-size:20px!important;}
         .hero-btns{flex-direction:column!important;}
@@ -596,6 +599,73 @@ export function Navbar() {
 }
 
 // ─────────────── HERO ───────────────
+// A hand-built (not photo) triple-fan GPU illustration so the fan blades are
+// real rotating SVG geometry, not an animation faked over a static photo.
+function FanUnit({ cx, cy, r, blades = 7, animClass, label }: { cx: number; cy: number; r: number; blades?: number; animClass: string; label?: string }) {
+  const bladeEls = Array.from({ length: blades }).map((_, i) => {
+    const angle = (360 / blades) * i;
+    return (
+      <path
+        key={i}
+        transform={`rotate(${angle} ${cx} ${cy})`}
+        d={`M ${cx} ${cy} Q ${cx + r * 0.22} ${cy - r * 0.18} ${cx + r * 0.82} ${cy - r * 0.3} Q ${cx + r * 0.98} ${cy - r * 0.02} ${cx + r * 0.68} ${cy + r * 0.14} Q ${cx + r * 0.28} ${cy + r * 0.1} ${cx} ${cy} Z`}
+        fill="#2b2b2f"
+        stroke="rgba(255,255,255,.08)"
+        strokeWidth={1}
+      />
+    );
+  });
+  return (
+    <g>
+      <circle cx={cx} cy={cy} r={r + 7} fill="#0d0d0f" stroke="rgba(255,255,255,.14)" strokeWidth={2} />
+      <circle cx={cx} cy={cy} r={r + 3} fill="#08080a" />
+      <g className={animClass}>{bladeEls}</g>
+      <circle cx={cx} cy={cy} r={r * 0.24} fill="#111114" stroke="#FF1F45" strokeWidth={1.5} />
+      <circle cx={cx} cy={cy} r={r * 0.07} fill="#FF1F45" opacity={0.85} />
+      {label && <text x={cx} y={cy + r + 20} textAnchor="middle" fontFamily="'Orbitron',sans-serif" fontSize={7} fill="rgba(255,255,255,.35)" letterSpacing={2}>{label}</text>}
+    </g>
+  );
+}
+
+function GpuHeroVisual() {
+  return (
+    <svg viewBox="0 0 640 460" style={{ width: "100%", height: "100%", display: "block", overflow: "visible" }} aria-label="DESKTO RTX 5090 GPU, animated cooling fans">
+      <defs>
+        <linearGradient id="gpuBody" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#232326" />
+          <stop offset="55%" stopColor="#141416" />
+          <stop offset="100%" stopColor="#08080a" />
+        </linearGradient>
+        <linearGradient id="gpuEdge" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="#FF1F45" stopOpacity="0" />
+          <stop offset="50%" stopColor="#FF1F45" stopOpacity=".9" />
+          <stop offset="100%" stopColor="#FF1F45" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+
+      {/* Card shroud */}
+      <rect x="40" y="30" width="560" height="400" rx="26" fill="url(#gpuBody)" stroke="rgba(255,255,255,.08)" strokeWidth={1.5} />
+      <rect x="40" y="30" width="560" height="400" rx="26" fill="none" stroke="url(#gpuEdge)" strokeWidth={2} className="animate-glow" />
+
+      {/* Brand text */}
+      <text x="66" y="76" fontFamily="'Orbitron',sans-serif" fontSize={13} fontWeight={800} fill="rgba(255,255,255,.85)" letterSpacing={2}>NVIDIA</text>
+      <text x="66" y="100" fontFamily="'Rajdhani',sans-serif" fontSize={19} fontWeight={700} fill="#FF1F45" letterSpacing={1}>GEFORCE RTX 5090</text>
+      <text x="66" y="120" fontFamily="'Space Grotesk',sans-serif" fontSize={10} fill="rgba(255,255,255,.4)">32GB GDDR7 · 21760 CUDA Cores</text>
+
+      {/* Cooling fans, each spinning independently and in alternating directions */}
+      <FanUnit cx={225} cy={255} r={85} animClass="animate-fan-1" />
+      <FanUnit cx={410} cy={255} r={85} animClass="animate-fan-2" />
+
+      {/* Backplate / PCB strip with glowing traces */}
+      <rect x="64" y="368" width="512" height="42" rx="8" fill="#0a0a0c" stroke="rgba(255,31,69,.15)" strokeWidth={1} />
+      {Array.from({ length: 9 }).map((_, i) => (
+        <line key={i} x1={84 + i * 54} y1="380" x2={84 + i * 54 + 30} y2="398" stroke="#FF1F45" strokeOpacity={0.35} strokeWidth={1.5} />
+      ))}
+      <circle cx="576" cy="50" r="5" fill="#FF1F45" className="animate-glow" />
+    </svg>
+  );
+}
+
 function HeroSection() {
   const { scrollYProgress } = useScroll();
   const user = useCurrentUser();
@@ -618,69 +688,11 @@ function HeroSection() {
       <div style={{ position:"absolute",left:0,right:0,height:2,background:"linear-gradient(90deg,transparent,rgba(255,31,69,.25),transparent)",pointerEvents:"none",animation:"scan-line 10s linear infinite" }} />
       <ParticleCanvas />
 
-      {/* Floating hardware — hidden on mobile via class */}
-      <div className="hero-floating animate-float" style={{ position:"absolute",right:"6%",top:"12%",zIndex:5 }}>
-        <div className="glass-card" style={{ width:250,borderRadius:16,padding:20,border:"1px solid rgba(255,31,69,.28)" }}>
-          <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10 }}>
-            <span style={{ fontFamily:"'Orbitron',sans-serif",color:"#FF1F45",fontSize:9,letterSpacing:3 }}>NVIDIA</span>
-            <div className="animate-glow" style={{ width:8,height:8,borderRadius:"50%",background:"#FF1F45" }} />
-          </div>
-          <div style={{ fontFamily:"'Orbitron',sans-serif",color:"white",fontSize:16,fontWeight:800,marginBottom:3 }}>RTX 4090</div>
-          <div style={{ fontFamily:"'Rajdhani',sans-serif",color:"#CFCFCF",fontSize:11,marginBottom:14 }}>24 GB GDDR6X · 16384 CUDA Cores</div>
-          <div style={{ height:44,background:"rgba(255,31,69,.06)",borderRadius:8,border:"1px solid rgba(255,31,69,.15)",display:"flex",alignItems:"center",justifyContent:"center",gap:5,marginBottom:10 }}>
-            {[.15,.25,.4,.55,.7,.55,.4,.25].map((h,i)=>(
-              <div key={i} style={{ width:4,borderRadius:2,background:"#FF1F45",opacity:h,height:`${h*80}%`,animation:`glow-pulse ${1.2+i*.2}s ease-in-out infinite` }} />
-            ))}
-          </div>
-          <div style={{ display:"flex",gap:3 }}>
-            {Array.from({length:10}).map((_,i)=>(
-              <div key={i} style={{ flex:1,height:3,borderRadius:2,background:i<8?"rgba(255,31,69,.55)":"rgba(255,255,255,.08)" }} />
-            ))}
-          </div>
-        </div>
+      {/* Signature GPU visual — a single large card with real rotating fan
+          blades, replacing the old cluster of small floating spec-cards. */}
+      <div className="hero-gpu-visual animate-float" style={{ position:"absolute",right:"-4%",top:"50%",transform:"translateY(-50%)",width:"58%",maxWidth:760,zIndex:4,pointerEvents:"none" }}>
+        <GpuHeroVisual />
       </div>
-
-      <div className="hero-floating animate-float3" style={{ position:"absolute",right:"26%",top:"6%",zIndex:5 }}>
-        <div className="glass-card" style={{ width:130,borderRadius:10,padding:14 }}>
-          <div style={{ fontFamily:"'Orbitron',sans-serif",color:"#CFCFCF",fontSize:7,letterSpacing:2,marginBottom:8 }}>INTEL® CORE™</div>
-          <div style={{ width:96,height:96,margin:"0 auto",background:"rgba(255,255,255,.03)",border:"1.5px solid rgba(255,255,255,.12)",borderRadius:6,display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:2,padding:8 }}>
-            {Array.from({length:36}).map((_,i)=>(
-              <div key={i} style={{ background:`rgba(255,31,69,${[.12,.22,.32,.18,.28,.14][i%6]})`,borderRadius:1 }} />
-            ))}
-          </div>
-          <div style={{ fontFamily:"'Rajdhani',sans-serif",color:"white",fontSize:12,fontWeight:700,marginTop:8,textAlign:"center" }}>i9-14900K</div>
-          <div style={{ fontFamily:"'Space Grotesk',sans-serif",color:"#FF1F45",fontSize:9,textAlign:"center",marginTop:2 }}>6.0 GHz · 24 Cores</div>
-        </div>
-      </div>
-
-      <div className="hero-floating animate-float2" style={{ position:"absolute",right:"4%",bottom:"22%",zIndex:5 }}>
-        <div style={{ display:"flex",gap:5 }}>
-          {[0,1].map(i=>(
-            <div key={i} className="glass-card" style={{ width:28,height:108,borderRadius:5,display:"flex",flexDirection:"column",alignItems:"center",padding:"8px 3px",gap:4 }}>
-              {Array.from({length:7}).map((_,j)=>(
-                <div key={j} style={{ width:"80%",height:7,background:`rgba(80,120,255,${.08+j*.04})`,borderRadius:1 }} />
-              ))}
-              <div style={{ width:"70%",height:5,background:"#FF1F45",borderRadius:2,boxShadow:"0 0 6px #FF1F45",marginTop:"auto" }} />
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="hero-floating animate-float4" style={{ position:"absolute",right:"20%",bottom:"12%",zIndex:5 }}>
-        <div className="glass-card" style={{ width:138,height:48,borderRadius:6,padding:"8px 12px",display:"flex",alignItems:"center",gap:8 }}>
-          <div style={{ width:26,height:26,background:"rgba(255,31,69,.1)",border:"1px solid rgba(255,31,69,.3)",borderRadius:4,display:"flex",alignItems:"center",justifyContent:"center" }}>
-            <HardDrive size={11} color="#FF1F45" />
-          </div>
-          <div>
-            <div style={{ fontFamily:"'Orbitron',sans-serif",color:"white",fontSize:9,fontWeight:700 }}>4TB NVMe</div>
-            <div style={{ fontFamily:"'Rajdhani',sans-serif",color:"#CFCFCF",fontSize:8 }}>7,450 MB/s</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Rings */}
-      <div className="hero-rings animate-rotate-slow" style={{ position:"absolute",right:"18%",top:"35%",width:300,height:300,border:"1px solid rgba(255,31,69,.07)",borderRadius:"50%",pointerEvents:"none" }} />
-      <div className="hero-rings animate-rotate-reverse" style={{ position:"absolute",right:"22%",top:"30%",width:200,height:200,border:"1px dashed rgba(255,31,69,.1)",borderRadius:"50%",pointerEvents:"none" }} />
 
       {/* Main content */}
       <div className="hero-content section-inner" style={{ position:"relative",zIndex:10,maxWidth:1400,margin:"0 auto",padding:"130px 32px 130px",width:"100%" }}>
@@ -1388,7 +1400,15 @@ function usePublishedHomepageItems(type: string) {
   const { store } = useDashboardData();
   return useMemo(
     () => (store.gamingHub || [])
-      .filter(item => item.type === type && item.status === "published")
+      .filter(item => item.status === "published" && (
+        item.type === type ||
+        // Featured Builds section also includes items flagged for Signature Machines
+        (type === "featured-build" && item.showInSignatureMachines) ||
+        // Offers section also includes items flagged for Exclusive Offers
+        (type === "offer" && item.showInExclusiveOffers) ||
+        // Gaming News section also includes admin items flagged for Latest News
+        (type === "gaming-news" && item.showInLatestNews)
+      ))
       .sort((a, b) => (a.order || 0) - (b.order || 0) || (b.publishDate || 0) - (a.publishDate || 0)),
     [store.gamingHub, type],
   );
@@ -1401,6 +1421,10 @@ const homepageDate = (ts?: number) => ts
 const FEATURED_BUILD_WHATSAPP = "919893543312";
 const buildEnquiryHref = (name: string) =>
   `https://wa.me/${FEATURED_BUILD_WHATSAPP}?text=${encodeURIComponent(`Hi DESKTO, I'm interested in the "${name}" build. Please share the details.`)}`;
+const offerEnquiryHref = (name: string) =>
+  `https://wa.me/${FEATURED_BUILD_WHATSAPP}?text=${encodeURIComponent(`Hi DESKTO, I'm interested in the "${name}" offer. Please share the details.`)}`;
+const gamingHubArticleHref = (slug?: string | null) =>
+  slug ? `/services/gaming-hub/${slug}` : "/services/gaming-hub";
 
 function FeaturedBuildsSection() {
   const published = usePublishedHomepageItems("featured-build");
@@ -1478,77 +1502,71 @@ function BrandsSection() {
 
 // ─────────────── OFFERS ───────────────
 const STATIC_OFFER_HERO = {
-  title: "RTX 4090 BEAST BUILD",
-  desc: "Save ₹35,000 on our flagship gaming PC",
+  title: "RTX 4090 Beast Build Hot Deal",
+  desc: "Save on DESKTO's flagship 4K gaming PC bundle for a limited time.",
   discount: "11% OFF",
   img: "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=800&h=400&fit=crop&auto=format",
-  cta: "Grab Deal",
+  detailsHref: "/services/custom-pc",
 };
-const STATIC_OFFER_CARDS = [
-  { title:"PC Repair",off:"20% OFF",desc:"All repair services" },
-  { title:"Rentals",off:"Free 1st Day",desc:"Gaming rig rentals" },
-  { title:"Used PCs",off:"Up to 40%",desc:"Refurbished machines" },
+const STATIC_OFFERS = [
+  {
+    title: "Gaming Laptop",
+    desc: "20% off",
+    discount: "20%",
+    img: "https://images.unsplash.com/photo-1603302576837-37561b2e2302?w=800&h=400&fit=crop&auto=format",
+    detailsHref: "/shop?category=gaming-laptop",
+  },
+  STATIC_OFFER_HERO,
 ];
-const OFFER_CARD_COLORS = ["#7a00ff","#00b4ff","#00cc66","#ffcc00","#ff6b00"];
 
 function OffersSection() {
   const published = usePublishedHomepageItems("offer");
-  const hero = published.length
-    ? {
-        title: published[0].title,
-        desc: published[0].offerDetails || published[0].shortDescription || published[0].intro || "",
-        discount: published[0].discount || "Limited Offer",
-        img: published[0].coverImage || published[0].thumbnailImage || (published[0].gallery || [])[0] || STATIC_OFFER_HERO.img,
-        cta: published[0].ctaText || "Grab Deal",
-      }
-    : STATIC_OFFER_HERO;
-  const cards = published.length > 1
-    ? published.slice(1, 6).map(it => ({ title: it.title, off: it.discount || "Offer", desc: it.shortDescription || it.category || "" }))
-    : STATIC_OFFER_CARDS;
+  const offers = published.length
+    ? published.slice(0, 6).map(it => ({
+        title: it.title,
+        desc: it.shortDescription || it.offerDetails || it.intro || "Limited time DESKTO offer.",
+        discount: it.discount || "Limited Offer",
+        img: it.bannerImage || it.coverImage || it.thumbnailImage || (it.gallery || [])[0] || STATIC_OFFER_HERO.img,
+        detailsHref: it.slug ? `/services/gaming-hub/${it.slug}` : (it.ctaHref || "/services/custom-pc"),
+      }))
+    : STATIC_OFFERS;
   return (
     <section id="deals" className="section-pad" style={{ padding:"96px 0",background:"#050505" }}>
       <div className="section-inner" style={{ maxWidth:1400,margin:"0 auto",padding:"0 32px" }}>
         <SectionHeader eyebrow="Hot Deals" title="Exclusive" accent="Offers" />
-        <div className="offers-grid" style={{ display:"grid",gridTemplateColumns:"2fr 1fr",gap:18 }}>
-          <Reveal dir="left">
-            <div className="offers-hero glass-card" style={{ borderRadius:18,overflow:"hidden",position:"relative",height:280,background:"linear-gradient(135deg,#0a0005,#2A0008)",border:"1px solid rgba(255,31,69,.15)" }}>
-              <img src={hero.img} alt="deal" style={{ position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:.22 }} />
-              <div style={{ position:"absolute",inset:0,background:"linear-gradient(90deg,rgba(5,5,5,.92) 0%,rgba(5,5,5,.2) 100%)" }} />
-              <div style={{ position:"absolute",inset:0,padding:28,display:"flex",flexDirection:"column",justifyContent:"center" }}>
-                <span style={{ fontFamily:"'Orbitron',sans-serif",fontSize:9,color:"#FF1F45",letterSpacing:"3px",marginBottom:10,fontWeight:700 }}>LIMITED TIME OFFER</span>
-                <h3 className="offer-h3" style={{ fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(16px,3vw,26px)",fontWeight:900,color:"white",marginBottom:8,lineHeight:1.1 }}>{hero.title}</h3>
-                <p style={{ fontFamily:"'Space Grotesk',sans-serif",color:"#CFCFCF",fontSize:13,marginBottom:18 }}>{hero.desc}</p>
-                <div style={{ display:"flex",alignItems:"center",gap:12,marginBottom:20,flexWrap:"wrap" }}>
-                  <span className="glass-red" style={{ padding:"3px 8px",borderRadius:3,fontFamily:"'Orbitron',sans-serif",fontSize:9,fontWeight:700,color:"#FF1F45" }}>{hero.discount}</span>
-                </div>
-                <button className="glass-pill glass-pill-primary" style={{ alignSelf:"flex-start" }}>
-                  {hero.cta} <ArrowRight size={12} />
-                </button>
-              </div>
-              <div style={{ position:"absolute",top:16,right:16 }}>
-                <div className="glass-dark" style={{ padding:"8px 12px",borderRadius:8,textAlign:"center" }}>
-                  <div style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:9,color:"#FF1F45" }}>Ends in</div>
-                  <div style={{ fontFamily:"'Rajdhani',sans-serif",fontSize:22,fontWeight:700,color:"white" }}>23:47:12</div>
-                </div>
-              </div>
-            </div>
-          </Reveal>
-          <div style={{ display:"flex",flexDirection:"column",gap:14 }}>
-            {cards.map((o,i)=>{
-              const color = OFFER_CARD_COLORS[i % OFFER_CARD_COLORS.length];
-              return (
-              <Reveal key={`${o.title}-${i}`} delay={i*.08} dir="right">
-                <div className="card-hover glass-card" style={{ borderRadius:12,padding:"17px 18px",border:`1px solid ${color}22`,display:"flex",alignItems:"center",justifyContent:"space-between",background:`${color}08` }}>
-                  <div>
-                    <div style={{ fontFamily:"'Orbitron',sans-serif",fontSize:11,color:"white",fontWeight:700,marginBottom:2 }}>{o.title}</div>
-                    <div style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:11,color:"#CFCFCF" }}>{o.desc}</div>
+        <div className="offers-grid" style={{ display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(320px,1fr))",gap:18 }}>
+          {offers.map((offer,i)=>(
+            <Reveal key={`${offer.title}-${i}`} delay={i*.08} dir={i % 2 ? "right" : "left"}>
+              <div className="offers-hero glass-card card-hover" style={{ borderRadius:18,overflow:"hidden",position:"relative",height:280,background:"linear-gradient(135deg,#0a0005,#2A0008)",border:"1px solid rgba(255,31,69,.15)" }}>
+                <img src={offer.img} alt={offer.title} style={{ position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:.22 }} />
+                <div style={{ position:"absolute",inset:0,background:"linear-gradient(90deg,rgba(5,5,5,.92) 0%,rgba(5,5,5,.35) 100%)" }} />
+                <div style={{ position:"absolute",inset:0,padding:28,display:"flex",flexDirection:"column",justifyContent:"center",paddingRight:i === 0 ? 150 : 28 }}>
+                  <span style={{ fontFamily:"'Orbitron',sans-serif",fontSize:9,color:"#FF1F45",letterSpacing:"3px",marginBottom:10,fontWeight:700 }}>LIMITED TIME OFFER</span>
+                  <h3 className="offer-h3" style={{ fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(18px,2.7vw,30px)",fontWeight:900,color:"white",marginBottom:8,lineHeight:1.1 }}>{offer.title}</h3>
+                  <p style={{ fontFamily:"'Space Grotesk',sans-serif",color:"#CFCFCF",fontSize:13,marginBottom:18,maxWidth:620 }}>{offer.desc}</p>
+                  <div style={{ display:"flex",alignItems:"center",gap:12,marginBottom:20,flexWrap:"wrap" }}>
+                    <span className="glass-red" style={{ padding:"3px 8px",borderRadius:3,fontFamily:"'Orbitron',sans-serif",fontSize:9,fontWeight:700,color:"#FF1F45" }}>{offer.discount}</span>
                   </div>
-                  <div style={{ fontFamily:"'Rajdhani',sans-serif",fontSize:17,fontWeight:700,color:color }}>{o.off}</div>
+                  <div style={{ display:"flex",gap:10,flexWrap:"wrap" }}>
+                    <a href={offerEnquiryHref(offer.title)} target="_blank" rel="noopener noreferrer" className="glass-pill glass-pill-primary" style={{ textDecoration:"none" }}>
+                      Enquire <ArrowRight size={12} />
+                    </a>
+                    <a href={offer.detailsHref || "/services/custom-pc"} className="glass-pill glass-pill-outline" style={{ textDecoration:"none" }}>
+                      Details <ArrowRight size={12} />
+                    </a>
+                  </div>
                 </div>
-              </Reveal>
-              );
-            })}
-          </div>
+                {i === 0 && (
+                  <div style={{ position:"absolute",top:16,right:16 }}>
+                    <div className="glass-dark" style={{ padding:"8px 12px",borderRadius:8,textAlign:"center" }}>
+                      <div style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:9,color:"#FF1F45" }}>Ends in</div>
+                      <div style={{ fontFamily:"'Rajdhani',sans-serif",fontSize:22,fontWeight:700,color:"white" }}>23:47:12</div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </Reveal>
+          ))}
         </div>
       </div>
     </section>
@@ -1557,21 +1575,24 @@ function OffersSection() {
 
 // ─────────────── GAMING NEWS ───────────────
 const NEWS = [
-  { tag:"Hardware",title:"NVIDIA RTX 5090 Leaked: 40% Performance Uplift Over 4090",date:"Jun 20, 2026",img:"https://images.unsplash.com/photo-1591489378430-ef2f4c626b35?w=400&h=240&fit=crop&auto=format" },
-  { tag:"Gaming",title:"DESKTO Phantom X Wins Best Gaming PC of 2026 Award",date:"Jun 15, 2026",img:"https://images.unsplash.com/photo-1593640408182-31c228a7e5e1?w=400&h=240&fit=crop&auto=format" },
-  { tag:"Tech",title:"DDR6 RAM: What It Means for PC Gaming in 2027",date:"Jun 10, 2026",img:"https://images.unsplash.com/photo-1563770660941-20978e870e26?w=400&h=240&fit=crop&auto=format" },
+  { slug:"nvidia-rtx-5090-performance-uplift",tag:"Hardware",title:"NVIDIA RTX 5090 Leaked: 40% Performance Uplift Over 4090",date:"Jun 20, 2026",img:"https://images.unsplash.com/photo-1591489378430-ef2f4c626b35?w=400&h=240&fit=crop&auto=format" },
+  { slug:"deskto-phantom-x-best-gaming-pc-2026",tag:"Gaming",title:"DESKTO Phantom X Wins Best Gaming PC of 2026 Award",date:"Jun 15, 2026",img:"https://images.unsplash.com/photo-1593640408182-31c228a7e5e1?w=400&h=240&fit=crop&auto=format" },
+  { slug:"ddr6-ram-pc-gaming-2027",tag:"Tech",title:"DDR6 RAM: What It Means for PC Gaming in 2027",date:"Jun 10, 2026",img:"https://images.unsplash.com/photo-1563770660941-20978e870e26?w=400&h=240&fit=crop&auto=format" },
 ];
 
 function GamingNewsSection() {
+  const { trackGamingHubMetric } = useDashboardData();
   const published = usePublishedHomepageItems("gaming-news");
   const news = published.length
     ? published.map(it => ({
+        id: it.id,
+        slug: it.slug,
         tag: it.category || "News",
         title: it.title,
         date: homepageDate(it.publishDate),
         img: it.coverImage || it.thumbnailImage || (it.gallery || [])[0] || "https://images.unsplash.com/photo-1591489378430-ef2f4c626b35?w=400&h=240&fit=crop&auto=format",
       }))
-    : NEWS;
+    : NEWS.map(item => ({ ...item, id: "" }));
   return (
     <section id="news" className="section-pad" style={{ padding:"96px 0",background:"#0D0D0D" }}>
       <div className="section-inner" style={{ maxWidth:1400,margin:"0 auto",padding:"0 32px" }}>
@@ -1591,9 +1612,16 @@ function GamingNewsSection() {
                   <h3 style={{ fontFamily:"'Orbitron',sans-serif",fontSize:12,fontWeight:700,color:"white",lineHeight:1.45,marginBottom:10 }}>{n.title}</h3>
                   <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between" }}>
                     <span style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:10,color:"#555" }}>{n.date}</span>
-                    <button className="glass-pill glass-pill-red glass-pill-sm">
+                    <a
+                      href={gamingHubArticleHref(n.slug)}
+                      className="glass-pill glass-pill-red glass-pill-sm"
+                      style={{ textDecoration:"none" }}
+                      onClick={() => {
+                        if (n.id) trackGamingHubMetric(n.id, "ctaClicks");
+                      }}
+                    >
                       Read <ChevronRight size={9} />
-                    </button>
+                    </a>
                   </div>
                 </div>
               </div>
