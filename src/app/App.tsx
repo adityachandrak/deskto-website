@@ -83,6 +83,7 @@ function GlobalStyles() {
       @keyframes shimmer{0%{background-position:-200% center}100%{background-position:200% center}}
       @keyframes rgb-bar{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
       @keyframes fade-slide-down{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}
+      @keyframes gpu3d-float{0%,100%{transform:rotateX(14deg) rotateY(-24deg) translateY(0);}50%{transform:rotateX(14deg) rotateY(-24deg) translateY(-26px);}}
 
       /* ── Resets ── */
       *,*::before,*::after{box-sizing:border-box;}
@@ -264,6 +265,10 @@ function GlobalStyles() {
       .animate-glow{animation:glow-pulse 3s ease-in-out infinite;}
       .animate-rotate-slow{animation:rotate-slow 22s linear infinite;}
       .animate-rotate-reverse{animation:rotate-reverse 28s linear infinite;}
+      .animate-fan-1{animation:rotate-slow 2.2s linear infinite;transform-box:fill-box;transform-origin:50% 50%;}
+      .animate-fan-2{animation:rotate-reverse 2.6s linear infinite;transform-box:fill-box;transform-origin:50% 50%;}
+      .gpu3d-stage{perspective:1400px;}
+      .gpu3d-card{transform-style:preserve-3d;animation:gpu3d-float 9s ease-in-out infinite;will-change:transform;}
       .animate-glitch{animation:glitch 9s infinite;}
       .animate-marquee{animation:marquee 32s linear infinite;}
       .rgb-bar{background:linear-gradient(90deg,#f00,#ff6b00,#ff0,#0f0,#00f,#f0f,#f00);background-size:400% 100%;animation:rgb-bar 4s linear infinite;}
@@ -284,6 +289,7 @@ function GlobalStyles() {
         /* Hero */
         .hero-content{padding:86px 20px 136px!important;}
         .hero-floating,.hero-rings{display:none!important;}
+        .hero-gpu-bg{width:150%!important;right:auto!important;left:50%!important;transform:translate(-50%,-50%)!important;opacity:.16!important;top:38%!important;}
         .hero-stats{grid-template-columns:repeat(2,1fr)!important;padding:14px 20px!important;}
         .hero-stats-num{font-size:20px!important;}
         .hero-btns{flex-direction:column!important;}
@@ -596,6 +602,110 @@ export function Navbar() {
 }
 
 // ─────────────── HERO ───────────────
+// Original, stylised RTX-5090-style GPU rendered as inline SVG (not a
+// copyrighted product photo). Given a 3D look via CSS perspective on the wrapper,
+// an extruded side for real depth, metallic gradients, an animated RGB edge, and
+// two continuously spinning fans. Used as a subtle, responsive hero backdrop.
+function Gpu3DFan({ cx, cy, r, anim }: { cx: number; cy: number; r: number; anim: string }) {
+  const blades = 9;
+  const bladeEls = Array.from({ length: blades }).map((_, i) => (
+    <path
+      key={i}
+      transform={`rotate(${(360 / blades) * i} ${cx} ${cy})`}
+      d={`M ${cx} ${cy} Q ${cx + r * 0.2} ${cy - r * 0.16} ${cx + r * 0.86} ${cy - r * 0.26} Q ${cx + r} ${cy + r * 0.02} ${cx + r * 0.66} ${cy + r * 0.16} Q ${cx + r * 0.26} ${cy + r * 0.08} ${cx} ${cy} Z`}
+      fill="url(#gpuBlade)"
+      stroke="rgba(255,255,255,.06)"
+      strokeWidth={0.6}
+    />
+  ));
+  return (
+    <g>
+      <circle cx={cx} cy={cy} r={r + 10} fill="#0c0c0f" stroke="rgba(255,255,255,.1)" strokeWidth={2} />
+      <circle cx={cx} cy={cy} r={r + 5} fill="url(#gpuFanWell)" />
+      <g className={anim}>{bladeEls}</g>
+      <circle cx={cx} cy={cy} r={r * 0.26} fill="url(#gpuHub)" stroke="#FF1F45" strokeWidth={1.5} />
+      <circle cx={cx} cy={cy} r={r * 0.08} fill="#FF1F45" className="animate-glow" />
+    </g>
+  );
+}
+
+function Gpu3DBackground() {
+  return (
+    <div className="gpu3d-stage" style={{ width: "100%", height: "100%" }}>
+      <div className="gpu3d-card" style={{ width: "100%", height: "100%" }}>
+        <svg viewBox="0 0 720 460" style={{ width: "100%", height: "100%", display: "block", overflow: "visible" }} aria-hidden="true">
+          <defs>
+            <linearGradient id="gpuShroud" x1="0" y1="0" x2="0.6" y2="1">
+              <stop offset="0%" stopColor="#34343a" />
+              <stop offset="40%" stopColor="#1c1c20" />
+              <stop offset="100%" stopColor="#0b0b0d" />
+            </linearGradient>
+            <linearGradient id="gpuSide" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#17171a" />
+              <stop offset="100%" stopColor="#050506" />
+            </linearGradient>
+            <linearGradient id="gpuTop" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#3a3a40" />
+              <stop offset="100%" stopColor="#101013" />
+            </linearGradient>
+            <radialGradient id="gpuFanWell" cx="50%" cy="42%" r="60%">
+              <stop offset="0%" stopColor="#161619" />
+              <stop offset="100%" stopColor="#050506" />
+            </radialGradient>
+            <linearGradient id="gpuBlade" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="#3a3a40" />
+              <stop offset="100%" stopColor="#202024" />
+            </linearGradient>
+            <radialGradient id="gpuHub" cx="40%" cy="35%" r="70%">
+              <stop offset="0%" stopColor="#2a2a2e" />
+              <stop offset="100%" stopColor="#0d0d10" />
+            </radialGradient>
+            <linearGradient id="gpuRgb" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#7a00ff" />
+              <stop offset="35%" stopColor="#FF1F45" />
+              <stop offset="70%" stopColor="#ff7b00" />
+              <stop offset="100%" stopColor="#00b4ff" />
+            </linearGradient>
+            <filter id="gpuSoft" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="24" stdDeviation="26" floodColor="#000" floodOpacity="0.55" />
+            </filter>
+          </defs>
+
+          {/* Ambient contact shadow */}
+          <ellipse cx="360" cy="430" rx="300" ry="26" fill="#000" opacity="0.5" />
+
+          <g filter="url(#gpuSoft)">
+            {/* Extruded depth: bottom + right side faces give real 3D thickness */}
+            <path d="M 70 96 L 650 96 L 650 372 L 70 372 Z" fill="url(#gpuSide)" transform="translate(26 30)" />
+            {/* Top bevel face */}
+            <path d="M 70 96 L 96 66 L 676 66 L 650 96 Z" fill="url(#gpuTop)" />
+            {/* Right edge face */}
+            <path d="M 650 96 L 676 66 L 676 342 L 650 372 Z" fill="url(#gpuSide)" />
+
+            {/* Front shroud */}
+            <rect x="70" y="96" width="580" height="276" rx="20" fill="url(#gpuShroud)" stroke="rgba(255,255,255,.08)" strokeWidth={1.4} />
+
+            {/* Animated RGB accent bar along the top edge */}
+            <rect x="86" y="104" width="548" height="6" rx="3" fill="url(#gpuRgb)" opacity="0.85" className="rgb-bar" style={{ mixBlendMode: "screen" }} />
+
+            {/* Heatsink fin hint on the far left */}
+            {Array.from({ length: 9 }).map((_, i) => (
+              <rect key={i} x={90 + i * 5} y={124} width={2} height={220} fill="rgba(255,255,255,.04)" />
+            ))}
+
+            {/* Two spinning fans */}
+            <Gpu3DFan cx={250} cy={234} r={92} anim="animate-fan-1" />
+            <Gpu3DFan cx={470} cy={234} r={92} anim="animate-fan-2" />
+
+            {/* Subtle top highlight for a metallic sheen */}
+            <rect x="70" y="96" width="580" height="60" rx="20" fill="rgba(255,255,255,.03)" />
+          </g>
+        </svg>
+      </div>
+    </div>
+  );
+}
+
 function HeroSection() {
   const { scrollYProgress } = useScroll();
   const user = useCurrentUser();
@@ -617,6 +727,11 @@ function HeroSection() {
       <div style={{ position:"absolute",bottom:"5%",left:"5%",width:500,height:500,background:"radial-gradient(circle,rgba(255,31,69,.04) 0%,transparent 65%)",pointerEvents:"none" }} />
       <div style={{ position:"absolute",left:0,right:0,height:2,background:"linear-gradient(90deg,transparent,rgba(255,31,69,.25),transparent)",pointerEvents:"none",animation:"scan-line 10s linear infinite" }} />
       <ParticleCanvas />
+
+      {/* 3D RTX-5090-style GPU as a subtle animated backdrop */}
+      <div className="hero-gpu-bg" style={{ position:"absolute",right:"-8%",top:"50%",transform:"translateY(-50%)",width:"68%",maxWidth:900,zIndex:1,opacity:.5,pointerEvents:"none",filter:"saturate(.9)",maskImage:"radial-gradient(ellipse 75% 80% at 60% 50%, #000 55%, transparent 100%)",WebkitMaskImage:"radial-gradient(ellipse 75% 80% at 60% 50%, #000 55%, transparent 100%)" }}>
+        <Gpu3DBackground />
+      </div>
 
       {/* Main content */}
       <div className="hero-content section-inner" style={{ position:"relative",zIndex:10,maxWidth:1400,margin:"0 auto",padding:"130px 32px 130px",width:"100%" }}>
