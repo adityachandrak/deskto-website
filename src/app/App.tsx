@@ -264,9 +264,6 @@ function GlobalStyles() {
       .animate-glow{animation:glow-pulse 3s ease-in-out infinite;}
       .animate-rotate-slow{animation:rotate-slow 22s linear infinite;}
       .animate-rotate-reverse{animation:rotate-reverse 28s linear infinite;}
-      .animate-fan-1{animation:rotate-slow 1.4s linear infinite;transform-box:fill-box;transform-origin:50% 50%;}
-      .animate-fan-2{animation:rotate-reverse 1.7s linear infinite;transform-box:fill-box;transform-origin:50% 50%;}
-      .animate-fan-3{animation:rotate-slow 2s linear infinite;transform-box:fill-box;transform-origin:50% 50%;}
       .animate-glitch{animation:glitch 9s infinite;}
       .animate-marquee{animation:marquee 32s linear infinite;}
       .rgb-bar{background:linear-gradient(90deg,#f00,#ff6b00,#ff0,#0f0,#00f,#f0f,#f00);background-size:400% 100%;animation:rgb-bar 4s linear infinite;}
@@ -286,7 +283,7 @@ function GlobalStyles() {
 
         /* Hero */
         .hero-content{padding:86px 20px 136px!important;}
-        .hero-floating,.hero-rings,.hero-gpu-visual{display:none!important;}
+        .hero-floating,.hero-rings{display:none!important;}
         .hero-stats{grid-template-columns:repeat(2,1fr)!important;padding:14px 20px!important;}
         .hero-stats-num{font-size:20px!important;}
         .hero-btns{flex-direction:column!important;}
@@ -599,73 +596,6 @@ export function Navbar() {
 }
 
 // ─────────────── HERO ───────────────
-// A hand-built (not photo) triple-fan GPU illustration so the fan blades are
-// real rotating SVG geometry, not an animation faked over a static photo.
-function FanUnit({ cx, cy, r, blades = 7, animClass, label }: { cx: number; cy: number; r: number; blades?: number; animClass: string; label?: string }) {
-  const bladeEls = Array.from({ length: blades }).map((_, i) => {
-    const angle = (360 / blades) * i;
-    return (
-      <path
-        key={i}
-        transform={`rotate(${angle} ${cx} ${cy})`}
-        d={`M ${cx} ${cy} Q ${cx + r * 0.22} ${cy - r * 0.18} ${cx + r * 0.82} ${cy - r * 0.3} Q ${cx + r * 0.98} ${cy - r * 0.02} ${cx + r * 0.68} ${cy + r * 0.14} Q ${cx + r * 0.28} ${cy + r * 0.1} ${cx} ${cy} Z`}
-        fill="#2b2b2f"
-        stroke="rgba(255,255,255,.08)"
-        strokeWidth={1}
-      />
-    );
-  });
-  return (
-    <g>
-      <circle cx={cx} cy={cy} r={r + 7} fill="#0d0d0f" stroke="rgba(255,255,255,.14)" strokeWidth={2} />
-      <circle cx={cx} cy={cy} r={r + 3} fill="#08080a" />
-      <g className={animClass}>{bladeEls}</g>
-      <circle cx={cx} cy={cy} r={r * 0.24} fill="#111114" stroke="#FF1F45" strokeWidth={1.5} />
-      <circle cx={cx} cy={cy} r={r * 0.07} fill="#FF1F45" opacity={0.85} />
-      {label && <text x={cx} y={cy + r + 20} textAnchor="middle" fontFamily="'Orbitron',sans-serif" fontSize={7} fill="rgba(255,255,255,.35)" letterSpacing={2}>{label}</text>}
-    </g>
-  );
-}
-
-function GpuHeroVisual() {
-  return (
-    <svg viewBox="0 0 640 460" style={{ width: "100%", height: "100%", display: "block", overflow: "visible" }} aria-label="DESKTO RTX 5090 GPU, animated cooling fans">
-      <defs>
-        <linearGradient id="gpuBody" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#232326" />
-          <stop offset="55%" stopColor="#141416" />
-          <stop offset="100%" stopColor="#08080a" />
-        </linearGradient>
-        <linearGradient id="gpuEdge" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="#FF1F45" stopOpacity="0" />
-          <stop offset="50%" stopColor="#FF1F45" stopOpacity=".9" />
-          <stop offset="100%" stopColor="#FF1F45" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-
-      {/* Card shroud */}
-      <rect x="40" y="30" width="560" height="400" rx="26" fill="url(#gpuBody)" stroke="rgba(255,255,255,.08)" strokeWidth={1.5} />
-      <rect x="40" y="30" width="560" height="400" rx="26" fill="none" stroke="url(#gpuEdge)" strokeWidth={2} className="animate-glow" />
-
-      {/* Brand text */}
-      <text x="66" y="76" fontFamily="'Orbitron',sans-serif" fontSize={13} fontWeight={800} fill="rgba(255,255,255,.85)" letterSpacing={2}>NVIDIA</text>
-      <text x="66" y="100" fontFamily="'Rajdhani',sans-serif" fontSize={19} fontWeight={700} fill="#FF1F45" letterSpacing={1}>GEFORCE RTX 5090</text>
-      <text x="66" y="120" fontFamily="'Space Grotesk',sans-serif" fontSize={10} fill="rgba(255,255,255,.4)">32GB GDDR7 · 21760 CUDA Cores</text>
-
-      {/* Cooling fans, each spinning independently and in alternating directions */}
-      <FanUnit cx={225} cy={255} r={85} animClass="animate-fan-1" />
-      <FanUnit cx={410} cy={255} r={85} animClass="animate-fan-2" />
-
-      {/* Backplate / PCB strip with glowing traces */}
-      <rect x="64" y="368" width="512" height="42" rx="8" fill="#0a0a0c" stroke="rgba(255,31,69,.15)" strokeWidth={1} />
-      {Array.from({ length: 9 }).map((_, i) => (
-        <line key={i} x1={84 + i * 54} y1="380" x2={84 + i * 54 + 30} y2="398" stroke="#FF1F45" strokeOpacity={0.35} strokeWidth={1.5} />
-      ))}
-      <circle cx="576" cy="50" r="5" fill="#FF1F45" className="animate-glow" />
-    </svg>
-  );
-}
-
 function HeroSection() {
   const { scrollYProgress } = useScroll();
   const user = useCurrentUser();
@@ -687,12 +617,6 @@ function HeroSection() {
       <div style={{ position:"absolute",bottom:"5%",left:"5%",width:500,height:500,background:"radial-gradient(circle,rgba(255,31,69,.04) 0%,transparent 65%)",pointerEvents:"none" }} />
       <div style={{ position:"absolute",left:0,right:0,height:2,background:"linear-gradient(90deg,transparent,rgba(255,31,69,.25),transparent)",pointerEvents:"none",animation:"scan-line 10s linear infinite" }} />
       <ParticleCanvas />
-
-      {/* Signature GPU visual — a single large card with real rotating fan
-          blades, replacing the old cluster of small floating spec-cards. */}
-      <div className="hero-gpu-visual animate-float" style={{ position:"absolute",right:"-4%",top:"50%",transform:"translateY(-50%)",width:"58%",maxWidth:760,zIndex:4,pointerEvents:"none" }}>
-        <GpuHeroVisual />
-      </div>
 
       {/* Main content */}
       <div className="hero-content section-inner" style={{ position:"relative",zIndex:10,maxWidth:1400,margin:"0 auto",padding:"130px 32px 130px",width:"100%" }}>
