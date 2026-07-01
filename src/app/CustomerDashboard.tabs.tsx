@@ -67,7 +67,7 @@ export function CustomerOverview({ user, data, onTab }: { user: AuthUser; data: 
   const activeRentals = myRentals.filter(r => r.status === "active").length;
   const openTickets = myTickets.filter(t => !["resolved", "closed"].includes(t.status)).length;
   const points = store.rewards.find(r => r.customerId === user.id)?.points || 0;
-  const unread = store.notifications.filter(n => !n.read && !n.archived && n.customerId === user.id).length;
+  const unread = store.notifications.filter(n => !n.read && !n.archived && (n.customerId === user.id || n.audience === "all" || n.audience === "customers")).length;
   const pendingPayments = myOrders.filter(o => o.status === "verified" || o.status === "packing").length
     + myRepairs.filter(r => r.status === "quotation" || r.status === "payment-pending").length
     + myBuilds.filter(b => b.status === "quotation" || b.status === "approved").length;

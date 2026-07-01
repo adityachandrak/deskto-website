@@ -753,7 +753,7 @@ export function AdminProducts({ store, addCatalogProduct, patchCatalogProduct, d
           { key: "media", label: "JPGs", render: p => `${p.gallery?.length || (p.img ? 1 : 0)}/5` },
           { key: "price", label: "Price", align: "right", render: p => inr(p.price) },
           { key: "stock", label: "Stock", align: "right", render: p => <span style={{ color: p.stock < 5 ? "#FF1F45" : "#ddd" }}>{p.stock}</span> },
-          { key: "actions", label: "", render: p => <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}><button className="glass-pill glass-pill-sm glass-pill-outline" onClick={() => setEditing(p)}>Edit</button><button className="glass-pill glass-pill-sm glass-pill-info" onClick={() => patchCatalogProduct(p.id, { catalogStatus: p.catalogStatus === "archived" ? "published" : "archived", inStock: false })}>{p.catalogStatus === "archived" ? "Restore" : "Archive"}</button><button className="glass-pill glass-pill-sm glass-pill-red" onClick={() => deleteCatalogProduct(p.id)}>Delete</button></div> },
+          { key: "actions", label: "", render: p => <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}><button className="glass-pill glass-pill-sm glass-pill-outline" onClick={(e) => { e.stopPropagation(); setEditing(p); }}>Edit</button><button className="glass-pill glass-pill-sm glass-pill-info" onClick={(e) => { e.stopPropagation(); patchCatalogProduct(p.id, { catalogStatus: p.catalogStatus === "archived" ? "published" : "archived", inStock: false }); }}>{p.catalogStatus === "archived" ? "Restore" : "Archive"}</button><button className="glass-pill glass-pill-sm glass-pill-red" onClick={(e) => { e.stopPropagation(); deleteCatalogProduct(p.id); }}>Delete</button></div> },
         ]}
       />
     </SectionCard>
@@ -1038,7 +1038,7 @@ export function AdminGamingHub({ store, addGamingHubItem, patchGamingHubItem, de
             { key: "media", label: "Images", render: item => `${item.coverImage ? 1 : 0} cover + ${(item.gallery || []).filter(Boolean).length}/5` },
             { key: "analytics", label: "Analytics", render: item => <span>{item.views} views · {item.reads} reads · {item.shares} shares</span> },
             { key: "comments", label: "Comments", render: item => `${(item.comments || []).filter(c => c.status === "pending").length} pending` },
-            { key: "actions", label: "", render: item => <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}><a href={`/services/gaming-hub/${item.slug}`} className="glass-pill glass-pill-sm glass-pill-outline" style={{ textDecoration: "none" }}>Preview</a><button className="glass-pill glass-pill-sm glass-pill-outline" onClick={() => setEditing(item)}>Edit</button><button className="glass-pill glass-pill-sm glass-pill-info" onClick={() => patchGamingHubItem(item.id, { status: item.status === "archived" ? "published" : "archived" })}>{item.status === "archived" ? "Restore" : "Archive"}</button><button className="glass-pill glass-pill-sm glass-pill-red" onClick={() => deleteGamingHubItem(item.id)}>Delete</button></div> },
+            { key: "actions", label: "", render: item => <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}><a href={`/services/gaming-hub/${item.slug}`} target="_blank" className="glass-pill glass-pill-sm glass-pill-outline" style={{ textDecoration: "none" }}>Preview</a><button className="glass-pill glass-pill-sm glass-pill-outline" onClick={(e) => { e.stopPropagation(); setEditing(item); }}>Edit</button><button className="glass-pill glass-pill-sm glass-pill-info" onClick={(e) => { e.stopPropagation(); patchGamingHubItem(item.id, { status: item.status === "archived" ? "published" : "archived" }); }}>{item.status === "archived" ? "Restore" : "Archive"}</button><button className="glass-pill glass-pill-sm glass-pill-red" onClick={(e) => { e.stopPropagation(); deleteGamingHubItem(item.id); }}>Delete</button></div> },
           ]}
         />
       </SectionCard>
@@ -1124,8 +1124,8 @@ function TypeFilteredAdmin({
                   <div style={{ color: "#888", fontSize: 11, marginTop: 4 }}>Order: {item.order || 0}</div>
                 </div>
                 <div style={{ display: "flex", gap: 6 }}>
-                  <button className="glass-pill glass-pill-sm glass-pill-outline" onClick={() => setEditing(item)}>Edit</button>
-                  <button className="glass-pill glass-pill-sm glass-pill-red" onClick={() => { if (confirm("Delete this item?")) { deleteGamingHubItem(item.id); toast.success("Deleted"); } }}>Delete</button>
+                  <button className="glass-pill glass-pill-sm glass-pill-outline" onClick={(e) => { e.stopPropagation(); setEditing(item); }}>Edit</button>
+                  <button className="glass-pill glass-pill-sm glass-pill-red" onClick={(e) => { e.stopPropagation(); if (confirm("Delete this item?")) { deleteGamingHubItem(item.id); toast.success("Deleted"); } }}>Delete</button>
                 </div>
               </div>
             ))}
@@ -1227,8 +1227,8 @@ export function AdminCategories() {
               </div>
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              <button className="glass-pill glass-pill-sm glass-pill-outline" onClick={() => setEditing(c)}>Edit</button>
-              <button className="glass-pill glass-pill-sm glass-pill-red" onClick={() => remove(c)}>Delete</button>
+              <button className="glass-pill glass-pill-sm glass-pill-outline" onClick={(e) => { e.stopPropagation(); setEditing(c); }}>Edit</button>
+              <button className="glass-pill glass-pill-sm glass-pill-red" onClick={(e) => { e.stopPropagation(); remove(c); }}>Delete</button>
             </div>
           </div>
         ))}
@@ -1310,8 +1310,8 @@ export function AdminBrands() {
               <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 13, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b.name}</div>
             </div>
             <div style={{ display: "flex", gap: 6 }}>
-              <button className="glass-pill glass-pill-sm glass-pill-outline" onClick={() => setEditing(b)}>Edit</button>
-              <button className="glass-pill glass-pill-sm glass-pill-red" onClick={() => remove(b)}>Delete</button>
+              <button className="glass-pill glass-pill-sm glass-pill-outline" onClick={(e) => { e.stopPropagation(); setEditing(b); }}>Edit</button>
+              <button className="glass-pill glass-pill-sm glass-pill-red" onClick={(e) => { e.stopPropagation(); remove(b); }}>Delete</button>
             </div>
           </div>
         ))}
@@ -1323,34 +1323,79 @@ export function AdminBrands() {
 // ─── Inventory ────────────────────────────────────────────────────────────
 
 export function AdminInventory({ store }: { store: DashboardStore }) {
+  const [restockProduct, setRestockProduct] = useState<typeof store.products[0] | null>(null);
+  const [restockQty, setRestockQty] = useState("10");
   const lowStock = store.products.filter(p => p.stock < 5);
+  const [showForm, setShowForm] = useState(false);
+  const [draft, setDraft] = useState({ supplierId: store.suppliers[0]?.id || "", component: "", qty: "10", cost: "", gst: "18" });
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
       {lowStock.length > 0 && (
         <div className="glass-card" style={{ padding: 16, borderColor: "rgba(255,31,69,0.4)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             <AlertCircle size={20} color="#FF1F45" />
             <div>
               <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 13, color: "white" }}>{lowStock.length} Low-Stock Alerts</div>
               <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, color: "#888", marginTop: 2 }}>Restock soon to avoid lost sales</div>
             </div>
-            <button className="glass-pill glass-pill-primary glass-pill-sm" style={{ marginLeft: "auto" }} onClick={() => toast.success("Purchase order created")}>Create PO</button>
+            <button className="glass-pill glass-pill-primary glass-pill-sm" style={{ marginLeft: "auto" }} onClick={() => setShowForm(true)}>Create PO</button>
           </div>
         </div>
       )}
-      <SectionCard title="Stock Levels">
+
+      {showForm && (
+        <SectionCard title="Create Purchase Order" subtitle="Fill in component details to create a PO">
+          <div className="glass-card" style={{ padding: 14, marginBottom: 14, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
+            <SelectField label="Supplier" value={draft.supplierId} onChange={v => setDraft({ ...draft, supplierId: v })} options={store.suppliers.map(s => s.id)} />
+            <Field label="Component / Product" value={draft.component} onChange={v => setDraft({ ...draft, component: v })} />
+            <Field label="Quantity" value={draft.qty} onChange={v => setDraft({ ...draft, qty: v })} type="number" />
+            <Field label="Unit Cost (₹)" value={draft.cost} onChange={v => setDraft({ ...draft, cost: v })} type="number" />
+            <Field label="GST %" value={draft.gst} onChange={v => setDraft({ ...draft, gst: v })} type="number" />
+          </div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <button className="glass-pill glass-pill-primary" onClick={() => { toast.success("PO created - go to Purchase Orders tab to send"); setShowForm(false); }}>Create PO</button>
+            <button className="glass-pill glass-pill-outline" onClick={() => setShowForm(false)}>Cancel</button>
+          </div>
+        </SectionCard>
+      )}
+
+      <SectionCard title="Stock Levels" subtitle={`${lowStock.length} items need restocking`}>
         <DataTable
           rowKey={p => p.id.toString()}
           data={store.products}
           columns={[
-            { key: "id", label: "ID", width: "60px" },
-            { key: "name", label: "Product" },
-            { key: "category", label: "Category" },
-            { key: "stock", label: "Stock", align: "right", render: p => <span style={{ color: p.stock < 5 ? "#FF1F45" : p.stock < 10 ? "#ff6b00" : "#00cc66", fontWeight: 700 }}>{p.stock}</span> },
-            { key: "actions", label: "", render: p => <button className="glass-pill glass-pill-sm glass-pill-outline">Restock</button> },
+            { key: "id", label: "ID", width: "60px", render: p => <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 10 }}>#{p.id}</span> },
+            { key: "name", label: "Product", render: p => <div style={{ display: "flex", alignItems: "center", gap: 8 }}><span>{p.name}</span></div> },
+            { key: "category", label: "Category", render: p => <span style={{ color: "#888", fontSize: 11 }}>{p.category}</span> },
+            { key: "stock", label: "Stock", align: "right", render: p => <span style={{ color: p.stock < 5 ? "#FF1F45" : p.stock < 10 ? "#ff6b00" : "#00cc66", fontWeight: 700, fontFamily: "'Orbitron', sans-serif" }}>{p.stock}</span> },
+            { key: "price", label: "Price", align: "right", render: p => <span style={{ color: "#aaa" }}>{inr(p.price)}</span> },
+            { key: "actions", label: "", render: p => (
+              <button
+                className="glass-pill glass-pill-sm glass-pill-outline"
+                onClick={(e) => { e.stopPropagation(); setRestockProduct(p); setRestockQty("10"); setDraft({ ...draft, component: p.name }); }}
+                style={{ whiteSpace: "nowrap" }}
+              >
+                Restock
+              </button>
+            )},
           ]}
         />
       </SectionCard>
+
+      {restockProduct && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.7)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => setRestockProduct(null)}>
+          <div className="glass-card" style={{ padding: 24, maxWidth: 420, width: "90%", borderColor: "rgba(255,31,69,.3)" }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 14, color: "white", marginTop: 0 }}>Restock: {restockProduct.name}</h3>
+            <p style={{ color: "#888", fontSize: 12, marginBottom: 16 }}>Current stock: <span style={{ color: "#FF1F45", fontWeight: 700 }}>{restockProduct.stock}</span> units</p>
+            <Field label="Add Quantity" value={restockQty} onChange={setRestockQty} type="number" />
+            <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+              <button className="glass-pill glass-pill-primary" onClick={() => { toast.success(`Added ${restockQty} units to ${restockProduct.name}`); setRestockProduct(null); }}>Confirm Restock</button>
+              <button className="glass-pill glass-pill-outline" onClick={() => setRestockProduct(null)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -3196,9 +3241,9 @@ export function AdminCustomers({ store, addLog }: { store: DashboardStore; addLo
             { key: "createdAt", label: "Joined", render: u => u.createdAt ? formatDate(new Date(u.createdAt).getTime()) : "—" },
             { key: "action", label: "", render: u => (
               <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                <button className="glass-pill glass-pill-sm glass-pill-outline" onClick={() => setStatus(u, u.status === "locked" ? "active" : "locked")}>{u.status === "locked" ? <Unlock size={10} /> : <Lock size={10} />} {u.status === "locked" ? "Unlock" : "Lock"}</button>
-                <button className="glass-pill glass-pill-sm glass-pill-success" onClick={() => setStatus(u, "active")}>Verify</button>
-                <button className="glass-pill glass-pill-sm glass-pill-info" onClick={() => setSelectedId(u.id)}>History</button>
+                <button className="glass-pill glass-pill-sm glass-pill-outline" onClick={(e) => { e.stopPropagation(); setStatus(u, u.status === "locked" ? "active" : "locked"); }}>{u.status === "locked" ? <Unlock size={10} /> : <Lock size={10} />} {u.status === "locked" ? "Unlock" : "Lock"}</button>
+                <button className="glass-pill glass-pill-sm glass-pill-success" onClick={(e) => { e.stopPropagation(); setStatus(u, "active"); }}>Verify</button>
+                <button className="glass-pill glass-pill-sm glass-pill-info" onClick={(e) => { e.stopPropagation(); setSelectedId(u.id); }}>History</button>
               </div>
             )},
           ]}
@@ -3244,13 +3289,15 @@ export function AdminStaff({ store, addStaffMember }: { store: DashboardStore; a
         action={<button className="glass-pill glass-pill-primary glass-pill-sm" onClick={() => setShowForm(v => !v)}><Plus size={12} /> Add Staff</button>}
       >
         {showForm && (
-          <div className="glass-card" style={{ padding: 14, marginBottom: 14, display: "grid", gridTemplateColumns: "repeat(5, 1fr) auto", gap: 10, alignItems: "end" }}>
+          <div className="glass-card" style={{ padding: 14, marginBottom: 14, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
             <Field label="Name" value={draft.name} onChange={v => setDraft({ ...draft, name: v })} />
             <Field label="Email" value={draft.email} onChange={v => setDraft({ ...draft, email: v })} />
             <SelectField label="Role" value={draft.role} onChange={v => setDraft({ ...draft, role: v })} options={["technician", "sales", "support", "delivery"]} />
             <Field label="Department" value={draft.department} onChange={v => setDraft({ ...draft, department: v })} />
             <Field label="Phone" value={draft.phone} onChange={v => setDraft({ ...draft, phone: v })} />
-            <button className="glass-pill glass-pill-primary glass-pill-sm" onClick={save}><Save size={11} /> Save</button>
+            <div style={{ display: "flex", alignItems: "flex-end" }}>
+              <button className="glass-pill glass-pill-primary" style={{ width: "100%" }} onClick={save}><Save size={11} /> Save</button>
+            </div>
           </div>
         )}
         <DataTable
@@ -3292,12 +3339,14 @@ export function AdminSuppliers({ store, addSupplier }: { store: DashboardStore; 
       action={<button className="glass-pill glass-pill-primary glass-pill-sm" onClick={() => setShowForm(v => !v)}><Plus size={12} /> Add Supplier</button>}
     >
       {showForm && (
-        <div className="glass-card" style={{ padding: 14, marginBottom: 14, display: "grid", gridTemplateColumns: "repeat(4, 1fr) auto", gap: 10, alignItems: "end" }}>
+        <div className="glass-card" style={{ padding: 14, marginBottom: 14, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
           <Field label="Supplier Name" value={draft.name} onChange={v => setDraft({ ...draft, name: v })} />
           <Field label="Contact Number" value={draft.contact} onChange={v => setDraft({ ...draft, contact: v })} />
           <Field label="Email" value={draft.email} onChange={v => setDraft({ ...draft, email: v })} />
           <Field label="Components" value={draft.components} onChange={v => setDraft({ ...draft, components: v })} placeholder="CPU | GPU | RAM" />
-          <button className="glass-pill glass-pill-primary glass-pill-sm" onClick={save}><Save size={11} /> Save</button>
+          <div style={{ display: "flex", alignItems: "flex-end" }}>
+            <button className="glass-pill glass-pill-primary" style={{ width: "100%" }} onClick={save}><Save size={11} /> Save</button>
+          </div>
         </div>
       )}
       <DataTable
@@ -3338,13 +3387,15 @@ export function AdminPurchaseOrders({ store, addPurchaseOrder, patchPurchaseOrde
       action={<button className="glass-pill glass-pill-primary glass-pill-sm" onClick={() => setShowForm(v => !v)}><Plus size={12} /> Create PO</button>}
     >
       {showForm && (
-        <div className="glass-card" style={{ padding: 14, marginBottom: 14, display: "grid", gridTemplateColumns: "1.2fr repeat(4, 1fr) auto", gap: 10, alignItems: "end" }}>
+        <div className="glass-card" style={{ padding: 14, marginBottom: 14, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
           <SelectField label="Supplier" value={draft.supplierId} onChange={v => setDraft({ ...draft, supplierId: v })} options={store.suppliers.map(s => s.id)} />
           <Field label="Component" value={draft.component} onChange={v => setDraft({ ...draft, component: v })} />
           <Field label="Quantity" value={draft.qty} onChange={v => setDraft({ ...draft, qty: v })} type="number" />
           <Field label="Unit Cost" value={draft.cost} onChange={v => setDraft({ ...draft, cost: v })} type="number" />
           <Field label="GST %" value={draft.gst} onChange={v => setDraft({ ...draft, gst: v })} type="number" />
-          <button className="glass-pill glass-pill-primary glass-pill-sm" onClick={save}><Send size={11} /> Send PO</button>
+          <div style={{ display: "flex", alignItems: "flex-end" }}>
+            <button className="glass-pill glass-pill-primary" style={{ width: "100%" }} onClick={save}><Send size={11} /> Send PO</button>
+          </div>
         </div>
       )}
       <DataTable
@@ -3358,8 +3409,8 @@ export function AdminPurchaseOrders({ store, addPurchaseOrder, patchPurchaseOrde
           { key: "status", label: "Status", render: p => <StatusBadge status={p.status} /> },
           { key: "action", label: "", render: p => (
             <div style={{ display: "flex", gap: 6 }}>
-              <button className="glass-pill glass-pill-sm glass-pill-info" onClick={() => patchPurchaseOrder(p.id, { status: "sent" })}>Sent</button>
-              <button className="glass-pill glass-pill-sm glass-pill-success" onClick={() => patchPurchaseOrder(p.id, { status: "received" })}>Receive</button>
+              <button className="glass-pill glass-pill-sm glass-pill-info" onClick={(e) => { e.stopPropagation(); patchPurchaseOrder(p.id, { status: "sent" }); }}>Sent</button>
+              <button className="glass-pill glass-pill-sm glass-pill-success" onClick={(e) => { e.stopPropagation(); patchPurchaseOrder(p.id, { status: "received" }); }}>Receive</button>
             </div>
           ) },
         ]}
@@ -3398,7 +3449,7 @@ export function AdminCoupons({ store, addCoupon, patchCoupon }: { store: Dashboa
       action={<button className="glass-pill glass-pill-primary glass-pill-sm" onClick={() => setShowForm(v => !v)}><Plus size={12} /> New Coupon</button>}
     >
       {showForm && (
-        <div className="glass-card" style={{ padding: 14, marginBottom: 14, display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
+        <div className="glass-card" style={{ padding: 14, marginBottom: 14, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
           <Field label="Code" value={draft.code} onChange={v => setDraft({ ...draft, code: v })} />
           <Field label="Description" value={draft.description} onChange={v => setDraft({ ...draft, description: v })} />
           <Field label="Discount %" value={draft.discountPercent} onChange={v => setDraft({ ...draft, discountPercent: v })} type="number" />
@@ -3406,7 +3457,9 @@ export function AdminCoupons({ store, addCoupon, patchCoupon }: { store: Dashboa
           <Field label="Min Spend" value={draft.minSpend} onChange={v => setDraft({ ...draft, minSpend: v })} type="number" />
           <Field label="Expiry" value={draft.expiresAt} onChange={v => setDraft({ ...draft, expiresAt: v })} type="date" />
           <Field label="Usage Limit" value={draft.usageLimit} onChange={v => setDraft({ ...draft, usageLimit: v })} type="number" />
-          <button className="glass-pill glass-pill-primary glass-pill-sm" style={{ alignSelf: "end" }} onClick={save}><Save size={11} /> Save Coupon</button>
+          <div style={{ display: "flex", alignItems: "flex-end" }}>
+            <button className="glass-pill glass-pill-primary" style={{ width: "100%" }} onClick={save}><Save size={11} /> Save Coupon</button>
+          </div>
         </div>
       )}
       <DataTable
@@ -3420,7 +3473,7 @@ export function AdminCoupons({ store, addCoupon, patchCoupon }: { store: Dashboa
           { key: "usage", label: "Usage", render: c => `${c.usedCount || 0}/${c.usageLimit || "∞"}` },
           { key: "expires", label: "Expires", render: c => formatDate(c.expiresAt) },
           { key: "status", label: "Status", render: c => <span className={`glass-pill glass-pill-sm ${c.active === false ? "glass-pill-red" : "glass-pill-success"}`} style={{ pointerEvents: "none" }}>{c.active === false ? "Disabled" : "Active"}</span> },
-          { key: "action", label: "", render: c => <button className="glass-pill glass-pill-sm glass-pill-outline" onClick={() => patchCoupon(c.id, { active: c.active === false })}>{c.active === false ? "Enable" : "Disable"}</button> },
+          { key: "action", label: "", render: c => <button className="glass-pill glass-pill-sm glass-pill-outline" onClick={(e) => { e.stopPropagation(); patchCoupon(c.id, { active: c.active === false }); }}>{c.active === false ? "Enable" : "Disable"}</button> },
         ]}
       />
     </SectionCard>
@@ -3456,7 +3509,7 @@ export function AdminOffers({ store, addOffer, patchOffer }: { store: DashboardS
       action={<button className="glass-pill glass-pill-primary glass-pill-sm" onClick={() => setShowForm(v => !v)}><Plus size={12} /> New Offer</button>}
     >
       {showForm && (
-        <div className="glass-card" style={{ padding: 14, marginBottom: 14, display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
+        <div className="glass-card" style={{ padding: 14, marginBottom: 14, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
           <Field label="Offer Title" value={draft.title} onChange={v => setDraft({ ...draft, title: v })} />
           <Field label="Offer Code" value={draft.code} onChange={v => setDraft({ ...draft, code: v })} />
           <Field label="Discount" value={draft.discount} onChange={v => setDraft({ ...draft, discount: v })} placeholder="25% OFF / Free 1st Day" />
@@ -3464,7 +3517,9 @@ export function AdminOffers({ store, addOffer, patchOffer }: { store: DashboardS
           <Field label="Start Date" value={draft.startsAt} onChange={v => setDraft({ ...draft, startsAt: v })} type="date" />
           <Field label="End Date" value={draft.expiresAt} onChange={v => setDraft({ ...draft, expiresAt: v })} type="date" />
           <Area label="Offer Details" value={draft.detail} onChange={v => setDraft({ ...draft, detail: v })} />
-          <button className="glass-pill glass-pill-primary glass-pill-sm" style={{ alignSelf: "end" }} onClick={save}><Save size={11} /> Activate</button>
+          <div style={{ display: "flex", alignItems: "flex-end" }}>
+            <button className="glass-pill glass-pill-primary" style={{ width: "100%" }} onClick={save}><Save size={11} /> Activate</button>
+          </div>
         </div>
       )}
       <div className="dash-tab-grid">
@@ -3480,7 +3535,7 @@ export function AdminOffers({ store, addOffer, patchOffer }: { store: DashboardS
               <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 11, color: "#FF1F45", letterSpacing: 1 }}>{o.code}</span>
               <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, color: "#666" }}>Expires {formatDate(o.expiresAt)}</span>
             </div>
-            <button className="glass-pill glass-pill-sm glass-pill-outline" style={{ marginTop: 12 }} onClick={() => patchOffer(o.id, { active: o.active === false })}>{o.active === false ? "Activate" : "Disable"}</button>
+            <button className="glass-pill glass-pill-sm glass-pill-outline" style={{ marginTop: 12 }} onClick={(e) => { e.stopPropagation(); patchOffer(o.id, { active: o.active === false }); }}>{o.active === false ? "Activate" : "Disable"}</button>
           </div>
         ))}
       </div>
@@ -3613,6 +3668,7 @@ export function AdminNotifications({ store, addNotification, markNotificationRea
 export function AdminSettings({ store, updateSettings }: { store: DashboardStore; updateSettings: any }) {
   const [form, setForm] = useState<DashboardSettings>(store.settings);
   const [zone, setZone] = useState("");
+  const [resetConfirm, setResetConfirm] = useState(false);
 
   const Field = ({ label, k, type = "text" }: { label: string; k: keyof DashboardSettings; type?: string }) => (
     <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -3620,6 +3676,29 @@ export function AdminSettings({ store, updateSettings }: { store: DashboardStore
       <input type={type} value={form[k] as any} onChange={e => setForm({ ...form, [k]: e.target.value })} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "10px 14px", color: "white", fontFamily: "'Space Grotesk', sans-serif", fontSize: 13, outline: "none" }} />
     </label>
   );
+
+  const removeZone = (z: string) => {
+    setForm({ ...form, shippingZones: form.shippingZones.filter(zone => zone !== z) });
+  };
+
+  const resetAllSettings = () => {
+    updateSettings({
+      gstPercent: 18,
+      paymentGateway: "Razorpay",
+      emailProvider: "SendGrid",
+      whatsappProvider: "Twilio",
+      smsProvider: "TextLocal",
+      businessHours: "9AM-7PM",
+      shippingZones: ["Mumbai", "Delhi", "Bangalore", "Hyderabad", "Pune", "Chennai"],
+      gstSlabs: {
+        Essential: 0,
+        Standard: 18,
+        Luxury: 28,
+      }
+    });
+    setResetConfirm(false);
+    toast.success("Settings reset to defaults");
+  };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
@@ -3639,18 +3718,56 @@ export function AdminSettings({ store, updateSettings }: { store: DashboardStore
       <SectionCard title="Shipping Zones">
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {form.shippingZones.map(z => (
-            <span key={z} className="glass-pill glass-pill-outline glass-pill-sm" style={{ pointerEvents: "none" }}>{z}</span>
+            <div key={z} className="glass-pill glass-pill-outline glass-pill-sm" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span>{z}</span>
+              <button
+                className="glass-pill-sm"
+                style={{ padding: "2px", borderRadius: 999, background: "rgba(255,255,255,0.1)", color: "#666" }}
+                onClick={() => removeZone(z)}
+              >
+                <X size={10} />
+              </button>
+            </div>
           ))}
         </div>
         <div style={{ display: "flex", gap: 8, marginTop: 12, maxWidth: 520 }}>
-          <input value={zone} onChange={e => setZone(e.target.value)} placeholder="Add shipping zone" style={{ flex: 1, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "10px 14px", color: "white", fontFamily: "'Space Grotesk', sans-serif", fontSize: 13, outline: "none" }} />
-          <button className="glass-pill glass-pill-sm glass-pill-outline" onClick={() => {
-            const next = zone.trim();
-            if (!next) return;
-            setForm({ ...form, shippingZones: Array.from(new Set([...form.shippingZones, next])) });
-            setZone("");
-          }}><Plus size={10} /> Add Zone</button>
+          <input
+            value={zone}
+            onChange={e => setZone(e.target.value)}
+            placeholder="Add shipping zone"
+            style={{ flex: 1, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "10px 14px", color: "white", fontFamily: "'Space Grotesk', sans-serif", fontSize: 13, outline: "none" }}
+          />
+          <button
+            className="glass-pill glass-pill-sm glass-pill-primary"
+            onClick={() => {
+              const next = zone.trim();
+              if (!next) return;
+              setForm({ ...form, shippingZones: Array.from(new Set([...form.shippingZones, next])) });
+              setZone("");
+            }}
+          >
+            <Plus size={10} /> Add
+          </button>
         </div>
+        {resetConfirm ? (
+          <div style={{ marginTop: 14, padding: 12, background: "rgba(255,31,69,0.1)", border: "1px solid rgba(255,31,69,0.3)", borderRadius: 8 }}>
+            <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 13, color: "white", marginBottom: 12 }}>Reset all settings to default values?</div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button className="glass-pill glass-pill-red" onClick={resetAllSettings}>
+                <RefreshCcw size={11} /> Yes, Reset
+              </button>
+              <button className="glass-pill glass-pill-outline" onClick={() => setResetConfirm(false)}>Cancel</button>
+            </div>
+          </div>
+        ) : (
+          <button
+            className="glass-pill glass-pill-sm glass-pill-outline"
+            onClick={() => setResetConfirm(true)}
+            style={{ marginTop: 14, fontSize: 12 }}
+          >
+            <RefreshCcw size={11} /> Reset All Settings
+          </button>
+        )}
       </SectionCard>
     </div>
   );
@@ -3669,7 +3786,7 @@ export function AdminAuditLogs({ store }: { store: DashboardStore }) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `audit-logs-${Date.now()}.csv`;
+    a.download = `deskto-audit-logs-${Date.now().toString().slice(-8)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
     toast.success("Audit log exported");
@@ -3705,7 +3822,11 @@ export function AdminAuditLogs({ store }: { store: DashboardStore }) {
 
 export function AdminBackup({ store, resetStore }: { store: DashboardStore; resetStore: any }) {
   const exportAll = () => {
-    const blob = new Blob([JSON.stringify(store, null, 2)], { type: "application/json" });
+    // Wrap the store with a version marker so importFile can validate the file
+    // is actually a DESKTO backup (previously this exported the raw store, which
+    // importFile then always rejected as "Invalid backup file format").
+    const payload = { version: 1, exportedAt: Date.now(), store };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -3718,14 +3839,28 @@ export function AdminBackup({ store, resetStore }: { store: DashboardStore; rese
   const importFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error("File too large. Maximum size is 50MB.");
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = ev => {
       try {
         const data = JSON.parse(ev.target?.result as string);
-        window.localStorage.setItem("deskto-dashboard-v1", JSON.stringify(data));
+        // Accept both the wrapped { version, store } format written by
+        // exportAll and a raw store object (orders/products present) for
+        // backups created before this fix.
+        const restoredStore = data && typeof data === "object" && data.store ? data.store : data;
+        if (!restoredStore || typeof restoredStore !== "object" || !Array.isArray(restoredStore.orders)) {
+          throw new Error("Invalid backup file format");
+        }
+        window.localStorage.setItem("deskto-dashboard-v1", JSON.stringify(restoredStore));
         toast.success("Backup restored — reload to see changes");
-      } catch {
-        toast.error("Invalid file");
+      } catch (error: any) {
+        console.error("Restore error:", error);
+        toast.error(error?.message || "Invalid file format");
       }
     };
     reader.readAsText(file);

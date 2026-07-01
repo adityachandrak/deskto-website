@@ -50,7 +50,7 @@ export default function CustomerDashboard({ user }: Props) {
   const groups: NavGroup[] = useMemo(() => [
     {
       label: "Overview",
-      items: TABS.filter(t => ["overview", "notifications"].includes(t.key)).map(t => ({ key: t.key, label: t.label, icon: t.icon, badge: t.key === "notifications" ? store.notifications.filter(n => !n.read && !n.archived && n.customerId === user.id).length : undefined })),
+      items: TABS.filter(t => ["overview", "notifications"].includes(t.key)).map(t => ({ key: t.key, label: t.label, icon: t.icon, badge: t.key === "notifications" ? store.notifications.filter(n => !n.read && !n.archived && (n.customerId === user.id || n.audience === "all" || n.audience === "customers")).length : undefined })),
     },
     {
       label: "Activity",
