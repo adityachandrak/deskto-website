@@ -1323,6 +1323,7 @@ function ProductCatalogPage({ category }: { category: ProductType | "all" }) {
   const [status,setStatus] = useState("Select products to add to your cart.");
   const [filtersOpen,setFiltersOpen] = useState(false);
   const dynamicCategories = Array.from(new Set(catalogProducts.map(p => p.category))) as ProductCategory[];
+  const allCategoryBrands = Array.from(new Set(Object.values(CATEGORY_BRANDS).flat() as string[])).sort();
 
   useEffect(() => { setCart(loadCart()); }, []);
   useEffect(() => { saveCart(cart); }, [cart]);
@@ -1459,19 +1460,13 @@ function ProductCatalogPage({ category }: { category: ProductType | "all" }) {
                     ))}
                   </div>
                 </div>
-                {/* Brands — grouped by category, top 5 popular companies each */}
+                {/* Brands — same flat chip-row format as Category, deduplicated
+                    across the curated top-5-per-category reference list. */}
                 <div>
-                  <div style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:10,color:"#777",letterSpacing:"1.4px",textTransform:"uppercase",fontWeight:700,marginBottom:10 }}>Brand</div>
-                  <div style={{ display:"flex",flexDirection:"column",gap:10,maxHeight:320,overflowY:"auto",paddingRight:4 }}>
-                    {(Object.keys(CATEGORY_BRANDS) as ProductCategory[]).map(cat => (
-                      <div key={cat}>
-                        <div style={{ fontFamily:"'Orbitron',sans-serif",fontSize:9,color:"#FF1F45",letterSpacing:"1px",marginBottom:6 }}>{CATEGORY_LABELS[cat] || cat}</div>
-                        <div style={{ display:"flex",gap:6,flexWrap:"wrap" }}>
-                          {CATEGORY_BRANDS[cat]!.map(b => (
-                            <FilterChip key={`${cat}-${b}`} active={selectedBrands.has(b)} onClick={() => toggleBrand(b)}>{b}</FilterChip>
-                          ))}
-                        </div>
-                      </div>
+                  <div style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:10,color:"#777",letterSpacing:"1.4px",textTransform:"uppercase",fontWeight:700,marginBottom:8 }}>Brand</div>
+                  <div style={{ display:"flex",gap:6,flexWrap:"wrap" }}>
+                    {allCategoryBrands.map(b => (
+                      <FilterChip key={b} active={selectedBrands.has(b)} onClick={() => toggleBrand(b)}>{b}</FilterChip>
                     ))}
                   </div>
                 </div>
