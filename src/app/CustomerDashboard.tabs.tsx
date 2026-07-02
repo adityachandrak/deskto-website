@@ -650,8 +650,25 @@ export function CustomerPCBuilds({ user, store, patchPCBuild }: { user: AuthUser
                 </div>
               ))}
             </div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 18, color: "white" }}>Total: {inr(b.total)}</div>
+            {b.quotation && ["quotation", "approved", "paid", "reserved", "technician-assigned", "assembling", "software-install", "stress-test", "qc", "invoice-generated", "warranty-generated", "packed", "shipped", "delivered"].includes(b.status) && (
+              <SectionCard title="Quotation">
+                <div style={{ display: "grid", gap: 8, marginBottom: 12 }}>
+                  {(b.quotationItems || []).map((item, index) => (
+                    <div key={`${item.label}-${index}`} style={{ display: "flex", justifyContent: "space-between", gap: 12, fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, color: "#ddd", borderBottom: "1px solid rgba(255,255,255,.06)", paddingBottom: 7 }}>
+                      <span>{item.label}</span>
+                      <span style={{ color: "white" }}>{inr(item.cost || 0)}</span>
+                    </div>
+                  ))}
+                  <div style={{ display: "flex", justifyContent: "space-between", fontFamily: "'Orbitron', sans-serif", fontSize: 15, color: "white" }}>
+                    <span>Total</span>
+                    <span>{inr(b.quotation)}</span>
+                  </div>
+                  {b.quotationNote && <p style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, color: "#aaa", lineHeight: 1.6, margin: 0 }}>{b.quotationNote}</p>}
+                </div>
+              </SectionCard>
+            )}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 16 }}>
+              <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 18, color: "white" }}>{b.quotation ? "Quoted: " : "Total: "}{inr(b.quotation || b.total)}</div>
               <div style={{ display: "flex", gap: 8 }}>
                 {["quotation", "submitted"].includes(b.status) && <button className="glass-pill glass-pill-success" onClick={() => { patchPCBuild(b.id, { status: "approved" }); toast.success("Build quotation approved"); }}>Approve Quotation</button>}
                 {b.status === "approved" && <button className="glass-pill glass-pill-primary" onClick={() => { patchPCBuild(b.id, { status: "paid", paidAmount: b.quotation || b.total, invoiceId: b.invoiceId || `INV-${b.id.slice(-6).toUpperCase()}` }); toast.success("Advance payment successful"); }}>Pay Advance</button>}

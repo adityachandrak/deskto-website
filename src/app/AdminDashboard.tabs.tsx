@@ -2166,18 +2166,19 @@ function PCBuildQuoteEditor({ build, patchPCBuild }: { build: PCBuild; patchPCBu
   const total = items.reduce((sum, item) => sum + Number(item.cost || 0), 0);
   const updateItem = (index: number, patch: Partial<{ label: string; cost: number }>) => setItems(prev => prev.map((item, i) => i === index ? { ...item, ...patch } : item));
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 120, justifyContent: "flex-end" }}>
-      {build.quotation ? (
-        <div style={{ textAlign: "right" }}>
-          <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 11, color: "#00b4ff", fontWeight: 700 }}>{inr(build.quotation)}</span>
-          <div style={{ fontSize: 9, color: "#888", marginTop: 2 }}>{build.quotationNote ? build.quotationNote.split(" ").slice(0, 2).join(" ") : ""}</div>
+    <div style={{ display: "grid", gap: 6, minWidth: 240 }}>
+      {items.map((item, index) => (
+        <div key={index} style={{ display: "grid", gridTemplateColumns: "1fr 86px 24px", gap: 5 }}>
+          <input value={item.label} onChange={e => updateItem(index, { label: e.target.value })} style={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "6px 7px", color: "white", fontSize: 11, minWidth: 0 }} />
+          <input type="number" min="0" value={item.cost || ""} onChange={e => updateItem(index, { cost: Number(e.target.value || 0) })} style={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "6px 7px", color: "white", fontSize: 11, minWidth: 0 }} />
+          <button className="glass-pill glass-pill-sm glass-pill-red" style={{ width: 24, minWidth: 24, padding: 0 }} onClick={() => setItems(prev => prev.filter((_, i) => i !== index))}>×</button>
         </div>
-      ) : (
-        <span style={{ fontSize: 11, color: "#777" }}>No quote</span>
-      )}
-      <button
-        className="glass-pill glass-pill-sm glass-pill-outline"
-        onClick={() => {
+      ))}
+      <button className="glass-pill glass-pill-sm glass-pill-outline" onClick={() => setItems(prev => [...prev, { label: "New Item", cost: 0 }])}>Add Cost Item</button>
+      <input value={note} onChange={e => setNote(e.target.value)} placeholder="Quotation note" style={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "6px 8px", color: "white", fontSize: 11 }} />
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+        <span style={{ fontFamily: "'Orbitron', sans-serif", color: "white", fontSize: 11 }}>{inr(total)}</span>
+        <button className="glass-pill glass-pill-sm glass-pill-info" onClick={() => {
           const quoteItems = items.filter(item => item.label.trim());
           patchPCBuild(build.id, {
             status: "quotation",
@@ -2187,10 +2188,8 @@ function PCBuildQuoteEditor({ build, patchPCBuild }: { build: PCBuild; patchPCBu
             adminVerified: true,
           });
           toast.success("PC Build quotation sent to customer");
-        }}
-      >
-        Edit
-      </button>
+        }}>Send Quote</button>
+      </div>
     </div>
   );
 }
@@ -2458,7 +2457,7 @@ export function AdminCustomPC({ store, patchPCBuild }: { store: DashboardStore; 
               ))}
             </div>
           ) },
-          { key: "quote", label: "Quote", render: b => (
+          { key: "quote", label: "Quote Details", render: b => (
             <PCBuildQuoteEditor build={b} patchPCBuild={patchPCBuild} />
           ) },
           { key: "tech", label: "Technician", render: b => (
