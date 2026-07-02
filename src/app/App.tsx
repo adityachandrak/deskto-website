@@ -19,7 +19,7 @@ import {
   Minus, Plus, X, Instagram, Youtube, Facebook,
   RefreshCw, Twitter, UserPlus, LogIn, KeyRound, ShieldCheck,
   LogOut, ClipboardCheck, Database, Lock, History, Smartphone,
-  Truck, CreditCard, Banknote, Wallet, Check, ChevronLeft, Eye
+  Truck, CreditCard, Banknote, Wallet, Check, ChevronLeft, Eye, User
 } from "lucide-react";
 
 class AppErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
@@ -83,7 +83,7 @@ function GlobalStyles() {
       @keyframes shimmer{0%{background-position:-200% center}100%{background-position:200% center}}
       @keyframes rgb-bar{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
       @keyframes fade-slide-down{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}
-      @keyframes gpu3d-float{0%,100%{transform:rotateX(14deg) rotateY(-24deg) translateY(0);}50%{transform:rotateX(14deg) rotateY(-24deg) translateY(-26px);}}
+      @keyframes gpu3d-float{0%,100%{transform:rotateX(12deg) rotateY(-22deg) translateY(0) scale(1);}25%{transform:rotateX(13deg) rotateY(-20deg) translateY(-18px) scale(1.005);}50%{transform:rotateX(11deg) rotateY(-24deg) translateY(-30px) scale(1.01);}75%{transform:rotateX(13deg) rotateY(-21deg) translateY(-12px) scale(1.003);}}
 
       /* ── Resets ── */
       *,*::before,*::after{box-sizing:border-box;}
@@ -267,11 +267,16 @@ function GlobalStyles() {
       .animate-rotate-reverse{animation:rotate-reverse 28s linear infinite;}
       .animate-fan-1{animation:rotate-slow 2.2s linear infinite;transform-box:fill-box;transform-origin:50% 50%;}
       .animate-fan-2{animation:rotate-reverse 2.6s linear infinite;transform-box:fill-box;transform-origin:50% 50%;}
-      .gpu3d-stage{perspective:1400px;}
-      .gpu3d-card{transform-style:preserve-3d;animation:gpu3d-float 9s ease-in-out infinite;will-change:transform;}
+      .animate-fan-3{animation:rotate-slow 2.4s linear infinite;transform-box:fill-box;transform-origin:50% 50%;}
+      .gpu3d-stage{perspective:1600px;perspective-origin:40% 45%;}
+      .gpu3d-card{transform-style:preserve-3d;animation:gpu3d-float 10s ease-in-out infinite;will-change:transform;}
       .animate-glitch{animation:glitch 9s infinite;}
       .animate-marquee{animation:marquee 32s linear infinite;}
       .rgb-bar{background:linear-gradient(90deg,#f00,#ff6b00,#ff0,#0f0,#00f,#f0f,#f00);background-size:400% 100%;animation:rgb-bar 4s linear infinite;}
+      .gpu-rgb-pulse{animation:gpu-rgb-pulse 3s ease-in-out infinite;}
+      @keyframes gpu-rgb-pulse{0%,100%{opacity:.7;filter:drop-shadow(0 0 4px rgba(255,31,69,.4));}50%{opacity:1;filter:drop-shadow(0 0 12px rgba(255,31,69,.8)) drop-shadow(0 0 24px rgba(139,0,0,.5));}}
+      @keyframes gpu-spark{0%{transform:translate(0,0) scale(1);opacity:1;}100%{transform:translate(var(--sx),var(--sy)) scale(0);opacity:0;}}
+      @keyframes gpu-particle-drift{0%{transform:translateY(0) translateX(0);opacity:var(--po,0.4);}50%{transform:translateY(var(--dy,-20px)) translateX(var(--dx,10px));opacity:calc(var(--po,0.4)*1.5);}100%{transform:translateY(0) translateX(0);opacity:var(--po,0.4);}}
 
       /* ── Visibility helpers ── */
       .desktop-only{display:flex!important;}
@@ -289,7 +294,7 @@ function GlobalStyles() {
         /* Hero */
         .hero-content{padding:86px 20px 136px!important;}
         .hero-floating,.hero-rings{display:none!important;}
-        .hero-gpu-bg{width:150%!important;right:auto!important;left:50%!important;transform:translate(-50%,-50%)!important;opacity:.16!important;top:38%!important;}
+        .hero-gpu-bg{width:160%!important;right:auto!important;left:50%!important;transform:translate(-50%,-50%)!important;opacity:.3!important;top:42%!important;filter:saturate(.8) brightness(1.2)!important;}
         .hero-stats{grid-template-columns:repeat(2,1fr)!important;padding:14px 20px!important;}
         .hero-stats-num{font-size:20px!important;}
         .hero-btns{flex-direction:column!important;}
@@ -602,103 +607,349 @@ export function Navbar() {
 }
 
 // ─────────────── HERO ───────────────
-// Original, stylised RTX-5090-style GPU rendered as inline SVG (not a
-// copyrighted product photo). Given a 3D look via CSS perspective on the wrapper,
-// an extruded side for real depth, metallic gradients, an animated RGB edge, and
-// two continuously spinning fans. Used as a subtle, responsive hero backdrop.
+// Ultra-detailed RTX 5090-style triple-fan GPU rendered as inline SVG.
+// Features: 3 spinning fans with realistic blades, heatsink fins, PCIe connector,
+// 8-pin power connectors, backplate, metallic screws, vent grills, RGB edge strip,
+// "RTX 5090" branding, ambient particles, sparks, and light streaks.
+// All CSS-animated — no external images needed.
+
 function Gpu3DFan({ cx, cy, r, anim }: { cx: number; cy: number; r: number; anim: string }) {
-  const blades = 9;
-  const bladeEls = Array.from({ length: blades }).map((_, i) => (
-    <path
-      key={i}
-      transform={`rotate(${(360 / blades) * i} ${cx} ${cy})`}
-      d={`M ${cx} ${cy} Q ${cx + r * 0.2} ${cy - r * 0.16} ${cx + r * 0.86} ${cy - r * 0.26} Q ${cx + r} ${cy + r * 0.02} ${cx + r * 0.66} ${cy + r * 0.16} Q ${cx + r * 0.26} ${cy + r * 0.08} ${cx} ${cy} Z`}
-      fill="url(#gpuBlade)"
-      stroke="rgba(255,255,255,.06)"
-      strokeWidth={0.6}
-    />
-  ));
+  const blades = 11;
+  const bladeEls = Array.from({ length: blades }).map((_, i) => {
+    const angle = (360 / blades) * i;
+    return (
+      <path
+        key={i}
+        transform={`rotate(${angle} ${cx} ${cy})`}
+        d={`M ${cx} ${cy}
+            C ${cx + r * 0.08} ${cy - r * 0.12} ${cx + r * 0.22} ${cy - r * 0.3} ${cx + r * 0.52} ${cy - r * 0.42}
+            Q ${cx + r * 0.72} ${cy - r * 0.36} ${cx + r * 0.88} ${cy - r * 0.18}
+            Q ${cx + r * 0.92} ${cy - r * 0.04} ${cx + r * 0.78} ${cy + r * 0.08}
+            Q ${cx + r * 0.5} ${cy + r * 0.18} ${cx + r * 0.2} ${cy + r * 0.1}
+            Q ${cx + r * 0.06} ${cy + r * 0.04} ${cx} ${cy} Z`}
+        fill="url(#gpuBlade5090)"
+        stroke="rgba(255,255,255,.05)"
+        strokeWidth={0.4}
+      />
+    );
+  });
   return (
     <g>
-      <circle cx={cx} cy={cy} r={r + 10} fill="#0c0c0f" stroke="rgba(255,255,255,.1)" strokeWidth={2} />
-      <circle cx={cx} cy={cy} r={r + 5} fill="url(#gpuFanWell)" />
+      {/* Outer ring with double rim */}
+      <circle cx={cx} cy={cy} r={r + 14} fill="none" stroke="rgba(255,255,255,.06)" strokeWidth={1} />
+      <circle cx={cx} cy={cy} r={r + 12} fill="#08080a" stroke="rgba(255,255,255,.1)" strokeWidth={2.5} />
+      {/* Fan well depression */}
+      <circle cx={cx} cy={cy} r={r + 6} fill="url(#gpuFanWell5090)" />
+      {/* Inner ring detail */}
+      <circle cx={cx} cy={cy} r={r + 2} fill="none" stroke="rgba(255,255,255,.04)" strokeWidth={0.5} strokeDasharray="3 5" />
+      {/* Spinning blades */}
       <g className={anim}>{bladeEls}</g>
-      <circle cx={cx} cy={cy} r={r * 0.26} fill="url(#gpuHub)" stroke="#FF1F45" strokeWidth={1.5} />
-      <circle cx={cx} cy={cy} r={r * 0.08} fill="#FF1F45" className="animate-glow" />
+      {/* Central hub */}
+      <circle cx={cx} cy={cy} r={r * 0.28} fill="url(#gpuHub5090)" stroke="rgba(255,255,255,.12)" strokeWidth={1.5} />
+      <circle cx={cx} cy={cy} r={r * 0.2} fill="url(#gpuHubInner5090)" stroke="rgba(255,31,69,.3)" strokeWidth={1} />
+      {/* Hub screws — 4 tiny dots */}
+      {[0, 90, 180, 270].map(a => {
+        const sr = r * 0.23;
+        const sx = cx + sr * Math.cos((a * Math.PI) / 180);
+        const sy = cy + sr * Math.sin((a * Math.PI) / 180);
+        return <circle key={a} cx={sx} cy={sy} r={1.8} fill="#1a1a1e" stroke="rgba(255,255,255,.15)" strokeWidth={0.5} />;
+      })}
+      {/* Center LED glow */}
+      <circle cx={cx} cy={cy} r={r * 0.07} fill="#FF1F45" opacity={0.9} className="animate-glow" />
+      <circle cx={cx} cy={cy} r={r * 0.12} fill="none" stroke="rgba(255,31,69,.2)" strokeWidth={0.6} />
     </g>
   );
 }
 
 function Gpu3DBackground() {
+  // Particle positions for ambient dust/sparks
+  const particles = useMemo(() =>
+    Array.from({ length: 22 }, (_, i) => ({
+      x: 60 + Math.random() * 820,
+      y: 20 + Math.random() * 500,
+      size: Math.random() * 2 + 0.5,
+      dur: 4 + Math.random() * 6,
+      delay: Math.random() * 4,
+      isRed: Math.random() > 0.6,
+      dx: (Math.random() - 0.5) * 30,
+      dy: (Math.random() - 0.5) * 25,
+      opacity: 0.15 + Math.random() * 0.35,
+    }))
+  , []);
+
+  // Spark positions (small bright points near the GPU edge)
+  const sparks = useMemo(() =>
+    Array.from({ length: 8 }, (_, i) => ({
+      x: 120 + Math.random() * 700,
+      y: 60 + Math.random() * 400,
+      sx: (Math.random() - 0.5) * 60,
+      sy: (Math.random() - 0.5) * 60,
+      dur: 1.5 + Math.random() * 2,
+      delay: Math.random() * 5,
+    }))
+  , []);
+
   return (
-    <div className="gpu3d-stage" style={{ width: "100%", height: "100%" }}>
-      <div className="gpu3d-card" style={{ width: "100%", height: "100%" }}>
-        <svg viewBox="0 0 720 460" style={{ width: "100%", height: "100%", display: "block", overflow: "visible" }} aria-hidden="true">
+    <div className="gpu3d-stage" style={{ width: "100%", height: "100%", position: "relative" }}>
+      {/* Ambient neon glow behind GPU */}
+      <div style={{
+        position: "absolute", top: "50%", left: "50%",
+        transform: "translate(-50%, -50%)",
+        width: "110%", height: "110%",
+        background: "radial-gradient(ellipse 60% 55% at 50% 48%, rgba(255,31,69,.08) 0%, rgba(139,0,0,.04) 40%, transparent 70%)",
+        pointerEvents: "none", zIndex: 0,
+      }} />
+
+      <div className="gpu3d-card" style={{ width: "100%", height: "100%", position: "relative", zIndex: 1 }}>
+        <svg viewBox="0 0 940 540" style={{ width: "100%", height: "100%", display: "block", overflow: "visible" }} aria-hidden="true">
           <defs>
-            <linearGradient id="gpuShroud" x1="0" y1="0" x2="0.6" y2="1">
-              <stop offset="0%" stopColor="#34343a" />
-              <stop offset="40%" stopColor="#1c1c20" />
-              <stop offset="100%" stopColor="#0b0b0d" />
+            {/* ── Gradient: Front shroud (dark matte metal) ── */}
+            <linearGradient id="gpuShroud5090" x1="0" y1="0" x2="0.5" y2="1">
+              <stop offset="0%" stopColor="#3d3d45" />
+              <stop offset="25%" stopColor="#2a2a30" />
+              <stop offset="60%" stopColor="#1a1a20" />
+              <stop offset="100%" stopColor="#0f0f13" />
             </linearGradient>
-            <linearGradient id="gpuSide" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#17171a" />
-              <stop offset="100%" stopColor="#050506" />
+            {/* ── Gradient: Side extrusion ── */}
+            <linearGradient id="gpuSide5090" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#141417" />
+              <stop offset="100%" stopColor="#040405" />
             </linearGradient>
-            <linearGradient id="gpuTop" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="#3a3a40" />
-              <stop offset="100%" stopColor="#101013" />
+            {/* ── Gradient: Top bevel ── */}
+            <linearGradient id="gpuTop5090" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#38383e" />
+              <stop offset="50%" stopColor="#1e1e22" />
+              <stop offset="100%" stopColor="#0d0d10" />
             </linearGradient>
-            <radialGradient id="gpuFanWell" cx="50%" cy="42%" r="60%">
-              <stop offset="0%" stopColor="#161619" />
+            {/* ── Gradient: Backplate ── */}
+            <linearGradient id="gpuBackplate5090" x1="0" y1="0" x2="0.3" y2="1">
+              <stop offset="0%" stopColor="#1a1a1e" />
+              <stop offset="100%" stopColor="#0a0a0c" />
+            </linearGradient>
+            {/* ── Gradient: Fan well ── */}
+            <radialGradient id="gpuFanWell5090" cx="50%" cy="42%" r="58%">
+              <stop offset="0%" stopColor="#141417" />
+              <stop offset="80%" stopColor="#08080a" />
               <stop offset="100%" stopColor="#050506" />
             </radialGradient>
-            <linearGradient id="gpuBlade" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="#3a3a40" />
-              <stop offset="100%" stopColor="#202024" />
+            {/* ── Gradient: Blade ── */}
+            <linearGradient id="gpuBlade5090" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="#38383e" />
+              <stop offset="40%" stopColor="#28282c" />
+              <stop offset="100%" stopColor="#18181c" />
             </linearGradient>
-            <radialGradient id="gpuHub" cx="40%" cy="35%" r="70%">
+            {/* ── Gradient: Hub ── */}
+            <radialGradient id="gpuHub5090" cx="40%" cy="35%" r="70%">
               <stop offset="0%" stopColor="#2a2a2e" />
               <stop offset="100%" stopColor="#0d0d10" />
             </radialGradient>
-            <linearGradient id="gpuRgb" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="#7a00ff" />
-              <stop offset="35%" stopColor="#FF1F45" />
-              <stop offset="70%" stopColor="#ff7b00" />
-              <stop offset="100%" stopColor="#00b4ff" />
+            <radialGradient id="gpuHubInner5090" cx="45%" cy="40%" r="60%">
+              <stop offset="0%" stopColor="#222226" />
+              <stop offset="100%" stopColor="#0a0a0c" />
+            </radialGradient>
+            {/* ── Gradient: RGB bar (red-maroon theme) ── */}
+            <linearGradient id="gpuRgb5090" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#8B0000" />
+              <stop offset="20%" stopColor="#FF1F45" />
+              <stop offset="40%" stopColor="#cc1133" />
+              <stop offset="60%" stopColor="#FF1F45" />
+              <stop offset="80%" stopColor="#8B0000" />
+              <stop offset="100%" stopColor="#FF1F45" />
             </linearGradient>
-            <filter id="gpuSoft" x="-20%" y="-20%" width="140%" height="140%">
-              <feDropShadow dx="0" dy="24" stdDeviation="26" floodColor="#000" floodOpacity="0.55" />
+            {/* ── Gradient: PCIe gold pins ── */}
+            <linearGradient id="gpuPCIe5090" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#d4a340" />
+              <stop offset="50%" stopColor="#b8922e" />
+              <stop offset="100%" stopColor="#8a6d20" />
+            </linearGradient>
+            {/* ── Gradient: Power connector ── */}
+            <linearGradient id="gpuPower5090" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#222226" />
+              <stop offset="100%" stopColor="#111114" />
+            </linearGradient>
+            {/* ── Filter: Card drop shadow ── */}
+            <filter id="gpuSoft5090" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="20" stdDeviation="28" floodColor="#000" floodOpacity="0.6" />
+              <feDropShadow dx="0" dy="6" stdDeviation="8" floodColor="#FF1F45" floodOpacity="0.08" />
             </filter>
+            {/* ── Filter: Neon glow for RGB strip ── */}
+            <filter id="gpuNeonGlow" x="-30%" y="-60%" width="160%" height="220%">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur1" />
+              <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur2" />
+              <feMerge>
+                <feMergeNode in="blur2" />
+                <feMergeNode in="blur1" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+            {/* ── Clip for backplate ventilation slots ── */}
+            <clipPath id="backplateVents">
+              <rect x="0" y="0" width="940" height="540" />
+            </clipPath>
           </defs>
 
-          {/* Ambient contact shadow */}
-          <ellipse cx="360" cy="430" rx="300" ry="26" fill="#000" opacity="0.5" />
+          {/* ═══════════ AMBIENT PARTICLES ═══════════ */}
+          {particles.map((p, i) => (
+            <circle
+              key={`p-${i}`}
+              cx={p.x} cy={p.y} r={p.size}
+              fill={p.isRed ? "#FF1F45" : "#ffffff"}
+              opacity={p.opacity}
+              style={{
+                animation: `gpu-particle-drift ${p.dur}s ease-in-out infinite`,
+                animationDelay: `${p.delay}s`,
+                ["--dx" as any]: `${p.dx}px`,
+                ["--dy" as any]: `${p.dy}px`,
+                ["--po" as any]: p.opacity,
+              }}
+            />
+          ))}
 
-          <g filter="url(#gpuSoft)">
-            {/* Extruded depth: bottom + right side faces give real 3D thickness */}
-            <path d="M 70 96 L 650 96 L 650 372 L 70 372 Z" fill="url(#gpuSide)" transform="translate(26 30)" />
-            {/* Top bevel face */}
-            <path d="M 70 96 L 96 66 L 676 66 L 650 96 Z" fill="url(#gpuTop)" />
-            {/* Right edge face */}
-            <path d="M 650 96 L 676 66 L 676 342 L 650 372 Z" fill="url(#gpuSide)" />
+          {/* ═══════════ SPARKS ═══════════ */}
+          {sparks.map((s, i) => (
+            <circle
+              key={`s-${i}`}
+              cx={s.x} cy={s.y} r={1}
+              fill="#FF1F45"
+              style={{
+                animation: `gpu-spark ${s.dur}s ease-out infinite`,
+                animationDelay: `${s.delay}s`,
+                ["--sx" as any]: `${s.sx}px`,
+                ["--sy" as any]: `${s.sy}px`,
+              }}
+            />
+          ))}
 
-            {/* Front shroud */}
-            <rect x="70" y="96" width="580" height="276" rx="20" fill="url(#gpuShroud)" stroke="rgba(255,255,255,.08)" strokeWidth={1.4} />
+          {/* ═══════════ LIGHT STREAKS (horizontal lens flares) ═══════════ */}
+          <line x1="60" y1="188" x2="280" y2="188" stroke="url(#gpuRgb5090)" strokeWidth="0.5" opacity="0.15" className="gpu-rgb-pulse" />
+          <line x1="650" y1="332" x2="880" y2="332" stroke="url(#gpuRgb5090)" strokeWidth="0.4" opacity="0.1" className="gpu-rgb-pulse" style={{ animationDelay: "1.5s" }} />
 
-            {/* Animated RGB accent bar along the top edge */}
-            <rect x="86" y="104" width="548" height="6" rx="3" fill="url(#gpuRgb)" opacity="0.85" className="rgb-bar" style={{ mixBlendMode: "screen" }} />
+          {/* ═══════════ CONTACT SHADOW ═══════════ */}
+          <ellipse cx="460" cy="510" rx="340" ry="28" fill="#000" opacity="0.5" />
+          <ellipse cx="460" cy="510" rx="220" ry="14" fill="#FF1F45" opacity="0.03" />
 
-            {/* Heatsink fin hint on the far left */}
-            {Array.from({ length: 9 }).map((_, i) => (
-              <rect key={i} x={90 + i * 5} y={124} width={2} height={220} fill="rgba(255,255,255,.04)" />
+          <g filter="url(#gpuSoft5090)">
+
+            {/* ─── BACKPLATE (visible bottom slice for 3D depth) ─── */}
+            <path d="M 90 120 L 830 120 L 830 400 L 90 400 Z" fill="url(#gpuBackplate5090)" transform="translate(28 32)" />
+            {/* Backplate ventilation slots */}
+            {Array.from({ length: 14 }).map((_, i) => (
+              <rect key={`bv-${i}`} x={140 + i * 48} y={160} width={28} height={3} rx={1.5} fill="rgba(255,255,255,.02)" transform="translate(28 32)" />
+            ))}
+            {/* Backplate screw mounts */}
+            {[150, 350, 550, 750].map(x => (
+              <g key={`bs-${x}`} transform="translate(28 32)">
+                <circle cx={x} cy={136} r={4} fill="#0e0e11" stroke="rgba(255,255,255,.1)" strokeWidth={0.8} />
+                <line x1={x - 2} y1={136} x2={x + 2} y2={136} stroke="rgba(255,255,255,.15)" strokeWidth={0.5} />
+              </g>
             ))}
 
-            {/* Two spinning fans */}
-            <Gpu3DFan cx={250} cy={234} r={92} anim="animate-fan-1" />
-            <Gpu3DFan cx={470} cy={234} r={92} anim="animate-fan-2" />
+            {/* ─── 3D EXTRUSION: Bottom face ─── */}
+            <path d="M 90 400 L 118 432 L 858 432 L 830 400 Z" fill="url(#gpuSide5090)" />
+            {/* ─── 3D EXTRUSION: Right face ─── */}
+            <path d="M 830 120 L 858 90 L 858 432 L 830 400 Z" fill="url(#gpuSide5090)" />
+            {/* ─── 3D EXTRUSION: Top bevel face ─── */}
+            <path d="M 90 120 L 118 90 L 858 90 L 830 120 Z" fill="url(#gpuTop5090)" />
 
-            {/* Subtle top highlight for a metallic sheen */}
-            <rect x="70" y="96" width="580" height="60" rx="20" fill="rgba(255,255,255,.03)" />
+            {/* ─── MAIN SHROUD (front face) ─── */}
+            <rect x="90" y="120" width="740" height="280" rx="16" fill="url(#gpuShroud5090)" stroke="rgba(255,255,255,.07)" strokeWidth={1.2} />
+
+            {/* ─── HEATSINK FINS (left edge, subtle vertical lines) ─── */}
+            {Array.from({ length: 16 }).map((_, i) => (
+              <rect key={`hf-${i}`} x={106 + i * 4.5} y={142} width={1.5} height={238} fill="rgba(255,255,255,.025)" rx={0.5} />
+            ))}
+
+            {/* ─── HEATSINK FINS (right edge) ─── */}
+            {Array.from({ length: 10 }).map((_, i) => (
+              <rect key={`hfr-${i}`} x={756 + i * 4.5} y={152} width={1.2} height={218} fill="rgba(255,255,255,.02)" rx={0.5} />
+            ))}
+
+            {/* ─── VENT GRILLS (horizontal slits near top) ─── */}
+            {Array.from({ length: 6 }).map((_, i) => (
+              <rect key={`vg-${i}`} x={115} y={136 + i * 5} width={60} height={1.5} rx={0.75} fill="rgba(255,255,255,.03)" />
+            ))}
+            {Array.from({ length: 6 }).map((_, i) => (
+              <rect key={`vgr-${i}`} x={750} y={136 + i * 5} width={55} height={1.5} rx={0.75} fill="rgba(255,255,255,.03)" />
+            ))}
+
+            {/* ═══════════ RGB ACCENT STRIP (top, pulsing red/maroon) ═══════════ */}
+            <g className="gpu-rgb-pulse" filter="url(#gpuNeonGlow)">
+              <rect x="108" y="127" width="704" height="5" rx="2.5" fill="url(#gpuRgb5090)" opacity="0.85" style={{ mixBlendMode: "screen" }} />
+            </g>
+            {/* Thin secondary RGB line at bottom */}
+            <g className="gpu-rgb-pulse" style={{ animationDelay: "1s" }}>
+              <rect x="108" y="388" width="704" height="3" rx="1.5" fill="url(#gpuRgb5090)" opacity="0.4" style={{ mixBlendMode: "screen" }} />
+            </g>
+
+            {/* ═══════════ THREE SPINNING FANS ═══════════ */}
+            <Gpu3DFan cx={230} cy={262} r={88} anim="animate-fan-1" />
+            <Gpu3DFan cx={460} cy={262} r={88} anim="animate-fan-2" />
+            <Gpu3DFan cx={690} cy={262} r={88} anim="animate-fan-3" />
+
+            {/* ─── METALLIC SCREWS (corners of shroud) ─── */}
+            {[
+              [106, 136], [106, 384], [814, 136], [814, 384],
+              [200, 136], [400, 136], [600, 136],
+              [200, 384], [400, 384], [600, 384],
+            ].map(([sx, sy], i) => (
+              <g key={`screw-${i}`}>
+                <circle cx={sx} cy={sy} r={4.5} fill="#141418" stroke="rgba(255,255,255,.12)" strokeWidth={0.8} />
+                <line x1={sx - 2.5} y1={sy} x2={sx + 2.5} y2={sy} stroke="rgba(255,255,255,.2)" strokeWidth={0.6} />
+                <line x1={sx} y1={sy - 2.5} x2={sx} y2={sy + 2.5} stroke="rgba(255,255,255,.2)" strokeWidth={0.6} />
+              </g>
+            ))}
+
+            {/* ─── "RTX 5090" BRANDING TEXT ─── */}
+            <text x="460" y="425" textAnchor="middle" fontFamily="'Orbitron', sans-serif" fontSize="14" fontWeight="800" letterSpacing="6" fill="#ffffff" filter="drop-shadow(0 0 8px rgba(255,31,69,0.8))">
+              RTX 5090
+            </text>
+            {/* Sub-brand text */}
+            <text x="460" y="440" textAnchor="middle" fontFamily="'Space Grotesk', sans-serif" fontSize="7" fontWeight="600" letterSpacing="4" fill="#ff7b90" filter="drop-shadow(0 0 4px rgba(255,31,69,0.6))">
+              GEFORCE
+            </text>
+
+            {/* ─── PCIe CONNECTOR (gold pins at the bottom-left) ─── */}
+            <g>
+              <rect x="120" y="400" width="180" height="14" rx="2" fill="#0e0e11" stroke="rgba(255,255,255,.06)" strokeWidth={0.6} />
+              {/* Gold pins */}
+              {Array.from({ length: 28 }).map((_, i) => (
+                <rect key={`pci-${i}`} x={126 + i * 6} y={404} width={3} height={7} rx={0.5} fill="url(#gpuPCIe5090)" />
+              ))}
+              {/* PCIe notch */}
+              <rect x="220" y="400" width="8" height="14" fill="#050505" />
+            </g>
+
+            {/* ─── 8-PIN POWER CONNECTORS (top-right, two blocks) ─── */}
+            <g>
+              {/* Connector block 1 */}
+              <rect x="690" y="108" width="42" height="18" rx="3" fill="url(#gpuPower5090)" stroke="rgba(255,255,255,.08)" strokeWidth={0.6} />
+              {Array.from({ length: 8 }).map((_, i) => (
+                <circle key={`pw1-${i}`} cx={697 + (i % 4) * 9} cy={113 + Math.floor(i / 4) * 8} r={2.2} fill="#0a0a0c" stroke="rgba(255,255,255,.1)" strokeWidth={0.4} />
+              ))}
+              {/* Connector block 2 */}
+              <rect x="738" y="108" width="42" height="18" rx="3" fill="url(#gpuPower5090)" stroke="rgba(255,255,255,.08)" strokeWidth={0.6} />
+              {Array.from({ length: 8 }).map((_, i) => (
+                <circle key={`pw2-${i}`} cx={745 + (i % 4) * 9} cy={113 + Math.floor(i / 4) * 8} r={2.2} fill="#0a0a0c" stroke="rgba(255,255,255,.1)" strokeWidth={0.4} />
+              ))}
+            </g>
+
+            {/* ─── DISPLAY OUTPUTS (bottom-right, 3 ports) ─── */}
+            <g>
+              {[0, 1, 2].map(i => (
+                <g key={`dp-${i}`}>
+                  <rect x={620 + i * 36} y={400} width={24} height={12} rx={2} fill="#0a0a0c" stroke="rgba(255,255,255,.08)" strokeWidth={0.5} />
+                  <rect x={624 + i * 36} y={403} width={16} height={6} rx={1} fill="#060608" />
+                </g>
+              ))}
+            </g>
+
+            {/* ─── Top metallic highlight ─── */}
+            <rect x="90" y="120" width="740" height="50" rx="16" fill="rgba(255,255,255,.02)" />
+
+            {/* ─── Side accent lines (geometric detail) ─── */}
+            <line x1="90" y1="175" x2="830" y2="175" stroke="rgba(255,255,255,.03)" strokeWidth={0.5} />
+            <line x1="90" y1="348" x2="830" y2="348" stroke="rgba(255,255,255,.03)" strokeWidth={0.5} />
+
           </g>
         </svg>
       </div>
@@ -728,8 +979,8 @@ function HeroSection() {
       <div style={{ position:"absolute",left:0,right:0,height:2,background:"linear-gradient(90deg,transparent,rgba(255,31,69,.25),transparent)",pointerEvents:"none",animation:"scan-line 10s linear infinite" }} />
       <ParticleCanvas />
 
-      {/* 3D RTX-5090-style GPU as a subtle animated backdrop */}
-      <div className="hero-gpu-bg" style={{ position:"absolute",right:"-8%",top:"50%",transform:"translateY(-50%)",width:"68%",maxWidth:900,zIndex:1,opacity:.5,pointerEvents:"none",filter:"saturate(.9)",maskImage:"radial-gradient(ellipse 75% 80% at 60% 50%, #000 55%, transparent 100%)",WebkitMaskImage:"radial-gradient(ellipse 75% 80% at 60% 50%, #000 55%, transparent 100%)" }}>
+      {/* 3D RTX-5090-style triple-fan GPU as cinematic animated backdrop */}
+      <div className="hero-gpu-bg" style={{ position:"absolute",right:"-6%",top:"50%",transform:"translateY(-50%)",width:"72%",maxWidth:1050,zIndex:1,opacity:0.85,pointerEvents:"none",filter:"saturate(1) contrast(1.15) brightness(1.1)",maskImage:"radial-gradient(ellipse 85% 90% at 55% 50%, #000 60%, transparent 100%)",WebkitMaskImage:"radial-gradient(ellipse 85% 90% at 55% 50%, #000 60%, transparent 100%)" }}>
         <Gpu3DBackground />
       </div>
 
@@ -989,11 +1240,17 @@ function applyCatalogFilters(products: readonly Product[], f: CatalogFilters): P
   });
 }
 
-type SortKey = "featured" | "latest" | "popular" | "best-selling" | "price-low" | "price-high" | "rating" | "new-arrivals";
+type SortKey = "featured" | "second-hand" | "latest" | "popular" | "best-selling" | "price-low" | "price-high" | "rating" | "new-arrivals";
 
 function sortCatalog(products: Product[], sort: SortKey): Product[] {
   const out = [...products];
   switch (sort) {
+    case "second-hand":
+      return out.sort((a,b) => {
+        if (a.condition === "second-hand" && b.condition !== "second-hand") return -1;
+        if (a.condition !== "second-hand" && b.condition === "second-hand") return 1;
+        return a.id - b.id;
+      });
     case "price-low": return out.sort((a,b) => a.price - b.price);
     case "price-high": return out.sort((a,b) => b.price - a.price);
     case "rating": return out.sort((a,b) => b.rating - a.rating);
@@ -1141,6 +1398,7 @@ function ProductCatalogPage({ category }: { category: ProductType | "all" }) {
             <select value={sort} onChange={e=>setSort(e.target.value as SortKey)}
               style={{ width:"100%",background:"#151515",border:"1px solid rgba(255,255,255,.12)",borderRadius:8,padding:"11px 12px",fontFamily:"'Space Grotesk',sans-serif",fontSize:13,color:"white",outline:"none" }}>
               <option value="featured">Featured</option>
+              <option value="second-hand">Second-hand</option>
               <option value="latest">Latest</option>
               <option value="popular">Popular</option>
               <option value="best-selling">Best Selling</option>
@@ -1778,7 +2036,7 @@ function LocationSection() {
               <h2 style={{ fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(22px,3.5vw,42px)",fontWeight:900,color:"white",lineHeight:1.1,marginBottom:16 }}>Experience DESKTO<br /><span style={{ color:"#FF1F45" }}>In Person</span></h2>
               <p style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:14,color:"#CFCFCF",lineHeight:1.7,marginBottom:26 }}>Visit our showroom to see our machines running live. Our experts are ready to guide you through every option.</p>
               <div style={{ display:"flex",flexDirection:"column",gap:12 }}>
-                {[{icon:MapPin,text:"123 Tech Hub, Sector 18, Noida, UP — 201301"},{icon:Phone,text:"+91 98765 43210 · Support 24/7"},{icon:Mail,text:"hello@deskto.in"},{icon:Clock,text:"Mon–Sat: 10 AM – 8 PM · Sun: 11 AM – 6 PM"}].map(({icon:Icon,text})=>(
+                {[{icon:User,text:"Mr. Vishnu — Computer & Gaming Expert"},{icon:Wrench,text:"Gaming PC Builds | Laptop/Desktop Repair"},{icon:Package,text:"Used Laptops (Buy/Sell) | Data Recovery | Gaming Info"},{icon:Phone,text:"9893543312"},{icon:Mail,text:"desktogaming@gmail.com"},{icon:MapPin,text:"Ground Floor Shop No-9 Block No-8 Dakshin Gangotri Supela Bhilai 490023"}].map(({icon:Icon,text})=>(
                   <div key={text} style={{ display:"flex",alignItems:"flex-start",gap:10 }}>
                     <div className="glass-icon-circle glass-icon-circle-red" style={{ width:32,height:32,flexShrink:0 }}>
                       <Icon size={13} color="#FF1F45" />
