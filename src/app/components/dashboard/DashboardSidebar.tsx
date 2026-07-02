@@ -1,5 +1,6 @@
 import { type ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
+import { BrandMark } from "@/app/components/BrandMark";
 
 export interface NavItem {
   key: string;
@@ -36,23 +37,8 @@ export function DashboardSidebar({ groups, active, onSelect, brandLabel, brandCo
         aria-label="Go to DESKTO home"
         style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 24, padding: "0 6px", background: "transparent", border: 0, cursor: "pointer", textAlign: "left", width: "100%" }}
       >
-        <div
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: 8,
-            background: `linear-gradient(135deg, ${brandColor}, #5a0008)`,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontFamily: "'Orbitron', sans-serif",
-            fontSize: 14,
-            color: "white",
-            fontWeight: 900,
-            boxShadow: `0 0 18px ${brandColor}55`,
-          }}
-        >
-          D
+        <div style={{ filter: `drop-shadow(0 0 10px ${brandColor}55)`, flexShrink: 0 }}>
+          <BrandMark size={36} />
         </div>
         <div>
           <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 13, color: "white", fontWeight: 800, letterSpacing: 1 }}>{brandLabel}</div>

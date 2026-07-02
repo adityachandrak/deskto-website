@@ -6,6 +6,7 @@ import ServicesPage from "@/app/ServicesPage";
 import { SERVICES } from "@/app/lib/services";
 import { useDashboardData, type CatalogProduct } from "@/app/lib/dashboardData";
 import { Toaster } from "@/app/components/ui/sonner";
+import { BrandMark } from "@/app/components/BrandMark";
 import { toast } from "sonner";
 import { AUTH_STATE_CHANGED_EVENT, logout, useCurrentUser } from "@/app/lib/currentUser";
 import CustomerDashboard from "@/app/CustomerDashboard";
@@ -543,13 +544,7 @@ export function Navbar() {
 
         {/* Logo */}
         <a href="/" aria-label="Go to DESKTO home" style={{ display:"flex",alignItems:"center",gap:10,textDecoration:"none",flexShrink:0 }}>
-          <div style={{ position:"relative",width:38,height:38,flexShrink:0 }}>
-            <div style={{ position:"absolute",inset:0,background:"linear-gradient(135deg,#FF1F45,#7a000f)",clipPath:"polygon(50% 0%,93% 25%,93% 75%,50% 100%,7% 75%,7% 25%)" }} />
-            <div style={{ position:"absolute",inset:"3px",background:"#050505",clipPath:"polygon(50% 0%,93% 25%,93% 75%,50% 100%,7% 75%,7% 25%)",display:"flex",alignItems:"center",justifyContent:"center" }}>
-              <span style={{ fontFamily:"'Orbitron',sans-serif",fontSize:12,fontWeight:900,color:"#FF1F45" }}>D</span>
-            </div>
-          </div>
-          <span className="nav-logo-text" style={{ fontFamily:"'Orbitron',sans-serif",fontSize:17,fontWeight:900,letterSpacing:"4px",color:"white" }}>DESKTO</span>
+          <BrandMark size={38} />
         </a>
 
         {/* Desktop links */}
@@ -1141,6 +1136,34 @@ export const CATEGORY_LABELS: Record<ProductCategory,string> = {
   "accessories":"Accessories", "others":"Others",
 };
 
+// Top 5 popular companies per category, used to group the Brand filter on the
+// Shop Products page (independent of which brands currently exist in the demo
+// catalogue — this is the curated reference list of trusted brands per category).
+export const CATEGORY_BRANDS: Partial<Record<ProductCategory, string[]>> = {
+  "laptop": ["Apple", "Dell", "HP", "Lenovo", "ASUS"],
+  "gaming-laptop": ["ASUS ROG", "MSI", "Acer Predator", "Lenovo Legion", "Alienware"],
+  "desktop-pc": ["Dell", "HP", "Lenovo", "ASUS", "Acer"],
+  "gaming-pc": ["Corsair", "ASUS ROG", "MSI", "Alienware", "NZXT"],
+  "monitor": ["LG", "Samsung", "ASUS", "MSI", "Acer"],
+  "cpu": ["Intel", "AMD", "Apple", "Qualcomm", "NVIDIA (Grace)"],
+  "gpu": ["NVIDIA", "AMD", "Intel", "ASUS", "MSI"],
+  "ram": ["Corsair", "Kingston", "G.Skill", "Crucial", "TeamGroup"],
+  "nvme": ["Samsung", "WD", "Crucial", "Kingston", "Seagate"],
+  "motherboard": ["ASUS", "MSI", "Gigabyte", "ASRock", "Biostar"],
+  "psu": ["Corsair", "Cooler Master", "DeepCool", "MSI", "Thermaltake"],
+  "cabinet": ["NZXT", "Corsair", "Lian Li", "Cooler Master", "DeepCool"],
+  "keyboard": ["Logitech", "Razer", "Corsair", "Redragon", "HyperX"],
+  "mouse": ["Logitech", "Razer", "SteelSeries", "Corsair", "HyperX"],
+  "headset": ["HyperX", "Logitech", "SteelSeries", "Razer", "Corsair"],
+  "router": ["TP-Link", "ASUS", "D-Link", "Netgear", "Tenda"],
+  "ups": ["APC", "Microtek", "CyberPower", "Eaton", "Zebronics"],
+  "printer": ["HP", "Canon", "Epson", "Brother", "Pantum"],
+  "scanner": ["Canon", "Epson", "HP", "Brother", "Fujitsu"],
+  "hdd": ["Seagate", "Western Digital", "Toshiba", "HGST", "Samsung"],
+  "ssd": ["Samsung", "Crucial", "Kingston", "WD", "SanDisk"],
+  "accessories": ["Logitech", "UGREEN", "Anker", "Belkin", "Zebronics"],
+};
+
 const PRODUCT_BRANDS = Array.from(new Set(PRODUCTS.map(p => p.brand))).sort();
 
 export const CART_STORAGE_KEY = "deskto_cart_v1";
@@ -1300,7 +1323,6 @@ function ProductCatalogPage({ category }: { category: ProductType | "all" }) {
   const [status,setStatus] = useState("Select products to add to your cart.");
   const [filtersOpen,setFiltersOpen] = useState(false);
   const dynamicCategories = Array.from(new Set(catalogProducts.map(p => p.category))) as ProductCategory[];
-  const dynamicBrands = Array.from(new Set(catalogProducts.map(p => p.brand))).sort();
 
   useEffect(() => { setCart(loadCart()); }, []);
   useEffect(() => { saveCart(cart); }, [cart]);
@@ -1437,12 +1459,19 @@ function ProductCatalogPage({ category }: { category: ProductType | "all" }) {
                     ))}
                   </div>
                 </div>
-                {/* Brands */}
+                {/* Brands — grouped by category, top 5 popular companies each */}
                 <div>
-                  <div style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:10,color:"#777",letterSpacing:"1.4px",textTransform:"uppercase",fontWeight:700,marginBottom:8 }}>Brand</div>
-                  <div style={{ display:"flex",gap:6,flexWrap:"wrap" }}>
-                    {dynamicBrands.map(b => (
-                      <FilterChip key={b} active={selectedBrands.has(b)} onClick={() => toggleBrand(b)}>{b}</FilterChip>
+                  <div style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:10,color:"#777",letterSpacing:"1.4px",textTransform:"uppercase",fontWeight:700,marginBottom:10 }}>Brand</div>
+                  <div style={{ display:"flex",flexDirection:"column",gap:10,maxHeight:320,overflowY:"auto",paddingRight:4 }}>
+                    {(Object.keys(CATEGORY_BRANDS) as ProductCategory[]).map(cat => (
+                      <div key={cat}>
+                        <div style={{ fontFamily:"'Orbitron',sans-serif",fontSize:9,color:"#FF1F45",letterSpacing:"1px",marginBottom:6 }}>{CATEGORY_LABELS[cat] || cat}</div>
+                        <div style={{ display:"flex",gap:6,flexWrap:"wrap" }}>
+                          {CATEGORY_BRANDS[cat]!.map(b => (
+                            <FilterChip key={`${cat}-${b}`} active={selectedBrands.has(b)} onClick={() => toggleBrand(b)}>{b}</FilterChip>
+                          ))}
+                        </div>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -2036,13 +2065,24 @@ function LocationSection() {
               <h2 style={{ fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(22px,3.5vw,42px)",fontWeight:900,color:"white",lineHeight:1.1,marginBottom:16 }}>Experience DESKTO<br /><span style={{ color:"#FF1F45" }}>In Person</span></h2>
               <p style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:14,color:"#CFCFCF",lineHeight:1.7,marginBottom:26 }}>Visit our showroom to see our machines running live. Our experts are ready to guide you through every option.</p>
               <div style={{ display:"flex",flexDirection:"column",gap:12 }}>
-                {[{icon:User,text:"Mr. Vishnu — Computer & Gaming Expert"},{icon:Wrench,text:"Gaming PC Builds | Laptop/Desktop Repair"},{icon:Package,text:"Used Laptops (Buy/Sell) | Data Recovery | Gaming Info"},{icon:Phone,text:"9893543312"},{icon:Mail,text:"desktogaming@gmail.com"},{icon:MapPin,text:"Ground Floor Shop No-9 Block No-8 Dakshin Gangotri Supela Bhilai 490023"}].map(({icon:Icon,text})=>(
-                  <div key={text} style={{ display:"flex",alignItems:"flex-start",gap:10 }}>
+                {[
+                  {icon:User,text:"Mr. Vishnu — Computer & Gaming Expert"},
+                  {icon:Wrench,text:"Gaming PC Builds | Laptop/Desktop Repair"},
+                  {icon:Package,text:"Used Laptops (Buy/Sell) | Data Recovery | Gaming Info"},
+                  {icon:Phone,text:"9893543312",link:"https://wa.me/919893543312"},
+                  {icon:Mail,text:"desktogaming@gmail.com",link:"mailto:desktogaming@gmail.com"},
+                  {icon:MapPin,text:"Ground Floor Shop No-9 Block No-8 Dakshin Gangotri Supela Bhilai 490023",link:"https://maps.google.com/?q=21.206030,81.348663"}
+                ].map(({icon:Icon,text,link})=>(
+                  <a key={text} href={link} target={link ? "_blank" : undefined} rel="noopener noreferrer" style={{ display:"flex",alignItems:"flex-start",gap:10,textDecoration:"none",cursor:link?"pointer":"default" }}>
                     <div className="glass-icon-circle glass-icon-circle-red" style={{ width:32,height:32,flexShrink:0 }}>
                       <Icon size={13} color="#FF1F45" />
                     </div>
-                    <span style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:13,color:"#CFCFCF",paddingTop:7 }}>{text}</span>
-                  </div>
+                    <span style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:13,color:"#CFCFCF",paddingTop:7,transition:"color .3s" }}
+                          onMouseEnter={e=>{if(link) e.currentTarget.style.color="#FF1F45"}}
+                          onMouseLeave={e=>{if(link) e.currentTarget.style.color="#CFCFCF"}}>
+                      {text}
+                    </span>
+                  </a>
                 ))}
               </div>
             </div>
@@ -2568,12 +2608,7 @@ export function FooterSection() {
         <div className="footer-grid" style={{ display:"grid",gridTemplateColumns:"1.4fr repeat(4,1fr)",gap:34,marginBottom:48 }}>
           <div className="footer-brand">
             <div style={{ display:"flex",alignItems:"center",gap:10,marginBottom:14 }}>
-              <div style={{ position:"relative",width:34,height:34,flexShrink:0 }}>
-                <div style={{ position:"absolute",inset:0,background:"linear-gradient(135deg,#FF1F45,#7a000f)",clipPath:"polygon(50% 0%,93% 25%,93% 75%,50% 100%,7% 75%,7% 25%)" }} />
-                <div style={{ position:"absolute",inset:"3px",background:"#0D0D0D",clipPath:"polygon(50% 0%,93% 25%,93% 75%,50% 100%,7% 75%,7% 25%)",display:"flex",alignItems:"center",justifyContent:"center" }}>
-                  <span style={{ fontFamily:"'Orbitron',sans-serif",fontSize:10,fontWeight:900,color:"#FF1F45" }}>D</span>
-                </div>
-              </div>
+              <BrandMark size={34} />
               <span style={{ fontFamily:"'Orbitron',sans-serif",fontSize:14,fontWeight:900,letterSpacing:"4px",color:"white" }}>DESKTO</span>
             </div>
             <p style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:12,color:"#555",lineHeight:1.7,marginBottom:16,maxWidth:200 }}>Premium gaming computers & tech services. Built for those who demand perfection.</p>
