@@ -1964,6 +1964,9 @@ export function AdminRepairs({ store, updateRepairStatus, patchRepair }: { store
                 </div>
               ) },
               { key: "issue", label: "Issue", render: r => <span style={{ maxWidth: 150, display: "inline-block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.issue}</span> },
+              { key: "quote", label: "Quote Details", render: r => (
+                <RepairQuoteEditor repair={r} patchRepair={patchRepair} />
+              ) },
               { key: "technician", label: "Technician", render: r => (
                 <RepairTechnicianCell repair={r} technicianOptions={technicianOptions} technicianName={technicianName} patchRepair={patchRepair} />
               ) },
@@ -1972,14 +1975,17 @@ export function AdminRepairs({ store, updateRepairStatus, patchRepair }: { store
               ) },
               { key: "status", label: "Status", render: r => <StatusBadge status={r.status} /> },
               { key: "action", label: "", render: r => (
-                <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 150 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 190 }}>
                   <select value={r.status} onChange={e => {
                     patchRepair(r.id, { status: e.target.value as Repair["status"] });
                     toast.success("Status synced to customer dashboard");
                   }} style={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "6px 8px", color: "white", fontSize: 11 }}>
                     {REPAIR_STATUS_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                   </select>
-                  <button className="glass-pill glass-pill-sm glass-pill-outline" onClick={() => setSelectedRepairId(r.id)}>View Details</button>
+                  <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                    <button className="glass-pill glass-pill-sm glass-pill-info" onClick={() => { setSelectedRepairId(r.id); }}>Quote</button>
+                    <button className="glass-pill glass-pill-sm glass-pill-outline" onClick={() => setSelectedRepairId(r.id)}>View</button>
+                  </div>
                 </div>
               ) },
             ]}
@@ -2130,6 +2136,61 @@ function RepairQuoteEditor({ repair, patchRepair }: { repair: Repair; patchRepai
           toast.success("Itemized repair quotation sent to customer");
         }}>Send Quote</button>
       </div>
+    </div>
+  );
+}
+
+function PCBuildQuoteEditor({ build, patchPCBuild }: { build: PCBuild; patchPCBuild: (id: string, patch: Partial<PCBuild>) => void }) {
+  const defaults = build.quotationItems?.length
+    ? build.quotationItems
+    : [
+        ...build.components?.map(c => ({ label: c.type + ": " + c.name, cost: c.price })) || [],
+        { label: "Assembly Charge", cost: build.assemblyCharge || 0 },
+        { label: "GST (18%)", cost: build.gst || 0 },
+        { label: "Shipping", cost: build.shipping || 0 },
+      ];
+  const [items, setItems] = useState(defaults.length ? defaults : [{ label: "Component", cost: 0 }, { label: "Assembly Charge", cost: 0 }, { label: "GST", cost: 0 }]);
+  const [note, setNote] = useState(build.quotationNote || "Professional build with warranty and testing.");
+  useEffect(() => {
+    const nextDefaults = build.quotationItems?.length
+      ? build.quotationItems
+      : [
+          ...build.components?.map(c => ({ label: c.type + ": " + c.name, cost: c.price })) || [],
+          { label: "Assembly Charge", cost: build.assemblyCharge || 0 },
+          { label: "GST (18%)", cost: build.gst || 0 },
+          { label: "Shipping", cost: build.shipping || 0 },
+        ];
+    setItems(nextDefaults.length ? nextDefaults : [{ label: "Component", cost: 0 }, { label: "Assembly Charge", cost: 0 }, { label: "GST", cost: 0 }]);
+    setNote(build.quotationNote || "Professional build with warranty and testing.");
+  }, [build.id, build.updatedAt, build.quotation, build.quotationNote]);
+  const total = items.reduce((sum, item) => sum + Number(item.cost || 0), 0);
+  const updateItem = (index: number, patch: Partial<{ label: string; cost: number }>) => setItems(prev => prev.map((item, i) => i === index ? { ...item, ...patch } : item));
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 120, justifyContent: "flex-end" }}>
+      {build.quotation ? (
+        <div style={{ textAlign: "right" }}>
+          <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 11, color: "#00b4ff", fontWeight: 700 }}>{inr(build.quotation)}</span>
+          <div style={{ fontSize: 9, color: "#888", marginTop: 2 }}>{build.quotationNote ? build.quotationNote.split(" ").slice(0, 2).join(" ") : ""}</div>
+        </div>
+      ) : (
+        <span style={{ fontSize: 11, color: "#777" }}>No quote</span>
+      )}
+      <button
+        className="glass-pill glass-pill-sm glass-pill-outline"
+        onClick={() => {
+          const quoteItems = items.filter(item => item.label.trim());
+          patchPCBuild(build.id, {
+            status: "quotation",
+            quotationItems: quoteItems,
+            quotation: total,
+            quotationNote: note,
+            adminVerified: true,
+          });
+          toast.success("PC Build quotation sent to customer");
+        }}
+      >
+        Edit
+      </button>
     </div>
   );
 }
@@ -2397,7 +2458,9 @@ export function AdminCustomPC({ store, patchPCBuild }: { store: DashboardStore; 
               ))}
             </div>
           ) },
-          { key: "total", label: "Quote", align: "right", render: b => inr(b.quotation || b.total) },
+          { key: "quote", label: "Quote", render: b => (
+            <PCBuildQuoteEditor build={b} patchPCBuild={patchPCBuild} />
+          ) },
           { key: "tech", label: "Technician", render: b => (
             <PCBuildTechnicianCell build={b} builders={builders} builderName={builderName} patchPCBuild={patchPCBuild} />
           ) },
