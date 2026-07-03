@@ -1,0 +1,182 @@
+---
+# Bootstrap playbook - run once per instance after Terraform provision
+# Installs Docker, creates deploy user, configures unattended security updates,
+# installs CloudWatch agent, and sets up log rotation
+
+- name: Bootstrap EC2 instance
+  hosts: webservers
+  become: true
+  gather_facts: true
+
+  vars:
+    deploy_user: deploy
+
+  tasks:
+    - name: Install CloudWatch agent
+      block:
+        - name: Download CloudWatch agent installer
+          get_url:
+            url: "https://s3.amazonaws.com/amazoncloudwatch-agent/amazon_linux/arm64/latest/amazon-cloudwatch-agent.rpm"
+            dest: /tmp/amazon-cloudwatch-agent.rpm
+            mode: '0644'
+
+        - name: Install CloudWatch agent RPM
+          yum:
+            name: /tmp/amazon-cloudwatch-agent.rpm
+            state: present
+
+        - name: Clean up installer
+          file:
+            path: /tmp/amazon-cloudwatch-agent.rpm
+            state: absent
+
+      rescue:
+        - name: Log CloudWatch install failure (non-fatal)
+          debug:
+            msg: "CloudWatch agent install skipped or failed — not critical for deployment"
+
+    - name: Install unattended security updates
+      block:
+        - name: Install yum-cron package
+          yum:
+            name: yum-cron
+            state: present
+
+        - name: Enable and start yum-cron service
+          systemd:
+            name: yum-cron
+            state: started
+            enabled: true
+
+        - name: Enable automatic security updates
+          lineinfile:
+            path: /etc/yum/yum-cron.conf
+            regexp: '^update_cmd'
+            line: 'update_cmd = security'
+
+      rescue:
+        - name: Log yum-cron setup failure
+          debug:
+            msg: "Unattended security updates setup failed — verify manually"
+
+    - name: Install Docker (idempotent)
+      block:
+        - name: Uninstall old docker packages
+          yum:
+            name:
+              - docker
+              - docker-client
+              - docker-client-latest
+              - docker-common
+              - docker-latest
+              - docker-latest-logrotate
+              - docker-logrotate
+              - docker-engine
+            state: absent
+            remove_deps: true
+
+        - name: Install Docker prerequisites
+          yum:
+            name:
+              - yum-utils
+              - device-mapper-persistent-data
+              - lvm2
+            state: present
+
+        - name: Add Docker yum repo
+          get_url:
+            url: https://download.docker.com/linux/centos/docker-ce.repo
+            dest: /etc/yum.repos.d/docker-ce.repo
+            mode: '0644'
+
+        - name: Install Docker CE
+          yum:
+            name:
+              - docker-ce
+              - docker-ce-cli
+              - containerd.io
+              - docker-buildx-plugin
+              - docker-compose-plugin
+            state: present
+
+        - name: Start Docker service
+          systemd:
+            name: docker
+            state: started
+            enabled: true
+
+        - name: Add ec2-user to docker group
+          user:
+            name: ec2-user
+            groups: docker
+            append: true
+
+    - name: Create deploy user for container management
+      user:
+        name: "{{ deploy_user }}"
+        groups:
+          - docker
+        append: true
+        shell: /bin/bash
+        create_home: true
+
+    - name: Install sudo for deploy user
+      yum:
+        name: sudo
+        state: present
+
+    - name: Grant deploy user passwordless docker access
+      copy:
+        dest: /etc/sudoers.d/deploy-docker
+        content: "{{ deploy_user }} ALL=(ALL) NOPASSWD: /usr/bin/docker, /usr/bin/systemctl restart {{ project_name }}.service\n"
+        mode: '0440'
+        validate: '/usr/sbin/visudo -cf %s'
+
+    - name: Configure log rotation for Docker containers
+      copy:
+        dest: /etc/logrotate.d/docker-containers
+        content: |
+          /var/lib/docker/containers/*/*.log {
+              rotate 7
+              daily
+              compress
+              missingok
+              notifempty
+              copytruncate
+          }
+        mode: '0644'
+
+    - name: Install CloudWatch agent Python dependencies
+      pip:
+        name: requests
+        state: present
+      ignore_errors: true
+
+    - name: Verify setup
+      block:
+        - name: Check Docker is running
+          command: docker version
+          register: docker_version
+
+        - name: Display Docker version
+          debug:
+            msg: "{{ docker_version.stdout_lines }}"
+
+        - name: Check deploy user exists
+          command: id {{ deploy_user }}
+          register: deploy_user_check
+
+        - name: Display deploy user info
+          debug:
+            msg: "{{ deploy_user_check.stdout }}"
+
+    - name: Generate host facts file for deploy playbook
+      copy:
+        dest: /etc/deskto-website/ansible-facts.yml
+        content: |
+          ---
+          ec2_public_ip: "{{ ansible_host }}"
+          ecr_repo_url: 898322960338.dkr.ecr.ap-south-1.amazonaws.com/deskto-web
+          deploy_user: {{ deploy_user }}
+          project_name: {{ project_name }}
+        mode: '0644'

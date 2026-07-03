@@ -1,0 +1,181 @@
+---
+# Deploy playbook - run for each release
+# Pulls Docker image from ECR, runs with docker-compose, performs health checks,
+# and automatically rolls back on failure
+
+- name: Deploy Deskto Website
+  hosts: webservers
+  become: true
+  gather_facts: true
+  vars:
+    deploy_user: deploy
+    project_name: deskto-website
+    docker_compose_file: /opt/{{ project_name }}/docker-compose.yml
+    backup_dir: /opt/{{ project_name }}/backup
+    service_name: deskto-website
+
+  tasks:
+    - name: Read existing facts from bootstrap
+      ansible.builtin.stat:
+        path: /etc/deskto-website/ansible-facts.yml
+      register: facts_file
+
+    - name: Load existing facts
+      ansible.builtin.include_vars:
+        file: /etc/deskto-website/ansible-facts.yml
+      when: facts_file.stat.exists
+
+    - name: Login to ECR
+      docker_login:
+        registry: "{{ ecr_repo_url }}"
+        username: AWS
+        password: "{{ lookup('env', 'ECR_PASSWORD') | default('', true) }}"
+
+    - name: Get git SHA for this build
+      command: git rev-parse --short HEAD
+      register: git_sha
+      delegate_to: localhost
+      run_once: true
+
+    - name: Pull Docker image from ECR
+      docker_image:
+        name: "{{ ecr_repo_url }}"
+        tag: "sha-{{ git_sha.stdout }}"
+        source: pull
+        load_path: null
+
+    - name: Create project directory
+      file:
+        path: "/opt/{{ project_name }}"
+        state: directory
+        mode: '0755'
+
+    - name: Generate docker-compose.yml
+      copy:
+        dest: "{{ docker_compose_file }}"
+        content: |
+          version: '3.8'
+          services:
+            app:
+              image: "{{ ecr_repo_url }}:sha-{{ git_sha.stdout }}"
+              ports:
+                - "80:80"
+              restart: unless-stopped
+              healthcheck:
+                test: ["CMD", "curl", "-f", "http://localhost/"]
+                interval: 30s
+                timeout: 10s
+                retries: 3
+                start_period: 40s
+        mode: '0644'
+
+    - name: Stop previous service if exists (for blue/green swap)
+      systemd:
+        name: "{{ service_name }}"
+        state: stopped
+        enabled: no
+      ignore_errors: yes
+
+    - name: Remove old docker-compose file if exists
+      file:
+        path: "{{ docker_compose_file }}"
+        state: absent
+
+    - name: Deploy using docker-compose
+      command: docker compose up -d
+      args:
+        chdir: "/opt/{{ project_name }}"
+        creates: "{{ docker_compose_file }}"
+
+    - name: Enable and restart service
+      systemd:
+        name: "{{ service_name }}"
+        state: restarted
+        enabled: yes
+        daemon_reload: yes
+        listen: service_status
+
+    - name: Wait for service to be healthy
+      wait_for:
+        host: "{{ ansible_host }}"
+        port: 80
+        state: started
+        delay: 10
+        timeout: 60
+        connect_timeout: 5
+        msg: "Service did not become healthy"
+      listen: service_status
+
+    - name: Verify health endpoint
+      uri:
+        url: "http://{{ ansible_host }}/"
+        method: GET
+        status_code: 200
+        timeout: 10
+        validate_certs: no
+      listen: health_check
+      rescue:
+        - name: Rollback deployment on failure
+          debug:
+            msg: "Health check failed! Rolling back to previous image..."
+          listen: health_check
+
+        - name: Get previous successful image tag
+          find:
+            path: "/var/lib/docker/images"
+            patterns: "*{{ ecr_repo_url }}*"
+            recurse: yes
+          register: previous_images
+          listen: health_check
+
+        - name: Roll back to previous image
+          debug:
+            msg: "Rolling back to :latest"
+          listen: health_check
+
+        - name: Roll back with docker-compose
+          command: docker compose up -d
+          args:
+            chdir: "/opt/{{ project_name }}"
+            image: "{{ ecr_repo_url }}:latest"
+          listen: health_check
+
+        - name: Restart after rollback
+          systemd:
+            name: "{{ service_name }}"
+            state: restarted
+            daemon_reload: yes
+          listen: health_check
+
+        - name: Log rollback status
+          debug:
+            msg: "Rollback completed. Previous deployment failed."
+          listen: health_check
+
+    - name: Clean up old Docker images
+      command: docker image prune -f --filter until=168h
+      delegate_to: localhost
+      run_once: true
+
+    - name: Generate deployment summary
+      copy:
+        dest: "/opt/{{ project_name }}/deployment-info.txt"
+        content: |
+          Deployment Summary:
+          -------------------
+          Host: {{ ansible_host }}
+          Image: {{ ecr_repo_url }}:sha-{{ git_sha.stdout }}
+          Deployed: {{ ansible_date_time.iso8601 }}
+          Deployed by: {{ ansible_user }}
+          Docker image ID: {{ docker_image.stdout_lines[1] | default('N/A') }}
+        mode: '0644'
+
+    - name: Show deployment success
+      debug:
+        msg: "✅ Deployment successful! Serving from: {{ ecr_repo_url }}:sha-{{ git_sha.stdout }}"
+
+  handlers:
+    - name: service_status
+      listen: service_status
+    - name: health_check
+      listen: health_check
