@@ -1121,11 +1121,13 @@ function catalogProductToProduct(p: CatalogProduct): Product {
 }
 
 export function mergedCatalogProducts(products: CatalogProduct[] = []): Product[] {
-  const adminProducts = products
+  // Demo products are intentionally excluded here — the live catalogue (shop
+  // page, product detail, checkout) only shows products the admin has actually
+  // added via Catalog Management. PRODUCTS still exists for unrelated demo
+  // cross-references (seeded cart/wishlist/order history) elsewhere.
+  return products
     .filter(p => (p.catalogStatus || "published") === "published" && p.img)
     .map(catalogProductToProduct);
-  const adminIds = new Set(adminProducts.map(p => p.id));
-  return [...adminProducts, ...PRODUCTS.filter(p => !adminIds.has(p.id))];
 }
 
 export const CATEGORY_LABELS: Record<ProductCategory,string> = {

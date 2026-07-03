@@ -31,13 +31,7 @@ function encodeUpload(file: File) {
 }
 
 function encodeInlineRepairImage(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    const type = file.type || (file.name.toLowerCase().endsWith(".png") ? "image/png" : file.name.toLowerCase().endsWith(".webp") ? "image/webp" : "image/jpeg");
-    reader.onload = () => resolve(`${file.name}|||${type}|||${reader.result}`);
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
+  return saveMediaFile(file);
 }
 
 function uploadName(value: string) {

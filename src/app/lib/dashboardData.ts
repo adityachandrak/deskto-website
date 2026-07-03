@@ -1474,24 +1474,2702 @@ function serviceTimelineThrough(kind: ServiceRequestKind, status: ServiceRequest
 
 // ── SEEDER ────────────────────────────────────────────────────────────────
 
+const MACBOOK_AIR_M4_PRODUCT: CatalogProduct = {
+  id: 22,
+  name: "Apple MacBook Air M4 13-inch (16GB/256GB)",
+  type: "general",
+  category: "laptop",
+  condition: "first-hand",
+  brand: "Apple",
+  model: "MacBook Air 13\" M4",
+  sku: "APL-MBA-M4-13-256-SLV",
+  price: 99900,
+  orig: 114900,
+  stock: 6,
+  inStock: true,
+  rating: 4.8,
+  badge: "NEW",
+  warrantyMonths: 12,
+  rgb: false,
+  specs: [
+    "Apple M4 chip (10-core CPU, 10-core GPU)",
+    "16GB Unified Memory",
+    "256GB SSD Storage",
+    "13.6-inch Liquid Retina Display",
+    "Up to 18 hours battery life",
+  ],
+  operatingSystem: "macOS Sequoia 15",
+  weight: "1.24 kg",
+  dimensions: "30.41 x 21.5 x 1.13 cm",
+  processor: "Apple M4 (10-core CPU)",
+  gpu: "Apple M4 10-core GPU",
+  ram: "16GB Unified Memory (LPDDR5)",
+  storage: "256GB SSD",
+  display: "13.6-inch Liquid Retina, 2560x1664, 500 nits",
+  refreshRate: "60Hz",
+  powerRequirement: "35W USB-C Power Adapter",
+  ports: "2x Thunderbolt 4 (USB-C), MagSafe 3, 3.5mm headphone jack",
+  description: "The Apple MacBook Air 13-inch with the M4 chip delivers exceptional performance and all-day battery life in an ultra-thin, fanless design. Perfect for everyday productivity, creative work, and portability.",
+  technicalDetails: "Apple M4 chip with 10-core CPU and 10-core GPU, 16GB unified memory, 256GB SSD storage, 13.6-inch Liquid Retina display with 500 nits brightness, 12MP Center Stage camera, four-speaker sound system, backlit Magic Keyboard with Touch ID.",
+  useCase: "Ideal for students, professionals, and creators who need a lightweight, powerful laptop for everyday computing, content creation, and multitasking.",
+  performanceNotes: "M4 chip delivers up to 2x faster performance than M1 with silent fanless operation and up to 18 hours of battery life.",
+  qualityNotes: "Genuine Apple product with 1-year manufacturer warranty, precision-milled aluminum unibody design.",
+  features: [
+    "Fanless silent design",
+    "12MP Center Stage camera",
+    "MagSafe 3 charging",
+    "Wi-Fi 6E & Bluetooth 5.3",
+    "Backlit Magic Keyboard with Touch ID",
+  ],
+  boxContents: ["MacBook Air", "35W USB-C Power Adapter", "USB-C to MagSafe 3 Cable", "Documentation"],
+  compatibility: ["macOS Sequoia", "Thunderbolt 4 accessories", "USB-C peripherals"],
+  upgradeOptions: ["Configure to 24GB/32GB RAM at purchase", "Configure up to 2TB SSD at purchase"],
+  recommendedAccessories: ["USB-C Hub", "Protective Sleeve", "Magic Mouse", "External SSD"],
+  deliveryInfo: {
+    homeDelivery: true,
+    storePickup: true,
+    estimatedDelivery: "3-5 working days",
+    shippingCharges: 0,
+    freeShippingAbove: 50000,
+    returnPolicy: "7-day returns",
+  },
+  warrantyInfo: {
+    type: "Apple India Manufacturer Warranty (1 Year)",
+    claimProcess: "Contact DESKTO support via WhatsApp or call",
+    pickupPolicy: "Doorstep pickup available for warranty claims",
+    repairTerms: "Repairs handled via Apple-authorized service partners",
+  },
+  seo: {
+    slug: "apple-macbook-air-m4-13-inch",
+    keywords: ["macbook air m4", "apple laptop", "m4 chip", "ultrabook", "apple macbook air"],
+    metaTitle: "Apple MacBook Air M4 13-inch (16GB/256GB) | DESKTO",
+    metaDescription: "Buy Apple MacBook Air 13-inch with M4 chip, 16GB RAM, 256GB SSD. Fanless design, up to 18-hour battery life. Best price with warranty at DESKTO.",
+    tags: ["macbook air m4", "apple laptop", "m4 chip", "ultrabook", "apple macbook air"],
+  },
+  catalogStatus: "draft",
+  createdAt: Date.now(),
+  updatedAt: Date.now(),
+};
+
+const DELL_INSPIRON_15_PRODUCT: CatalogProduct = {
+  id: 23,
+  name: "Dell Inspiron 15 3530 (i5/8GB/512GB)",
+  type: "general",
+  category: "laptop",
+  condition: "first-hand",
+  brand: "Dell",
+  model: "Inspiron 15 3530",
+  sku: "DELL-INS15-3530-I5-512",
+  price: 52990,
+  orig: 59990,
+  stock: 8,
+  inStock: true,
+  rating: 4.5,
+  badge: "NEW",
+  warrantyMonths: 12,
+  rgb: false,
+  specs: [
+    "Intel Core i5-1235U (10-core, up to 4.4GHz)",
+    "8GB DDR4 RAM",
+    "512GB SSD Storage",
+    "15.6-inch FHD Display",
+    "Intel UHD Graphics",
+  ],
+  operatingSystem: "Windows 11 Home",
+  weight: "1.65 kg",
+  dimensions: "35.81 x 23.63 x 1.99 cm",
+  processor: "Intel Core i5-1235U (10-core, up to 4.4GHz)",
+  gpu: "Intel UHD Graphics",
+  ram: "8GB DDR4 (expandable to 16GB)",
+  storage: "512GB M.2 PCIe NVMe SSD",
+  display: "15.6-inch FHD (1920x1080), anti-glare",
+  refreshRate: "60Hz",
+  powerRequirement: "65W Power Adapter",
+  ports: "2x USB-A 3.2, 1x USB-C, HDMI 1.4, SD card reader, 3.5mm headphone jack",
+  description: "The Dell Inspiron 15 3530 is a reliable everyday laptop built for productivity, study, and home use, combining a spacious FHD display with dependable Intel performance.",
+  technicalDetails: "Intel Core i5-1235U 10-core processor, 8GB DDR4 RAM, 512GB PCIe NVMe SSD, 15.6-inch FHD anti-glare display, Intel UHD Graphics, Waves MaxxAudio speakers.",
+  useCase: "Great for students, home users, and office productivity — browsing, documents, video calls, and light multitasking.",
+  performanceNotes: "10-core Intel i5 handles everyday multitasking smoothly with fast SSD storage for quick boot and app load times.",
+  qualityNotes: "Genuine Dell product with 1-year manufacturer warranty and standard build quality checks.",
+  features: [
+    "Narrow-border FHD display",
+    "Dell ExpressCharge fast charging",
+    "Waves MaxxAudio sound",
+    "Spill-resistant keyboard",
+  ],
+  boxContents: ["Laptop", "65W Power Adapter", "Documentation"],
+  compatibility: ["Windows 11", "USB-C peripherals"],
+  upgradeOptions: ["Add RAM up to 16GB", "Add secondary storage"],
+  recommendedAccessories: ["Laptop Bag", "Wireless Mouse", "USB-C Hub"],
+  deliveryInfo: {
+    homeDelivery: true,
+    storePickup: true,
+    estimatedDelivery: "3-5 working days",
+    shippingCharges: 0,
+    freeShippingAbove: 50000,
+    returnPolicy: "7-day returns",
+  },
+  warrantyInfo: {
+    type: "Dell India Manufacturer Warranty (1 Year)",
+    claimProcess: "Contact DESKTO support via WhatsApp or call",
+    pickupPolicy: "Doorstep pickup available for warranty claims",
+    repairTerms: "Repairs handled via Dell-authorized service partners",
+  },
+  seo: {
+    slug: "dell-inspiron-15-3530",
+    keywords: ["dell inspiron 15", "dell laptop", "i5 laptop", "budget laptop", "dell inspiron 3530"],
+    metaTitle: "Dell Inspiron 15 3530 (i5/8GB/512GB) | DESKTO",
+    metaDescription: "Buy Dell Inspiron 15 3530 with Intel Core i5, 8GB RAM, 512GB SSD. Reliable everyday performance with warranty at DESKTO.",
+    tags: ["dell inspiron 15", "dell laptop", "i5 laptop", "budget laptop", "dell inspiron 3530"],
+  },
+  catalogStatus: "draft",
+  createdAt: Date.now(),
+  updatedAt: Date.now(),
+};
+
+const HP_15S_PRODUCT: CatalogProduct = {
+  id: 24,
+  name: "HP 15s-fq5330TU (i5/8GB/512GB)",
+  type: "general",
+  category: "laptop",
+  condition: "first-hand",
+  brand: "HP",
+  model: "15s-fq5330TU",
+  sku: "HP-15S-FQ5330-I5-512",
+  price: 47990,
+  orig: 54990,
+  stock: 10,
+  inStock: true,
+  rating: 4.4,
+  badge: "NEW",
+  warrantyMonths: 12,
+  rgb: false,
+  specs: [
+    "Intel Core i5-1235U (10-core, up to 4.4GHz)",
+    "8GB DDR4 RAM",
+    "512GB SSD Storage",
+    "15.6-inch FHD Micro-edge Display",
+    "Intel Iris Xe Graphics",
+  ],
+  operatingSystem: "Windows 11 Home",
+  weight: "1.69 kg",
+  dimensions: "35.9 x 23.7 x 1.79 cm",
+  processor: "Intel Core i5-1235U (10-core, up to 4.4GHz)",
+  gpu: "Intel Iris Xe Graphics",
+  ram: "8GB DDR4 (expandable to 16GB)",
+  storage: "512GB PCIe NVMe SSD",
+  display: "15.6-inch FHD (1920x1080), micro-edge, anti-glare",
+  refreshRate: "60Hz",
+  powerRequirement: "45W Power Adapter",
+  ports: "1x USB-C, 2x USB-A, HDMI 1.4, SD card reader, 3.5mm headphone jack",
+  description: "The HP 15s-fq5330TU is a slim, value-focused laptop for everyday computing, offering a crisp FHD display and dependable Intel performance in a portable design.",
+  technicalDetails: "Intel Core i5-1235U 10-core processor, 8GB DDR4 RAM, 512GB PCIe NVMe SSD, 15.6-inch FHD micro-edge display, Intel Iris Xe Graphics, dual speakers with HP Audio Boost.",
+  useCase: "Ideal for students, home use, and everyday office work — web browsing, documents, streaming, and video calls.",
+  performanceNotes: "10-core Intel i5 with Iris Xe graphics handles everyday multitasking and light creative work smoothly.",
+  qualityNotes: "Genuine HP product with 1-year manufacturer warranty and standard build quality checks.",
+  features: [
+    "Micro-edge FHD display",
+    "HP Fast Charge support",
+    "HP Audio Boost dual speakers",
+    "Lightweight portable design",
+  ],
+  boxContents: ["Laptop", "45W Power Adapter", "Documentation"],
+  compatibility: ["Windows 11", "USB-C peripherals"],
+  upgradeOptions: ["Add RAM up to 16GB", "Add secondary storage"],
+  recommendedAccessories: ["Laptop Bag", "Wireless Mouse", "USB-C Hub"],
+  deliveryInfo: {
+    homeDelivery: true,
+    storePickup: true,
+    estimatedDelivery: "3-5 working days",
+    shippingCharges: 0,
+    freeShippingAbove: 50000,
+    returnPolicy: "7-day returns",
+  },
+  warrantyInfo: {
+    type: "HP India Manufacturer Warranty (1 Year)",
+    claimProcess: "Contact DESKTO support via WhatsApp or call",
+    pickupPolicy: "Doorstep pickup available for warranty claims",
+    repairTerms: "Repairs handled via HP-authorized service partners",
+  },
+  seo: {
+    slug: "hp-15s-fq5330tu",
+    keywords: ["hp 15s", "hp laptop", "i5 laptop", "budget laptop", "hp 15s fq5330"],
+    metaTitle: "HP 15s-fq5330TU (i5/8GB/512GB) | DESKTO",
+    metaDescription: "Buy HP 15s-fq5330TU with Intel Core i5, 8GB RAM, 512GB SSD. Slim, value-focused everyday laptop with warranty at DESKTO.",
+    tags: ["hp 15s", "hp laptop", "i5 laptop", "budget laptop", "hp 15s fq5330"],
+  },
+  catalogStatus: "draft",
+  createdAt: Date.now(),
+  updatedAt: Date.now(),
+};
+
+const LENOVO_IDEAPAD_SLIM3_PRODUCT: CatalogProduct = {
+  id: 25,
+  name: "Lenovo IdeaPad Slim 3 15AMN8 (R5/8GB/512GB)",
+  type: "general",
+  category: "laptop",
+  condition: "first-hand",
+  brand: "Lenovo",
+  model: "IdeaPad Slim 3 15AMN8",
+  sku: "LEN-IPS3-15-R5-512",
+  price: 42990,
+  orig: 48990,
+  stock: 10,
+  inStock: true,
+  rating: 4.4,
+  badge: "NEW",
+  warrantyMonths: 12,
+  rgb: false,
+  specs: [
+    "AMD Ryzen 5 7430U (6-core, up to 4.3GHz)",
+    "8GB LPDDR5 RAM",
+    "512GB SSD Storage",
+    "15.6-inch FHD Display",
+    "AMD Radeon Graphics",
+  ],
+  operatingSystem: "Windows 11 Home",
+  weight: "1.63 kg",
+  dimensions: "35.9 x 23.3 x 1.9 cm",
+  processor: "AMD Ryzen 5 7430U (6-core, up to 4.3GHz)",
+  gpu: "AMD Radeon Graphics (integrated)",
+  ram: "8GB LPDDR5",
+  storage: "512GB PCIe NVMe SSD",
+  display: "15.6-inch FHD (1920x1080), anti-glare, 60Hz",
+  refreshRate: "60Hz",
+  powerRequirement: "65W Power Adapter",
+  ports: "2x USB-A 3.2, 1x USB-C, HDMI 1.4, SD card reader, 3.5mm headphone jack",
+  description: "The Lenovo IdeaPad Slim 3 is a light, dependable everyday laptop built for students and home users who want smooth performance at an affordable price.",
+  technicalDetails: "AMD Ryzen 5 7430U 6-core processor, 8GB LPDDR5 RAM, 512GB PCIe NVMe SSD, 15.6-inch FHD anti-glare display, AMD Radeon integrated graphics, dual stereo speakers.",
+  useCase: "Great for students, home users, and everyday productivity — browsing, documents, streaming, and video calls.",
+  performanceNotes: "Ryzen 5 7430U delivers smooth everyday multitasking with fast SSD storage for quick boot and app load times.",
+  qualityNotes: "Genuine Lenovo product with 1-year manufacturer warranty and standard build quality checks.",
+  features: ["Slim, lightweight chassis", "Rapid Charge support", "Dolby Audio speakers", "Privacy webcam shutter"],
+  boxContents: ["Laptop", "65W Power Adapter", "Documentation"],
+  compatibility: ["Windows 11", "USB-C peripherals"],
+  upgradeOptions: ["Add secondary storage"],
+  recommendedAccessories: ["Laptop Bag", "Wireless Mouse", "USB-C Hub"],
+  deliveryInfo: {
+    homeDelivery: true,
+    storePickup: true,
+    estimatedDelivery: "3-5 working days",
+    shippingCharges: 0,
+    freeShippingAbove: 50000,
+    returnPolicy: "7-day returns",
+  },
+  warrantyInfo: {
+    type: "Lenovo India Manufacturer Warranty (1 Year)",
+    claimProcess: "Contact DESKTO support via WhatsApp or call",
+    pickupPolicy: "Doorstep pickup available for warranty claims",
+    repairTerms: "Repairs handled via Lenovo-authorized service partners",
+  },
+  seo: {
+    slug: "lenovo-ideapad-slim-3-15amn8",
+    keywords: ["lenovo ideapad slim 3", "lenovo laptop", "ryzen 5 laptop", "budget laptop"],
+    metaTitle: "Lenovo IdeaPad Slim 3 15AMN8 (R5/8GB/512GB) | DESKTO",
+    metaDescription: "Buy Lenovo IdeaPad Slim 3 with AMD Ryzen 5, 8GB RAM, 512GB SSD. Light, dependable everyday laptop with warranty at DESKTO.",
+    tags: ["lenovo ideapad slim 3", "lenovo laptop", "ryzen 5 laptop", "budget laptop"],
+  },
+  catalogStatus: "draft",
+  createdAt: Date.now(),
+  updatedAt: Date.now(),
+};
+
+const ASUS_VIVOBOOK_15_PRODUCT: CatalogProduct = {
+  id: 26,
+  name: "ASUS Vivobook 15 X1504VA (i5/16GB/512GB)",
+  type: "general",
+  category: "laptop",
+  condition: "first-hand",
+  brand: "ASUS",
+  model: "Vivobook 15 X1504VA",
+  sku: "ASUS-VB15-X1504-I5-512",
+  price: 54990,
+  orig: 62990,
+  stock: 9,
+  inStock: true,
+  rating: 4.5,
+  badge: "NEW",
+  warrantyMonths: 12,
+  rgb: false,
+  specs: [
+    "Intel Core i5-1334U (10-core, up to 4.6GHz)",
+    "16GB DDR4 RAM",
+    "512GB SSD Storage",
+    "15.6-inch FHD Display",
+    "Intel UHD Graphics",
+  ],
+  operatingSystem: "Windows 11 Home",
+  weight: "1.7 kg",
+  dimensions: "35.9 x 23.5 x 1.99 cm",
+  processor: "Intel Core i5-1334U (10-core, up to 4.6GHz)",
+  gpu: "Intel UHD Graphics",
+  ram: "16GB DDR4",
+  storage: "512GB PCIe NVMe SSD",
+  display: "15.6-inch FHD (1920x1080), 60Hz",
+  refreshRate: "60Hz",
+  powerRequirement: "65W Power Adapter",
+  ports: "2x USB-A 3.2, 1x USB-C, HDMI 1.4, SD card reader, 3.5mm headphone jack",
+  description: "The ASUS Vivobook 15 blends generous 16GB memory with a spacious FHD display, making it a strong all-rounder for productivity and everyday multitasking.",
+  technicalDetails: "Intel Core i5-1334U 10-core processor, 16GB DDR4 RAM, 512GB PCIe NVMe SSD, 15.6-inch FHD display, Intel UHD Graphics, ASUS SonicMaster audio.",
+  useCase: "Ideal for students, professionals, and home users who want extra memory headroom for multitasking and light creative work.",
+  performanceNotes: "16GB RAM and a 10-core i5 keep multiple apps and browser tabs running smoothly without slowdown.",
+  qualityNotes: "Genuine ASUS product with 1-year manufacturer warranty and standard build quality checks.",
+  features: ["ASUS SonicMaster audio", "Fingerprint sensor", "Backlit keyboard", "ErgoLift hinge design"],
+  boxContents: ["Laptop", "65W Power Adapter", "Documentation"],
+  compatibility: ["Windows 11", "USB-C peripherals"],
+  upgradeOptions: ["Add secondary storage"],
+  recommendedAccessories: ["Laptop Bag", "Wireless Mouse", "USB-C Hub"],
+  deliveryInfo: {
+    homeDelivery: true,
+    storePickup: true,
+    estimatedDelivery: "3-5 working days",
+    shippingCharges: 0,
+    freeShippingAbove: 50000,
+    returnPolicy: "7-day returns",
+  },
+  warrantyInfo: {
+    type: "ASUS India Manufacturer Warranty (1 Year)",
+    claimProcess: "Contact DESKTO support via WhatsApp or call",
+    pickupPolicy: "Doorstep pickup available for warranty claims",
+    repairTerms: "Repairs handled via ASUS-authorized service partners",
+  },
+  seo: {
+    slug: "asus-vivobook-15-x1504va",
+    keywords: ["asus vivobook 15", "asus laptop", "i5 laptop 16gb", "vivobook"],
+    metaTitle: "ASUS Vivobook 15 X1504VA (i5/16GB/512GB) | DESKTO",
+    metaDescription: "Buy ASUS Vivobook 15 with Intel Core i5, 16GB RAM, 512GB SSD. Strong all-round performance with warranty at DESKTO.",
+    tags: ["asus vivobook 15", "asus laptop", "i5 laptop 16gb", "vivobook"],
+  },
+  catalogStatus: "draft",
+  createdAt: Date.now(),
+  updatedAt: Date.now(),
+};
+
+const MSI_KATANA_15_PRODUCT: CatalogProduct = {
+  id: 27,
+  name: "MSI Katana 15 B13VFK (i7/RTX 4060/16GB/1TB)",
+  type: "gaming",
+  category: "gaming-laptop",
+  condition: "first-hand",
+  brand: "MSI",
+  model: "Katana 15 B13VFK",
+  sku: "MSI-KAT15-B13VFK-I7-RTX4060",
+  price: 109990,
+  orig: 124990,
+  stock: 5,
+  inStock: true,
+  rating: 4.6,
+  badge: "NEW",
+  warrantyMonths: 12,
+  rgb: true,
+  specs: [
+    "Intel Core i7-13620H (10-core, up to 4.9GHz)",
+    "NVIDIA GeForce RTX 4060 8GB GDDR6",
+    "16GB DDR5 RAM",
+    "1TB NVMe SSD",
+    "15.6-inch FHD 144Hz Display",
+  ],
+  operatingSystem: "Windows 11 Home",
+  weight: "2.25 kg",
+  dimensions: "35.9 x 26.5 x 2.19 cm",
+  processor: "Intel Core i7-13620H (10-core, up to 4.9GHz)",
+  gpu: "NVIDIA GeForce RTX 4060 8GB GDDR6",
+  ram: "16GB DDR5",
+  storage: "1TB NVMe SSD",
+  display: "15.6-inch FHD (1920x1080), 144Hz, IPS-level",
+  refreshRate: "144Hz",
+  powerRequirement: "180W Power Adapter",
+  ports: "3x USB-A 3.2, 1x USB-C, HDMI 2.1, RJ45 LAN, 3.5mm headphone jack",
+  description: "The MSI Katana 15 is a performance gaming laptop pairing an RTX 4060 GPU with a fast 144Hz display, built for competitive gaming and demanding workloads.",
+  technicalDetails: "Intel Core i7-13620H 10-core processor, NVIDIA GeForce RTX 4060 8GB GDDR6, 16GB DDR5 RAM, 1TB NVMe SSD, 15.6-inch FHD 144Hz IPS-level display, Cooler Boost 5 thermal system.",
+  useCase: "Built for gamers and creators who need high frame rates, fast rendering, and reliable thermals under sustained load.",
+  performanceNotes: "RTX 4060 and i7-13620H deliver smooth 1080p gaming at high settings with strong multitasking headroom.",
+  qualityNotes: "Genuine MSI product with 1-year manufacturer warranty and Cooler Boost thermal validation.",
+  features: ["Cooler Boost 5 thermal system", "Per-key RGB-ready backlit keyboard", "144Hz refresh rate display", "MSI Center performance tuning"],
+  boxContents: ["Laptop", "180W Power Adapter", "Documentation"],
+  compatibility: ["Windows 11", "USB-C peripherals", "External GPU-ready ports"],
+  upgradeOptions: ["Add secondary SSD storage", "Upgrade RAM up to 32GB"],
+  recommendedAccessories: ["Gaming Mouse", "Cooling Pad", "Laptop Backpack"],
+  deliveryInfo: {
+    homeDelivery: true,
+    storePickup: true,
+    estimatedDelivery: "3-5 working days",
+    shippingCharges: 0,
+    freeShippingAbove: 50000,
+    returnPolicy: "7-day returns",
+  },
+  warrantyInfo: {
+    type: "MSI India Manufacturer Warranty (1 Year)",
+    claimProcess: "Contact DESKTO support via WhatsApp or call",
+    pickupPolicy: "Doorstep pickup available for warranty claims",
+    repairTerms: "Repairs handled via MSI-authorized service partners",
+  },
+  seo: {
+    slug: "msi-katana-15-b13vfk",
+    keywords: ["msi katana 15", "gaming laptop", "rtx 4060 laptop", "msi gaming laptop"],
+    metaTitle: "MSI Katana 15 B13VFK (i7/RTX 4060/16GB/1TB) | DESKTO",
+    metaDescription: "Buy MSI Katana 15 with Intel Core i7, RTX 4060, 16GB RAM, 1TB SSD. High-performance 144Hz gaming laptop with warranty at DESKTO.",
+    tags: ["msi katana 15", "gaming laptop", "rtx 4060 laptop", "msi gaming laptop"],
+  },
+  catalogStatus: "draft",
+  createdAt: Date.now(),
+  updatedAt: Date.now(),
+};
+
+const ACER_PREDATOR_HELIOS_NEO_16_PRODUCT: CatalogProduct = {
+  id: 28,
+  name: "Acer Predator Helios Neo 16 PHN16-71 (i9/RTX 4070/16GB/1TB)",
+  type: "gaming",
+  category: "gaming-laptop",
+  condition: "first-hand",
+  brand: "Acer",
+  model: "Predator Helios Neo 16 PHN16-71",
+  sku: "ACER-PHN16-71-I9-RTX4070",
+  price: 184990,
+  orig: 209990,
+  stock: 4,
+  inStock: true,
+  rating: 4.7,
+  badge: "NEW",
+  warrantyMonths: 12,
+  rgb: true,
+  specs: [
+    "Intel Core i9-13900HX (24-core)",
+    "NVIDIA GeForce RTX 4070 8GB GDDR6",
+    "16GB DDR5 RAM",
+    "1TB NVMe SSD",
+    "16-inch WQXGA 165Hz Display",
+  ],
+  operatingSystem: "Windows 11 Home",
+  weight: "2.6 kg",
+  dimensions: "35.9 x 27.2 x 2.35 cm",
+  processor: "Intel Core i9-13900HX (24-core)",
+  gpu: "NVIDIA GeForce RTX 4070 8GB GDDR6",
+  ram: "16GB DDR5",
+  storage: "1TB NVMe SSD",
+  display: "16-inch WQXGA (2560x1600), 165Hz",
+  refreshRate: "165Hz",
+  powerRequirement: "240W Power Adapter",
+  ports: "3x USB-A 3.2, 1x USB-C Thunderbolt 4, HDMI 2.1, RJ45 LAN, 3.5mm headphone jack",
+  description: "The Acer Predator Helios Neo 16 pairs a flagship Intel i9 processor with an RTX 4070 GPU and a high-resolution 165Hz display for serious gaming and content creation performance.",
+  technicalDetails: "Intel Core i9-13900HX 24-core processor, NVIDIA GeForce RTX 4070 8GB GDDR6, 16GB DDR5 RAM, 1TB NVMe SSD, 16-inch WQXGA 165Hz display, 5th Gen AeroBlade 3D fan thermal system.",
+  useCase: "Built for high-end gaming, streaming, and content creation workloads that demand top-tier CPU and GPU performance.",
+  performanceNotes: "i9-13900HX and RTX 4070 combination handles AAA gaming at high/ultra settings and demanding creative workloads with ease.",
+  qualityNotes: "Genuine Acer product with 1-year manufacturer warranty and 5th Gen AeroBlade thermal validation.",
+  features: ["5th Gen AeroBlade 3D fan cooling", "PredatorSense performance tuning", "Per-zone RGB keyboard", "165Hz WQXGA display"],
+  boxContents: ["Laptop", "240W Power Adapter", "Documentation"],
+  compatibility: ["Windows 11", "Thunderbolt 4 accessories", "USB-C peripherals"],
+  upgradeOptions: ["Add secondary SSD storage", "Upgrade RAM up to 32GB"],
+  recommendedAccessories: ["Gaming Mouse", "Cooling Pad", "Laptop Backpack"],
+  deliveryInfo: {
+    homeDelivery: true,
+    storePickup: true,
+    estimatedDelivery: "3-5 working days",
+    shippingCharges: 0,
+    freeShippingAbove: 50000,
+    returnPolicy: "7-day returns",
+  },
+  warrantyInfo: {
+    type: "Acer India Manufacturer Warranty (1 Year)",
+    claimProcess: "Contact DESKTO support via WhatsApp or call",
+    pickupPolicy: "Doorstep pickup available for warranty claims",
+    repairTerms: "Repairs handled via Acer-authorized service partners",
+  },
+  seo: {
+    slug: "acer-predator-helios-neo-16-phn16-71",
+    keywords: ["acer predator helios neo 16", "gaming laptop", "rtx 4070 laptop", "acer predator"],
+    metaTitle: "Acer Predator Helios Neo 16 (i9/RTX 4070/16GB/1TB) | DESKTO",
+    metaDescription: "Buy Acer Predator Helios Neo 16 with Intel Core i9, RTX 4070, 16GB RAM, 1TB SSD. Flagship 165Hz gaming laptop with warranty at DESKTO.",
+    tags: ["acer predator helios neo 16", "gaming laptop", "rtx 4070 laptop", "acer predator"],
+  },
+  catalogStatus: "draft",
+  createdAt: Date.now(),
+  updatedAt: Date.now(),
+};
+
+const LENOVO_LEGION_5_PRODUCT: CatalogProduct = {
+  id: 29,
+  name: "Lenovo Legion 5 16IRX9 (R7/RTX 4060/16GB/512GB)",
+  type: "gaming",
+  category: "gaming-laptop",
+  condition: "first-hand",
+  brand: "Lenovo",
+  model: "Legion 5 16IRX9",
+  sku: "LEN-LEG5-16IRX9-R7-RTX4060",
+  price: 139990,
+  orig: 154990,
+  stock: 5,
+  inStock: true,
+  rating: 4.6,
+  badge: "NEW",
+  warrantyMonths: 12,
+  rgb: true,
+  specs: [
+    "AMD Ryzen 7 7735HS (8-core, up to 4.75GHz)",
+    "NVIDIA GeForce RTX 4060 8GB GDDR6",
+    "16GB DDR5 RAM",
+    "512GB NVMe SSD",
+    "16-inch WQXGA 165Hz Display",
+  ],
+  operatingSystem: "Windows 11 Home",
+  weight: "2.4 kg",
+  dimensions: "35.7 x 26.1 x 2.29 cm",
+  processor: "AMD Ryzen 7 7735HS (8-core, up to 4.75GHz)",
+  gpu: "NVIDIA GeForce RTX 4060 8GB GDDR6",
+  ram: "16GB DDR5",
+  storage: "512GB NVMe SSD",
+  display: "16-inch WQXGA (2560x1600), 165Hz",
+  refreshRate: "165Hz",
+  powerRequirement: "230W Power Adapter",
+  ports: "3x USB-A 3.2, 1x USB-C, HDMI 2.1, RJ45 LAN, 3.5mm headphone jack",
+  description: "The Lenovo Legion 5 combines an AMD Ryzen 7 processor with an RTX 4060 GPU and a sharp 165Hz WQXGA display, delivering strong gaming performance with solid build quality.",
+  technicalDetails: "AMD Ryzen 7 7735HS 8-core processor, NVIDIA GeForce RTX 4060 8GB GDDR6, 16GB DDR5 RAM, 512GB NVMe SSD, 16-inch WQXGA 165Hz display, Legion Coldfront thermal system.",
+  useCase: "Suited for gamers who want high frame rates and a sharp display without stepping up to flagship pricing.",
+  performanceNotes: "Ryzen 7 7735HS and RTX 4060 deliver smooth 1440p gaming at high settings with efficient power draw.",
+  qualityNotes: "Genuine Lenovo product with 1-year manufacturer warranty and Legion Coldfront thermal validation.",
+  features: ["Legion Coldfront 5.0 cooling", "4-zone RGB keyboard", "165Hz WQXGA display", "Legion Space performance tuning"],
+  boxContents: ["Laptop", "230W Power Adapter", "Documentation"],
+  compatibility: ["Windows 11", "USB-C peripherals"],
+  upgradeOptions: ["Add secondary SSD storage", "Upgrade RAM up to 32GB"],
+  recommendedAccessories: ["Gaming Mouse", "Cooling Pad", "Laptop Backpack"],
+  deliveryInfo: {
+    homeDelivery: true,
+    storePickup: true,
+    estimatedDelivery: "3-5 working days",
+    shippingCharges: 0,
+    freeShippingAbove: 50000,
+    returnPolicy: "7-day returns",
+  },
+  warrantyInfo: {
+    type: "Lenovo India Manufacturer Warranty (1 Year)",
+    claimProcess: "Contact DESKTO support via WhatsApp or call",
+    pickupPolicy: "Doorstep pickup available for warranty claims",
+    repairTerms: "Repairs handled via Lenovo-authorized service partners",
+  },
+  seo: {
+    slug: "lenovo-legion-5-16irx9",
+    keywords: ["lenovo legion 5", "gaming laptop", "rtx 4060 laptop", "legion 5"],
+    metaTitle: "Lenovo Legion 5 16IRX9 (R7/RTX 4060/16GB/512GB) | DESKTO",
+    metaDescription: "Buy Lenovo Legion 5 with AMD Ryzen 7, RTX 4060, 16GB RAM, 512GB SSD. Sharp 165Hz gaming laptop with warranty at DESKTO.",
+    tags: ["lenovo legion 5", "gaming laptop", "rtx 4060 laptop", "legion 5"],
+  },
+  catalogStatus: "draft",
+  createdAt: Date.now(),
+  updatedAt: Date.now(),
+};
+
+const ALIENWARE_M16_PRODUCT: CatalogProduct = {
+  id: 30,
+  name: "Alienware m16 R1 (i9/RTX 4070/32GB/1TB)",
+  type: "gaming",
+  category: "gaming-laptop",
+  condition: "first-hand",
+  brand: "Alienware",
+  model: "Alienware m16 R1",
+  sku: "DELL-ALW-M16R1-I9-RTX4070",
+  price: 229990,
+  orig: 254990,
+  stock: 3,
+  inStock: true,
+  rating: 4.7,
+  badge: "NEW",
+  warrantyMonths: 12,
+  rgb: true,
+  specs: [
+    "Intel Core i9-13900HX (24-core)",
+    "NVIDIA GeForce RTX 4070 8GB GDDR6",
+    "32GB DDR5 RAM",
+    "1TB NVMe SSD",
+    "16-inch QHD+ 240Hz Display",
+  ],
+  operatingSystem: "Windows 11 Home",
+  weight: "2.85 kg",
+  dimensions: "35.5 x 27.4 x 2.17 cm",
+  processor: "Intel Core i9-13900HX (24-core)",
+  gpu: "NVIDIA GeForce RTX 4070 8GB GDDR6",
+  ram: "32GB DDR5",
+  storage: "1TB NVMe SSD",
+  display: "16-inch QHD+ (2560x1600), 240Hz",
+  refreshRate: "240Hz",
+  powerRequirement: "240W Power Adapter",
+  ports: "3x USB-A 3.2, 1x USB-C Thunderbolt 4, HDMI 2.1, RJ45 LAN, 3.5mm headphone jack",
+  description: "The Alienware m16 R1 is a premium gaming laptop pairing a flagship i9 processor and RTX 4070 GPU with a 240Hz QHD+ display and Alienware's signature Cryo-tech cooling.",
+  technicalDetails: "Intel Core i9-13900HX 24-core processor, NVIDIA GeForce RTX 4070 8GB GDDR6, 32GB DDR5 RAM, 1TB NVMe SSD, 16-inch QHD+ 240Hz display, Alienware Cryo-tech thermal system.",
+  useCase: "Built for enthusiast gamers and creators who want top-tier performance, high refresh rates, and premium build quality.",
+  performanceNotes: "i9-13900HX and RTX 4070 with 32GB RAM deliver high frame rates at QHD+ resolution and handle demanding creative workloads smoothly.",
+  qualityNotes: "Genuine Dell Alienware product with 1-year manufacturer warranty and Cryo-tech thermal validation.",
+  features: ["Alienware Cryo-tech thermal design", "Per-key AlienFX RGB keyboard", "240Hz QHD+ display", "Alienware Command Center tuning"],
+  boxContents: ["Laptop", "240W Power Adapter", "Documentation"],
+  compatibility: ["Windows 11", "Thunderbolt 4 accessories", "USB-C peripherals"],
+  upgradeOptions: ["Add secondary SSD storage"],
+  recommendedAccessories: ["Gaming Mouse", "Cooling Pad", "Laptop Backpack"],
+  deliveryInfo: {
+    homeDelivery: true,
+    storePickup: true,
+    estimatedDelivery: "3-5 working days",
+    shippingCharges: 0,
+    freeShippingAbove: 50000,
+    returnPolicy: "7-day returns",
+  },
+  warrantyInfo: {
+    type: "Dell Alienware India Manufacturer Warranty (1 Year)",
+    claimProcess: "Contact DESKTO support via WhatsApp or call",
+    pickupPolicy: "Doorstep pickup available for warranty claims",
+    repairTerms: "Repairs handled via Dell-authorized service partners",
+  },
+  seo: {
+    slug: "alienware-m16-r1",
+    keywords: ["alienware m16", "gaming laptop", "rtx 4070 laptop", "alienware"],
+    metaTitle: "Alienware m16 R1 (i9/RTX 4070/32GB/1TB) | DESKTO",
+    metaDescription: "Buy Alienware m16 R1 with Intel Core i9, RTX 4070, 32GB RAM, 1TB SSD. Premium 240Hz gaming laptop with warranty at DESKTO.",
+    tags: ["alienware m16", "gaming laptop", "rtx 4070 laptop", "alienware"],
+  },
+  catalogStatus: "draft",
+  createdAt: Date.now(),
+  updatedAt: Date.now(),
+};
+
+function draftCatalogProduct(p: Partial<CatalogProduct> & Pick<CatalogProduct, "id" | "name" | "brand" | "category" | "price" | "stock">): CatalogProduct {
+  return {
+    type: "general",
+    condition: "first-hand",
+    rating: 4.5,
+    badge: "NEW",
+    warrantyMonths: 12,
+    rgb: false,
+    inStock: p.stock > 0,
+    deliveryInfo: {
+      homeDelivery: true,
+      storePickup: true,
+      estimatedDelivery: "3-5 working days",
+      shippingCharges: 0,
+      freeShippingAbove: 50000,
+      returnPolicy: "7-day returns",
+    },
+    warrantyInfo: {
+      type: `${p.brand} India Manufacturer Warranty (1 Year)`,
+      claimProcess: "Contact DESKTO support via WhatsApp or call",
+      pickupPolicy: "Doorstep pickup available for warranty claims",
+      repairTerms: `Repairs handled via ${p.brand}-authorized service partners`,
+    },
+    catalogStatus: "draft",
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    ...p,
+  };
+}
+
+// ── Office / prebuilt desktops ──
+const DELL_OPTIPLEX_7010_PRODUCT = draftCatalogProduct({
+  id: 31, name: "Dell OptiPlex 7010 SFF (i5/8GB/512GB)", category: "desktop-pc", brand: "Dell", model: "OptiPlex 7010 SFF",
+  sku: "DELL-OPT7010-SFF-I5-8-512", price: 64990, orig: 72990, stock: 6,
+  specs: ["Intel Core i5-13500 (14-core, up to 4.8GHz)", "8GB DDR5 RAM", "512GB SSD", "Intel UHD Graphics 770", "Windows 11 Pro"],
+  operatingSystem: "Windows 11 Pro", weight: "5.4 kg", dimensions: "29.2 x 9.3 x 29.3 cm",
+  processor: "Intel Core i5-13500 (14-core, up to 4.8GHz)", gpu: "Intel UHD Graphics 770 (integrated)", ram: "8GB DDR5", storage: "512GB PCIe NVMe SSD",
+  powerRequirement: "260W Internal PSU", ports: "6x USB-A, 2x USB-C, DisplayPort x2, RJ45 LAN, 3.5mm headphone jack",
+  description: "The Dell OptiPlex 7010 SFF is a compact, business-grade desktop built for reliable everyday office computing with enterprise security and manageability features.",
+  technicalDetails: "Intel Core i5-13500 14-core processor, 8GB DDR5 RAM, 512GB PCIe NVMe SSD, Intel UHD Graphics 770, small form factor chassis with tool-less access.",
+  useCase: "Ideal for office workstations, front-desk systems, and business productivity environments.",
+  performanceNotes: "14-core i5 handles office multitasking, spreadsheets, and business applications smoothly.",
+  qualityNotes: "Genuine Dell business product with 1-year manufacturer warranty and enterprise-grade build quality.",
+  features: ["Small form factor chassis", "Tool-less internal access", "Dell Optimizer software", "TPM 2.0 security"],
+  boxContents: ["Desktop unit", "Power cable", "Keyboard", "Mouse", "Documentation"],
+  compatibility: ["Windows 11 Pro", "Standard peripherals"], upgradeOptions: ["Add RAM up to 32GB", "Add secondary storage"],
+  recommendedAccessories: ["Monitor", "Keyboard & Mouse Combo", "UPS"],
+  seo: { slug: "dell-optiplex-7010-sff", keywords: ["dell optiplex 7010", "office desktop", "business pc"], metaTitle: "Dell OptiPlex 7010 SFF (i5/8GB/512GB) | DESKTO", metaDescription: "Buy Dell OptiPlex 7010 SFF business desktop with Intel Core i5, 8GB RAM, 512GB SSD at DESKTO.", tags: ["dell optiplex 7010", "office desktop", "business pc"] },
+});
+
+const HP_PRODESK_400_PRODUCT = draftCatalogProduct({
+  id: 32, name: "HP ProDesk 400 G9 SFF (i5/8GB/512GB)", category: "desktop-pc", brand: "HP", model: "ProDesk 400 G9 SFF",
+  sku: "HP-PD400G9-SFF-I5-8-512", price: 58990, orig: 65990, stock: 7,
+  specs: ["Intel Core i5-12500 (6-core, up to 4.6GHz)", "8GB DDR4 RAM", "512GB SSD", "Intel UHD Graphics 770", "Windows 11 Pro"],
+  operatingSystem: "Windows 11 Pro", weight: "5.1 kg", dimensions: "29.9 x 9.8 x 30.4 cm",
+  processor: "Intel Core i5-12500 (6-core, up to 4.6GHz)", gpu: "Intel UHD Graphics 770 (integrated)", ram: "8GB DDR4", storage: "512GB PCIe NVMe SSD",
+  powerRequirement: "180W Internal PSU", ports: "6x USB-A, 2x USB-C, DisplayPort x2, RJ45 LAN, 3.5mm headphone jack",
+  description: "The HP ProDesk 400 G9 SFF is a dependable small form factor business desktop designed for everyday office computing and easy IT management.",
+  technicalDetails: "Intel Core i5-12500 6-core processor, 8GB DDR4 RAM, 512GB PCIe NVMe SSD, Intel UHD Graphics 770, compact SFF chassis.",
+  useCase: "Suited for office workstations, business productivity, and standard enterprise deployments.",
+  performanceNotes: "6-core i5 comfortably handles office applications, browsing, and video conferencing.",
+  qualityNotes: "Genuine HP business product with 1-year manufacturer warranty.",
+  features: ["Small form factor chassis", "HP Wolf Security", "Tool-less chassis access", "Energy-efficient PSU"],
+  boxContents: ["Desktop unit", "Power cable", "Keyboard", "Mouse", "Documentation"],
+  compatibility: ["Windows 11 Pro", "Standard peripherals"], upgradeOptions: ["Add RAM up to 32GB", "Add secondary storage"],
+  recommendedAccessories: ["Monitor", "Keyboard & Mouse Combo", "UPS"],
+  seo: { slug: "hp-prodesk-400-g9-sff", keywords: ["hp prodesk 400", "office desktop", "business pc"], metaTitle: "HP ProDesk 400 G9 SFF (i5/8GB/512GB) | DESKTO", metaDescription: "Buy HP ProDesk 400 G9 SFF business desktop with Intel Core i5, 8GB RAM, 512GB SSD at DESKTO.", tags: ["hp prodesk 400", "office desktop", "business pc"] },
+});
+
+const LENOVO_THINKCENTRE_M70_PRODUCT = draftCatalogProduct({
+  id: 33, name: "Lenovo ThinkCentre M70q Gen 4 (i5/8GB/512GB)", category: "desktop-pc", brand: "Lenovo", model: "ThinkCentre M70q Gen 4",
+  sku: "LEN-M70Q-G4-I5-8-512", price: 56990, orig: 63990, stock: 8,
+  specs: ["Intel Core i5-13400T (10-core, up to 4.6GHz)", "8GB DDR4 RAM", "512GB SSD", "Intel UHD Graphics 730", "Windows 11 Pro"],
+  operatingSystem: "Windows 11 Pro", weight: "1.3 kg", dimensions: "17.9 x 18.2 x 3.49 cm",
+  processor: "Intel Core i5-13400T (10-core, up to 4.6GHz)", gpu: "Intel UHD Graphics 730 (integrated)", ram: "8GB DDR4", storage: "512GB PCIe NVMe SSD",
+  powerRequirement: "90W External Power Adapter", ports: "4x USB-A, 2x USB-C, DisplayPort, HDMI, RJ45 LAN, 3.5mm headphone jack",
+  description: "The Lenovo ThinkCentre M70q Gen 4 is an ultra-compact 1-liter desktop that saves desk space without compromising on business performance.",
+  technicalDetails: "Intel Core i5-13400T 10-core processor, 8GB DDR4 RAM, 512GB PCIe NVMe SSD, Intel UHD Graphics 730, tiny-form-factor chassis with VESA mount support.",
+  useCase: "Perfect for space-constrained office desks, receptionist counters, and digital signage setups.",
+  performanceNotes: "10-core i5-T series balances efficient power draw with smooth office multitasking performance.",
+  qualityNotes: "Genuine Lenovo business product with 1-year manufacturer warranty and MIL-SPEC durability testing.",
+  features: ["1-liter tiny form factor", "VESA mount compatible", "ThinkShield security", "Low power consumption"],
+  boxContents: ["Desktop unit", "Power adapter", "Keyboard", "Mouse", "Documentation"],
+  compatibility: ["Windows 11 Pro", "Standard peripherals"], upgradeOptions: ["Add RAM up to 32GB", "Add secondary storage"],
+  recommendedAccessories: ["Monitor", "Keyboard & Mouse Combo", "VESA Mount Bracket"],
+  seo: { slug: "lenovo-thinkcentre-m70q-gen4", keywords: ["thinkcentre m70q", "lenovo desktop", "tiny desktop"], metaTitle: "Lenovo ThinkCentre M70q Gen 4 (i5/8GB/512GB) | DESKTO", metaDescription: "Buy Lenovo ThinkCentre M70q Gen 4 tiny desktop with Intel Core i5, 8GB RAM, 512GB SSD at DESKTO.", tags: ["thinkcentre m70q", "lenovo desktop", "tiny desktop"] },
+});
+
+const ASUS_EXPERTCENTER_D5_PRODUCT = draftCatalogProduct({
+  id: 34, name: "ASUS ExpertCenter D500SD (i5/8GB/512GB)", category: "desktop-pc", brand: "ASUS", model: "ExpertCenter D500SD",
+  sku: "ASUS-EC-D500SD-I5-8-512", price: 54990, orig: 61990, stock: 6,
+  specs: ["Intel Core i5-13400 (10-core, up to 4.6GHz)", "8GB DDR4 RAM", "512GB SSD", "Intel UHD Graphics 730", "Windows 11 Pro"],
+  operatingSystem: "Windows 11 Pro", weight: "5.6 kg", dimensions: "33.8 x 10 x 33.8 cm",
+  processor: "Intel Core i5-13400 (10-core, up to 4.6GHz)", gpu: "Intel UHD Graphics 730 (integrated)", ram: "8GB DDR4", storage: "512GB PCIe NVMe SSD",
+  powerRequirement: "250W Internal PSU", ports: "6x USB-A, 2x USB-C, DisplayPort, HDMI, RJ45 LAN, 3.5mm headphone jack",
+  description: "The ASUS ExpertCenter D500SD is a reliable small form factor business desktop built for consistent day-to-day office performance.",
+  technicalDetails: "Intel Core i5-13400 10-core processor, 8GB DDR4 RAM, 512GB PCIe NVMe SSD, Intel UHD Graphics 730, tool-less SFF chassis.",
+  useCase: "Suited for office workstations, business productivity, and standard enterprise deployments.",
+  performanceNotes: "10-core i5 comfortably handles office applications, browsing, and video conferencing.",
+  qualityNotes: "Genuine ASUS business product with 1-year manufacturer warranty.",
+  features: ["Small form factor chassis", "Tool-less access", "ASUS Business Manager", "Energy-efficient PSU"],
+  boxContents: ["Desktop unit", "Power cable", "Keyboard", "Mouse", "Documentation"],
+  compatibility: ["Windows 11 Pro", "Standard peripherals"], upgradeOptions: ["Add RAM up to 32GB", "Add secondary storage"],
+  recommendedAccessories: ["Monitor", "Keyboard & Mouse Combo", "UPS"],
+  seo: { slug: "asus-expertcenter-d500sd", keywords: ["asus expertcenter d5", "office desktop", "business pc"], metaTitle: "ASUS ExpertCenter D500SD (i5/8GB/512GB) | DESKTO", metaDescription: "Buy ASUS ExpertCenter D500SD business desktop with Intel Core i5, 8GB RAM, 512GB SSD at DESKTO.", tags: ["asus expertcenter d5", "office desktop", "business pc"] },
+});
+
+const ACER_ASPIRE_TC_PRODUCT = draftCatalogProduct({
+  id: 35, name: "Acer Aspire TC-1660 (i5/8GB/512GB)", category: "desktop-pc", brand: "Acer", model: "Aspire TC-1660",
+  sku: "ACER-ATC1660-I5-8-512", price: 49990, orig: 56990, stock: 9,
+  specs: ["Intel Core i5-13400 (10-core, up to 4.6GHz)", "8GB DDR4 RAM", "512GB SSD", "Intel UHD Graphics 730", "Windows 11 Home"],
+  operatingSystem: "Windows 11 Home", weight: "6.2 kg", dimensions: "34.9 x 15 x 34.7 cm",
+  processor: "Intel Core i5-13400 (10-core, up to 4.6GHz)", gpu: "Intel UHD Graphics 730 (integrated)", ram: "8GB DDR4", storage: "512GB PCIe NVMe SSD",
+  powerRequirement: "300W Internal PSU", ports: "4x USB-A, 2x USB-C, DisplayPort, HDMI, VGA, RJ45 LAN, 3.5mm headphone jack",
+  description: "The Acer Aspire TC-1660 is an affordable home tower desktop offering solid everyday performance for browsing, work, and entertainment.",
+  technicalDetails: "Intel Core i5-13400 10-core processor, 8GB DDR4 RAM, 512GB PCIe NVMe SSD, Intel UHD Graphics 730, full tower chassis with expansion room.",
+  useCase: "Great for home use, students, and general productivity with room to add a discrete GPU later.",
+  performanceNotes: "10-core i5 handles everyday computing, browsing, and office tasks with ease.",
+  qualityNotes: "Genuine Acer product with 1-year manufacturer warranty.",
+  features: ["Tower chassis with expansion bays", "Acer PredatorSense not included (consumer line)", "Quiet cooling profile", "Multiple display outputs"],
+  boxContents: ["Desktop unit", "Power cable", "Keyboard", "Mouse", "Documentation"],
+  compatibility: ["Windows 11 Home", "Standard peripherals", "PCIe expansion cards"], upgradeOptions: ["Add discrete GPU", "Add RAM up to 32GB", "Add secondary storage"],
+  recommendedAccessories: ["Monitor", "Keyboard & Mouse Combo", "UPS"],
+  seo: { slug: "acer-aspire-tc-1660", keywords: ["acer aspire tc", "home desktop", "tower pc"], metaTitle: "Acer Aspire TC-1660 (i5/8GB/512GB) | DESKTO", metaDescription: "Buy Acer Aspire TC-1660 tower desktop with Intel Core i5, 8GB RAM, 512GB SSD at DESKTO.", tags: ["acer aspire tc", "home desktop", "tower pc"] },
+});
+
+// ── Prebuilt gaming PCs ──
+const CORSAIR_VENGEANCE_I7400_PRODUCT = draftCatalogProduct({
+  id: 36, name: "Corsair Vengeance i7400 (i7/RTX 4070/32GB/1TB)", type: "gaming", category: "gaming-pc", brand: "Corsair", model: "Vengeance i7400",
+  sku: "CORS-VENG-I7400-I7-RTX4070-32-1TB", price: 219990, orig: 244990, stock: 4, rgb: true,
+  specs: ["Intel Core i7-14700KF (20-core)", "NVIDIA GeForce RTX 4070 12GB GDDR6X", "32GB DDR5 RAM", "1TB NVMe SSD", "Liquid CPU Cooling"],
+  operatingSystem: "Windows 11 Home", weight: "12 kg", dimensions: "49.5 x 23 x 47 cm",
+  processor: "Intel Core i7-14700KF (20-core, up to 5.6GHz)", gpu: "NVIDIA GeForce RTX 4070 12GB GDDR6X", ram: "32GB DDR5", storage: "1TB NVMe SSD",
+  powerRequirement: "750W 80+ Gold PSU", ports: "6x USB-A, 2x USB-C, DisplayPort x3, HDMI x2, RJ45 LAN",
+  description: "The Corsair Vengeance i7400 is a factory-built gaming PC combining a high-core-count Intel i7 with an RTX 4070 GPU inside a premium, professionally cable-managed chassis.",
+  technicalDetails: "Intel Core i7-14700KF 20-core processor, NVIDIA GeForce RTX 4070 12GB GDDR6X, 32GB DDR5 RAM, 1TB NVMe SSD, Corsair liquid CPU cooler, tempered glass RGB chassis.",
+  useCase: "Built for high-refresh-rate 1440p gaming, streaming, and demanding multitasking.",
+  performanceNotes: "RTX 4070 and 20-core i7 combination delivers smooth 1440p gaming at high settings with strong streaming headroom.",
+  qualityNotes: "Factory-assembled and stress-tested by Corsair with 1-year manufacturer warranty.",
+  features: ["Liquid CPU cooling", "Tempered glass RGB chassis", "iCUE RGB lighting control", "Pre-cable-managed build"],
+  boxContents: ["Desktop unit", "Power cable", "Documentation"],
+  compatibility: ["Windows 11", "Standard peripherals", "PCIe expansion cards"], upgradeOptions: ["Add secondary storage", "Upgrade RAM up to 64GB"],
+  recommendedAccessories: ["Gaming Monitor", "Mechanical Keyboard", "Gaming Mouse"],
+  seo: { slug: "corsair-vengeance-i7400", keywords: ["corsair vengeance i7400", "prebuilt gaming pc", "rtx 4070 pc"], metaTitle: "Corsair Vengeance i7400 (i7/RTX 4070/32GB/1TB) | DESKTO", metaDescription: "Buy Corsair Vengeance i7400 prebuilt gaming PC with Intel Core i7, RTX 4070, 32GB RAM, 1TB SSD at DESKTO.", tags: ["corsair vengeance i7400", "prebuilt gaming pc", "rtx 4070 pc"] },
+});
+
+const ASUS_ROG_G22CH_PRODUCT = draftCatalogProduct({
+  id: 37, name: "ASUS ROG Strix G22CH (i7/RTX 4060/16GB/512GB)", type: "gaming", category: "gaming-pc", brand: "ASUS", model: "ROG Strix G22CH",
+  sku: "ASUS-ROG-G22CH-I7-RTX4060-16-512", price: 144990, orig: 159990, stock: 5, rgb: true,
+  specs: ["Intel Core i7-13700F (16-core)", "NVIDIA GeForce RTX 4060 8GB GDDR6", "16GB DDR5 RAM", "512GB NVMe SSD", "ROG-tuned cooling"],
+  operatingSystem: "Windows 11 Home", weight: "10.5 kg", dimensions: "42.8 x 19 x 42.6 cm",
+  processor: "Intel Core i7-13700F (16-core, up to 5.2GHz)", gpu: "NVIDIA GeForce RTX 4060 8GB GDDR6", ram: "16GB DDR5", storage: "512GB NVMe SSD",
+  powerRequirement: "650W 80+ Bronze PSU", ports: "6x USB-A, 2x USB-C, DisplayPort, HDMI x2, RJ45 LAN",
+  description: "The ASUS ROG Strix G22CH is a compact factory-built gaming desktop pairing an RTX 4060 GPU with a 16-core i7 for smooth mainstream gaming performance.",
+  technicalDetails: "Intel Core i7-13700F 16-core processor, NVIDIA GeForce RTX 4060 8GB GDDR6, 16GB DDR5 RAM, 512GB NVMe SSD, ROG-tuned airflow chassis.",
+  useCase: "Suited for 1080p/1440p gaming, esports, and everyday high-performance computing.",
+  performanceNotes: "RTX 4060 and 16-core i7 deliver smooth high-frame-rate gaming at 1080p and solid 1440p performance.",
+  qualityNotes: "Factory-assembled and stress-tested by ASUS with 1-year manufacturer warranty.",
+  features: ["ROG-tuned cooling", "Tempered glass side panel", "Aura Sync RGB lighting", "Compact ATX chassis"],
+  boxContents: ["Desktop unit", "Power cable", "Documentation"],
+  compatibility: ["Windows 11", "Standard peripherals", "PCIe expansion cards"], upgradeOptions: ["Add secondary storage", "Upgrade RAM up to 32GB"],
+  recommendedAccessories: ["Gaming Monitor", "Mechanical Keyboard", "Gaming Mouse"],
+  seo: { slug: "asus-rog-strix-g22ch", keywords: ["asus rog g22ch", "prebuilt gaming pc", "rtx 4060 pc"], metaTitle: "ASUS ROG Strix G22CH (i7/RTX 4060/16GB/512GB) | DESKTO", metaDescription: "Buy ASUS ROG Strix G22CH prebuilt gaming PC with Intel Core i7, RTX 4060, 16GB RAM, 512GB SSD at DESKTO.", tags: ["asus rog g22ch", "prebuilt gaming pc", "rtx 4060 pc"] },
+});
+
+const MSI_INFINITE_RS_PRODUCT = draftCatalogProduct({
+  id: 38, name: "MSI Infinite RS 13th Gen (i9/RTX 4080/32GB/1TB)", type: "gaming", category: "gaming-pc", brand: "MSI", model: "Infinite RS 13NUC7",
+  sku: "MSI-INFRS-13-I9-RTX4080-32-1TB", price: 294990, orig: 324990, stock: 3, rgb: true,
+  specs: ["Intel Core i9-13900KF (24-core)", "NVIDIA GeForce RTX 4080 16GB GDDR6X", "32GB DDR5 RAM", "1TB NVMe SSD", "Liquid CPU Cooling"],
+  operatingSystem: "Windows 11 Home", weight: "13.5 kg", dimensions: "50.7 x 23.3 x 47.6 cm",
+  processor: "Intel Core i9-13900KF (24-core, up to 5.8GHz)", gpu: "NVIDIA GeForce RTX 4080 16GB GDDR6X", ram: "32GB DDR5", storage: "1TB NVMe SSD",
+  powerRequirement: "850W 80+ Gold PSU", ports: "8x USB-A, 2x USB-C, DisplayPort x3, HDMI x2, RJ45 LAN",
+  description: "The MSI Infinite RS is a flagship factory-built gaming desktop pairing a 24-core Intel i9 with an RTX 4080 GPU for high-end 4K gaming and content creation.",
+  technicalDetails: "Intel Core i9-13900KF 24-core processor, NVIDIA GeForce RTX 4080 16GB GDDR6X, 32GB DDR5 RAM, 1TB NVMe SSD, MSI liquid CPU cooler, tempered glass RGB chassis.",
+  useCase: "Built for 4K gaming, streaming, video editing, and other GPU-intensive creative workloads.",
+  performanceNotes: "i9-13900KF and RTX 4080 combination handles 4K gaming at high settings and demanding creative workloads with ease.",
+  qualityNotes: "Factory-assembled and stress-tested by MSI with 1-year manufacturer warranty.",
+  features: ["Liquid CPU cooling", "Tempered glass RGB chassis", "MSI Mystic Light RGB control", "Pre-cable-managed build"],
+  boxContents: ["Desktop unit", "Power cable", "Documentation"],
+  compatibility: ["Windows 11", "Standard peripherals", "PCIe expansion cards"], upgradeOptions: ["Add secondary storage", "Upgrade RAM up to 64GB"],
+  recommendedAccessories: ["4K Gaming Monitor", "Mechanical Keyboard", "Gaming Mouse"],
+  seo: { slug: "msi-infinite-rs-13", keywords: ["msi infinite rs", "prebuilt gaming pc", "rtx 4080 pc"], metaTitle: "MSI Infinite RS 13th Gen (i9/RTX 4080/32GB/1TB) | DESKTO", metaDescription: "Buy MSI Infinite RS prebuilt gaming PC with Intel Core i9, RTX 4080, 32GB RAM, 1TB SSD at DESKTO.", tags: ["msi infinite rs", "prebuilt gaming pc", "rtx 4080 pc"] },
+});
+
+const ALIENWARE_AURORA_R16_PRODUCT = draftCatalogProduct({
+  id: 39, name: "Alienware Aurora R16 (i7/RTX 4070 Ti/32GB/1TB)", type: "gaming", category: "gaming-pc", brand: "Alienware", model: "Aurora R16",
+  sku: "DELL-AUR-R16-I7-RTX4070TI-32-1TB", price: 264990, orig: 289990, stock: 3, rgb: true,
+  specs: ["Intel Core i7-14700F (20-core)", "NVIDIA GeForce RTX 4070 Ti 12GB GDDR6X", "32GB DDR5 RAM", "1TB NVMe SSD", "Alienware Cryo-tech Cooling"],
+  operatingSystem: "Windows 11 Home", weight: "11.8 kg", dimensions: "46.7 x 19.7 x 41.6 cm",
+  processor: "Intel Core i7-14700F (20-core, up to 5.4GHz)", gpu: "NVIDIA GeForce RTX 4070 Ti 12GB GDDR6X", ram: "32GB DDR5", storage: "1TB NVMe SSD",
+  powerRequirement: "850W 80+ Gold PSU", ports: "6x USB-A, 2x USB-C, DisplayPort x3, HDMI x2, RJ45 LAN",
+  description: "The Alienware Aurora R16 is a premium factory-built gaming desktop with a distinctive Legend chassis, pairing a 20-core i7 with an RTX 4070 Ti for high-end gaming performance.",
+  technicalDetails: "Intel Core i7-14700F 20-core processor, NVIDIA GeForce RTX 4070 Ti 12GB GDDR6X, 32GB DDR5 RAM, 1TB NVMe SSD, Alienware Cryo-tech thermal design.",
+  useCase: "Built for high-refresh-rate 1440p/4K gaming, streaming, and demanding multitasking.",
+  performanceNotes: "RTX 4070 Ti and 20-core i7 combination delivers smooth high-settings gaming at 1440p and beyond.",
+  qualityNotes: "Factory-assembled and stress-tested by Dell Alienware with 1-year manufacturer warranty.",
+  features: ["Alienware Cryo-tech cooling", "Legend 2.0 chassis design", "AlienFX RGB lighting", "Tool-less upgradeable interior"],
+  boxContents: ["Desktop unit", "Power cable", "Documentation"],
+  compatibility: ["Windows 11", "Standard peripherals", "PCIe expansion cards"], upgradeOptions: ["Add secondary storage", "Upgrade RAM up to 64GB"],
+  recommendedAccessories: ["Gaming Monitor", "Mechanical Keyboard", "Gaming Mouse"],
+  seo: { slug: "alienware-aurora-r16", keywords: ["alienware aurora r16", "prebuilt gaming pc", "rtx 4070 ti pc"], metaTitle: "Alienware Aurora R16 (i7/RTX 4070 Ti/32GB/1TB) | DESKTO", metaDescription: "Buy Alienware Aurora R16 prebuilt gaming PC with Intel Core i7, RTX 4070 Ti, 32GB RAM, 1TB SSD at DESKTO.", tags: ["alienware aurora r16", "prebuilt gaming pc", "rtx 4070 ti pc"] },
+});
+
+const NZXT_PLAYER_ONE_PRODUCT = draftCatalogProduct({
+  id: 40, name: "NZXT Player One (i5/RTX 4060 Ti/16GB/1TB)", type: "gaming", category: "gaming-pc", brand: "NZXT", model: "Player One RTX 4060 Ti Edition",
+  sku: "NZXT-PLAYER1-I5-RTX4060TI-16-1TB", price: 164990, orig: 179990, stock: 4, rgb: true,
+  specs: ["Intel Core i5-13400F (10-core)", "NVIDIA GeForce RTX 4060 Ti 8GB GDDR6", "16GB DDR5 RAM", "1TB NVMe SSD", "NZXT Kraken AIO Cooling"],
+  operatingSystem: "Windows 11 Home", weight: "10.2 kg", dimensions: "43.5 x 21 x 43.7 cm",
+  processor: "Intel Core i5-13400F (10-core, up to 4.6GHz)", gpu: "NVIDIA GeForce RTX 4060 Ti 8GB GDDR6", ram: "16GB DDR5", storage: "1TB NVMe SSD",
+  powerRequirement: "650W 80+ Gold PSU", ports: "6x USB-A, 2x USB-C, DisplayPort x3, HDMI x2, RJ45 LAN",
+  description: "The NZXT Player One is a clean, minimalist factory-built gaming PC pairing an RTX 4060 Ti with a 10-core i5, assembled in NZXT's signature tidy chassis.",
+  technicalDetails: "Intel Core i5-13400F 10-core processor, NVIDIA GeForce RTX 4060 Ti 8GB GDDR6, 16GB DDR5 RAM, 1TB NVMe SSD, NZXT Kraken AIO liquid cooler.",
+  useCase: "Suited for 1080p/1440p gaming, streaming, and everyday high-performance computing.",
+  performanceNotes: "RTX 4060 Ti and 10-core i5 deliver smooth high-frame-rate gaming at 1080p and solid 1440p performance.",
+  qualityNotes: "Factory-assembled and stress-tested by NZXT with 1-year manufacturer warranty.",
+  features: ["NZXT Kraken AIO cooling", "Clean cable-managed interior", "CAM software monitoring", "Tempered glass side panel"],
+  boxContents: ["Desktop unit", "Power cable", "Documentation"],
+  compatibility: ["Windows 11", "Standard peripherals", "PCIe expansion cards"], upgradeOptions: ["Add secondary storage", "Upgrade RAM up to 32GB"],
+  recommendedAccessories: ["Gaming Monitor", "Mechanical Keyboard", "Gaming Mouse"],
+  seo: { slug: "nzxt-player-one", keywords: ["nzxt player one", "prebuilt gaming pc", "rtx 4060 ti pc"], metaTitle: "NZXT Player One (i5/RTX 4060 Ti/16GB/1TB) | DESKTO", metaDescription: "Buy NZXT Player One prebuilt gaming PC with Intel Core i5, RTX 4060 Ti, 16GB RAM, 1TB SSD at DESKTO.", tags: ["nzxt player one", "prebuilt gaming pc", "rtx 4060 ti pc"] },
+});
+
+// ── Monitors ──
+const LG_ULTRAGEAR_24GN650_PRODUCT = draftCatalogProduct({
+  id: 41, name: "LG UltraGear 24GN650-B (23.8\" FHD 144Hz)", category: "monitor", brand: "LG", model: "24GN650-B",
+  sku: "LG-24GN650-24-IPS-144", price: 15990, orig: 18990, stock: 12,
+  specs: ["23.8-inch FHD IPS (1920x1080)", "144Hz refresh rate", "1ms response time", "AMD FreeSync Premium", "HDR10"],
+  weight: "3.4 kg", dimensions: "54 x 20.9 x 47.9 cm", display: "23.8-inch FHD IPS (1920x1080), 144Hz, 1ms", refreshRate: "144Hz",
+  powerRequirement: "External Power Adapter (~30W)", ports: "DisplayPort x1, HDMI x2, 3.5mm headphone jack",
+  description: "The LG UltraGear 24GN650-B is a fast 144Hz IPS gaming monitor offering crisp FHD visuals and smooth motion clarity for competitive gaming.",
+  technicalDetails: "23.8-inch FHD IPS panel, 144Hz refresh rate, 1ms (GtG) response time, AMD FreeSync Premium, HDR10 support, tilt-adjustable stand.",
+  useCase: "Ideal for esports and fast-paced gaming where high refresh rate and low input lag matter most.",
+  performanceNotes: "144Hz IPS panel with 1ms response delivers smooth, tear-free motion with AMD FreeSync Premium support.",
+  qualityNotes: "Genuine LG product with 1-year manufacturer warranty and factory color calibration.",
+  features: ["144Hz IPS panel", "AMD FreeSync Premium", "Black Stabilizer", "Tilt-adjustable stand"],
+  boxContents: ["Monitor", "Power adapter", "HDMI cable", "Stand & base", "Documentation"],
+  compatibility: ["PC", "PlayStation", "Xbox", "HDMI/DisplayPort sources"], upgradeOptions: ["Wall mount kit (VESA 100x100)"],
+  recommendedAccessories: ["Monitor Arm", "HDMI Cable", "DisplayPort Cable"],
+  seo: { slug: "lg-ultragear-24gn650-b", keywords: ["lg ultragear 24gn650", "gaming monitor", "144hz monitor"], metaTitle: "LG UltraGear 24GN650-B (23.8\" FHD 144Hz) | DESKTO", metaDescription: "Buy LG UltraGear 24GN650-B 144Hz IPS gaming monitor at DESKTO with warranty.", tags: ["lg ultragear 24gn650", "gaming monitor", "144hz monitor"] },
+});
+
+const SAMSUNG_ODYSSEY_G5_PRODUCT = draftCatalogProduct({
+  id: 42, name: "Samsung Odyssey G5 (27\" QHD 165Hz Curved)", category: "monitor", brand: "Samsung", model: "Odyssey G5 LS27CG512",
+  sku: "SAM-ODYG5-27-VA-165", price: 22990, orig: 26990, stock: 10,
+  specs: ["27-inch QHD VA (2560x1440)", "165Hz refresh rate", "1ms response time", "1000R curved", "AMD FreeSync Premium"],
+  weight: "4.4 kg", dimensions: "61.3 x 20.4 x 46.7 cm", display: "27-inch QHD VA (2560x1440), 165Hz, 1ms, 1000R curved", refreshRate: "165Hz",
+  powerRequirement: "External Power Adapter (~40W)", ports: "DisplayPort x1, HDMI x2, 3.5mm headphone jack",
+  description: "The Samsung Odyssey G5 is a 1000R curved QHD gaming monitor with 165Hz refresh rate, delivering an immersive, wraparound gaming experience.",
+  technicalDetails: "27-inch QHD VA panel, 165Hz refresh rate, 1ms (MPRT) response time, 1000R curvature, AMD FreeSync Premium, HDR10 support.",
+  useCase: "Great for immersive single-player and competitive gaming where curved QHD visuals add depth.",
+  performanceNotes: "165Hz QHD VA panel delivers sharp detail with deep contrast and smooth, tear-free motion.",
+  qualityNotes: "Genuine Samsung product with 1-year manufacturer warranty.",
+  features: ["1000R curved VA panel", "AMD FreeSync Premium", "HDR10", "Eye Saver Mode"],
+  boxContents: ["Monitor", "Power adapter", "HDMI cable", "Stand & base", "Documentation"],
+  compatibility: ["PC", "PlayStation", "Xbox", "HDMI/DisplayPort sources"], upgradeOptions: ["Wall mount kit (VESA 100x100)"],
+  recommendedAccessories: ["Monitor Arm", "HDMI Cable", "DisplayPort Cable"],
+  seo: { slug: "samsung-odyssey-g5-27", keywords: ["samsung odyssey g5", "curved gaming monitor", "165hz monitor"], metaTitle: "Samsung Odyssey G5 (27\" QHD 165Hz Curved) | DESKTO", metaDescription: "Buy Samsung Odyssey G5 165Hz curved QHD gaming monitor at DESKTO with warranty.", tags: ["samsung odyssey g5", "curved gaming monitor", "165hz monitor"] },
+});
+
+const ASUS_TUF_VG249Q1A_PRODUCT = draftCatalogProduct({
+  id: 43, name: "ASUS TUF Gaming VG249Q1A (23.8\" FHD 165Hz)", category: "monitor", brand: "ASUS", model: "TUF Gaming VG249Q1A",
+  sku: "ASUS-TUF-VG249Q1A-24-IPS-165", price: 14490, orig: 16990, stock: 14,
+  specs: ["23.8-inch FHD IPS (1920x1080)", "165Hz refresh rate", "1ms response time", "AMD FreeSync Premium", "Extreme Low Motion Blur"],
+  weight: "3.4 kg", dimensions: "53.9 x 20.4 x 47.2 cm", display: "23.8-inch FHD IPS (1920x1080), 165Hz, 1ms", refreshRate: "165Hz",
+  powerRequirement: "External Power Adapter (~30W)", ports: "DisplayPort x1, HDMI x2, 3.5mm headphone jack",
+  description: "The ASUS TUF Gaming VG249Q1A is a value-focused 165Hz IPS monitor built for smooth, responsive gaming with reliable TUF-grade durability.",
+  technicalDetails: "23.8-inch FHD IPS panel, 165Hz refresh rate, 1ms (MPRT) response time, AMD FreeSync Premium, Extreme Low Motion Blur, Shadow Boost.",
+  useCase: "Ideal for budget-conscious gamers wanting a fast, responsive display for esports and everyday gaming.",
+  performanceNotes: "165Hz IPS panel with 1ms response delivers smooth, tear-free motion with excellent color for the price.",
+  qualityNotes: "Genuine ASUS product with 1-year manufacturer warranty and TUF-grade durability testing.",
+  features: ["165Hz IPS panel", "AMD FreeSync Premium", "Shadow Boost", "Flicker-free, Low Blue Light"],
+  boxContents: ["Monitor", "Power adapter", "HDMI cable", "Stand & base", "Documentation"],
+  compatibility: ["PC", "PlayStation", "Xbox", "HDMI/DisplayPort sources"], upgradeOptions: ["Wall mount kit (VESA 100x100)"],
+  recommendedAccessories: ["Monitor Arm", "HDMI Cable", "DisplayPort Cable"],
+  seo: { slug: "asus-tuf-gaming-vg249q1a", keywords: ["asus tuf vg249q1a", "gaming monitor", "165hz monitor"], metaTitle: "ASUS TUF Gaming VG249Q1A (23.8\" FHD 165Hz) | DESKTO", metaDescription: "Buy ASUS TUF Gaming VG249Q1A 165Hz IPS gaming monitor at DESKTO with warranty.", tags: ["asus tuf vg249q1a", "gaming monitor", "165hz monitor"] },
+});
+
+const MSI_G274QPF_PRODUCT = draftCatalogProduct({
+  id: 44, name: "MSI G274QPF (27\" QHD 180Hz Rapid IPS)", category: "monitor", brand: "MSI", model: "G274QPF",
+  sku: "MSI-G274QPF-27-IPS-180", price: 24990, orig: 28990, stock: 8,
+  specs: ["27-inch QHD Rapid IPS (2560x1440)", "180Hz refresh rate", "1ms response time", "AMD FreeSync Premium", "HDR Ready"],
+  weight: "4.6 kg", dimensions: "61.4 x 20.5 x 47.6 cm", display: "27-inch QHD Rapid IPS (2560x1440), 180Hz, 1ms", refreshRate: "180Hz",
+  powerRequirement: "External Power Adapter (~45W)", ports: "DisplayPort x1, HDMI x2, 3.5mm headphone jack",
+  description: "The MSI G274QPF is a high-refresh QHD Rapid IPS monitor built for competitive gaming with sharp detail and exceptionally smooth motion.",
+  technicalDetails: "27-inch QHD Rapid IPS panel, 180Hz refresh rate, 1ms (GtG) response time, AMD FreeSync Premium, HDR Ready, MSI Night Vision.",
+  useCase: "Suited for competitive gaming and content creation where QHD sharpness and high refresh rate both matter.",
+  performanceNotes: "180Hz Rapid IPS panel delivers exceptionally smooth, sharp motion clarity at QHD resolution.",
+  qualityNotes: "Genuine MSI product with 1-year manufacturer warranty and factory color calibration.",
+  features: ["180Hz Rapid IPS panel", "AMD FreeSync Premium", "MSI Night Vision", "Anti-flicker technology"],
+  boxContents: ["Monitor", "Power adapter", "HDMI cable", "Stand & base", "Documentation"],
+  compatibility: ["PC", "PlayStation", "Xbox", "HDMI/DisplayPort sources"], upgradeOptions: ["Wall mount kit (VESA 100x100)"],
+  recommendedAccessories: ["Monitor Arm", "HDMI Cable", "DisplayPort Cable"],
+  seo: { slug: "msi-g274qpf", keywords: ["msi g274qpf", "gaming monitor", "180hz monitor"], metaTitle: "MSI G274QPF (27\" QHD 180Hz Rapid IPS) | DESKTO", metaDescription: "Buy MSI G274QPF 180Hz QHD Rapid IPS gaming monitor at DESKTO with warranty.", tags: ["msi g274qpf", "gaming monitor", "180hz monitor"] },
+});
+
+const ACER_NITRO_VG240Y_PRODUCT = draftCatalogProduct({
+  id: 45, name: "Acer Nitro VG240Y (23.8\" FHD 100Hz)", category: "monitor", brand: "Acer", model: "Nitro VG240Y",
+  sku: "ACER-NITRO-VG240Y-24-IPS-100", price: 9990, orig: 11990, stock: 16,
+  specs: ["23.8-inch FHD IPS (1920x1080)", "100Hz refresh rate", "1ms response time", "AMD FreeSync", "Zero Frame Design"],
+  weight: "3.2 kg", dimensions: "53.9 x 20.1 x 46.4 cm", display: "23.8-inch FHD IPS (1920x1080), 100Hz, 1ms", refreshRate: "100Hz",
+  powerRequirement: "External Power Adapter (~25W)", ports: "DisplayPort x1, HDMI x1, 3.5mm headphone jack",
+  description: "The Acer Nitro VG240Y is an affordable entry-level gaming monitor offering a smooth 100Hz refresh rate and slim zero-frame design.",
+  technicalDetails: "23.8-inch FHD IPS panel, 100Hz refresh rate, 1ms (VRB) response time, AMD FreeSync, zero-frame design, flicker-less technology.",
+  useCase: "A great budget upgrade from 60Hz displays for casual and competitive gaming alike.",
+  performanceNotes: "100Hz IPS panel offers a noticeable smoothness upgrade over standard 60Hz monitors at an accessible price.",
+  qualityNotes: "Genuine Acer product with 1-year manufacturer warranty.",
+  features: ["100Hz IPS panel", "AMD FreeSync", "Zero Frame design", "Flicker-less technology"],
+  boxContents: ["Monitor", "Power adapter", "HDMI cable", "Stand & base", "Documentation"],
+  compatibility: ["PC", "PlayStation", "Xbox", "HDMI/DisplayPort sources"], upgradeOptions: ["Wall mount kit (VESA 100x100)"],
+  recommendedAccessories: ["Monitor Arm", "HDMI Cable"],
+  seo: { slug: "acer-nitro-vg240y", keywords: ["acer nitro vg240y", "budget gaming monitor", "100hz monitor"], metaTitle: "Acer Nitro VG240Y (23.8\" FHD 100Hz) | DESKTO", metaDescription: "Buy Acer Nitro VG240Y 100Hz IPS gaming monitor at DESKTO with warranty.", tags: ["acer nitro vg240y", "budget gaming monitor", "100hz monitor"] },
+});
+
+// ── CPUs ──
+const INTEL_I3_12100F_PRODUCT = draftCatalogProduct({
+  id: 46, name: "Intel Core i3-12100F", category: "cpu", brand: "Intel", model: "Core i3-12100F",
+  sku: "INTEL-I3-12100F", price: 8490, orig: 9990, stock: 20,
+  specs: ["4 Cores / 8 Threads", "Up to 4.3GHz Boost Clock", "LGA1700 Socket", "No Integrated Graphics", "60W TDP"],
+  processor: "Intel Core i3-12100F (4-core/8-thread, up to 4.3GHz)", gpu: "None — requires discrete GPU", powerRequirement: "60W TDP",
+  description: "The Intel Core i3-12100F is a budget-friendly quad-core processor offering strong single-core performance for entry-level gaming and everyday computing builds.",
+  technicalDetails: "4 cores, 8 threads, up to 4.3GHz boost clock, 12MB Intel Smart Cache, LGA1700 socket, 60W TDP, no integrated graphics (requires discrete GPU).",
+  useCase: "Ideal for budget gaming PCs and everyday computing builds paired with an entry-level discrete GPU.",
+  performanceNotes: "Strong single-core performance for its price segment, well-suited for 1080p gaming when paired with a mid-range GPU.",
+  qualityNotes: "Genuine Intel boxed processor with 1-year manufacturer warranty.",
+  features: ["Unlocked Smart Cache 12MB", "PCIe 5.0 & 4.0 support", "DDR5/DDR4 memory support"],
+  boxContents: ["Processor", "Documentation"],
+  compatibility: ["LGA1700 motherboards", "DDR4/DDR5 RAM"], upgradeOptions: ["Pair with discrete GPU", "Pair with aftermarket cooler"],
+  recommendedAccessories: ["LGA1700 Motherboard", "CPU Cooler", "DDR5 RAM Kit"],
+  seo: { slug: "intel-core-i3-12100f", keywords: ["intel i3 12100f", "budget cpu", "gaming cpu"], metaTitle: "Intel Core i3-12100F | DESKTO", metaDescription: "Buy Intel Core i3-12100F budget quad-core processor at DESKTO with warranty.", tags: ["intel i3 12100f", "budget cpu", "gaming cpu"] },
+});
+
+const INTEL_I5_12400F_PRODUCT = draftCatalogProduct({
+  id: 47, name: "Intel Core i5-12400F", category: "cpu", brand: "Intel", model: "Core i5-12400F",
+  sku: "INTEL-I5-12400F", price: 13490, orig: 15990, stock: 18,
+  specs: ["6 Cores / 12 Threads", "Up to 4.4GHz Boost Clock", "LGA1700 Socket", "No Integrated Graphics", "65W TDP"],
+  processor: "Intel Core i5-12400F (6-core/12-thread, up to 4.4GHz)", gpu: "None — requires discrete GPU", powerRequirement: "65W TDP",
+  description: "The Intel Core i5-12400F is a popular mid-range six-core processor offering excellent price-to-performance for mainstream gaming builds.",
+  technicalDetails: "6 cores, 12 threads, up to 4.4GHz boost clock, 18MB Intel Smart Cache, LGA1700 socket, 65W TDP, no integrated graphics (requires discrete GPU).",
+  useCase: "One of the best value CPUs for 1080p/1440p gaming builds and general productivity.",
+  performanceNotes: "Excellent gaming performance per rupee, pairs well with mid-to-high-end discrete GPUs without bottlenecking.",
+  qualityNotes: "Genuine Intel boxed processor with 1-year manufacturer warranty.",
+  features: ["18MB Smart Cache", "PCIe 5.0 & 4.0 support", "DDR5/DDR4 memory support"],
+  boxContents: ["Processor", "Documentation"],
+  compatibility: ["LGA1700 motherboards", "DDR4/DDR5 RAM"], upgradeOptions: ["Pair with discrete GPU", "Pair with aftermarket cooler"],
+  recommendedAccessories: ["LGA1700 Motherboard", "CPU Cooler", "DDR5 RAM Kit"],
+  seo: { slug: "intel-core-i5-12400f", keywords: ["intel i5 12400f", "gaming cpu", "mid-range cpu"], metaTitle: "Intel Core i5-12400F | DESKTO", metaDescription: "Buy Intel Core i5-12400F mid-range six-core processor at DESKTO with warranty.", tags: ["intel i5 12400f", "gaming cpu", "mid-range cpu"] },
+});
+
+const INTEL_I5_14400F_PRODUCT = draftCatalogProduct({
+  id: 48, name: "Intel Core i5-14400F", category: "cpu", brand: "Intel", model: "Core i5-14400F",
+  sku: "INTEL-I5-14400F", price: 16990, orig: 19990, stock: 15,
+  specs: ["10 Cores (6P+4E) / 16 Threads", "Up to 4.7GHz Boost Clock", "LGA1700 Socket", "No Integrated Graphics", "65W TDP"],
+  processor: "Intel Core i5-14400F (10-core: 6P+4E / 16-thread, up to 4.7GHz)", gpu: "None — requires discrete GPU", powerRequirement: "65W TDP",
+  description: "The Intel Core i5-14400F brings a hybrid 10-core design to the mainstream segment, offering strong gaming and multitasking performance.",
+  technicalDetails: "6 Performance-cores + 4 Efficient-cores (10 cores/16 threads), up to 4.7GHz boost clock, 20MB Intel Smart Cache, LGA1700 socket, 65W TDP, no integrated graphics.",
+  useCase: "Well suited for high-refresh 1080p/1440p gaming builds and content creation on a budget.",
+  performanceNotes: "Hybrid core design delivers strong gaming frame rates plus solid multi-threaded performance for productivity tasks.",
+  qualityNotes: "Genuine Intel boxed processor with 1-year manufacturer warranty.",
+  features: ["20MB Smart Cache", "Hybrid P-core/E-core architecture", "PCIe 5.0 & 4.0 support", "DDR5/DDR4 memory support"],
+  boxContents: ["Processor", "Documentation"],
+  compatibility: ["LGA1700 motherboards", "DDR4/DDR5 RAM"], upgradeOptions: ["Pair with discrete GPU", "Pair with aftermarket cooler"],
+  recommendedAccessories: ["LGA1700 Motherboard", "CPU Cooler", "DDR5 RAM Kit"],
+  seo: { slug: "intel-core-i5-14400f", keywords: ["intel i5 14400f", "gaming cpu", "14th gen intel"], metaTitle: "Intel Core i5-14400F | DESKTO", metaDescription: "Buy Intel Core i5-14400F 10-core processor at DESKTO with warranty.", tags: ["intel i5 14400f", "gaming cpu", "14th gen intel"] },
+});
+
+const INTEL_I7_14700K_PRODUCT = draftCatalogProduct({
+  id: 49, name: "Intel Core i7-14700K", category: "cpu", brand: "Intel", model: "Core i7-14700K",
+  sku: "INTEL-I7-14700K", price: 34990, orig: 39990, stock: 10,
+  specs: ["20 Cores (8P+12E) / 28 Threads", "Up to 5.6GHz Boost Clock", "LGA1700 Socket", "Intel UHD Graphics 770", "125W TDP"],
+  processor: "Intel Core i7-14700K (20-core: 8P+12E / 28-thread, up to 5.6GHz)", gpu: "Intel UHD Graphics 770 (integrated)", powerRequirement: "125W TDP (253W max turbo)",
+  description: "The Intel Core i7-14700K is a high-performance unlocked processor with 20 cores, ideal for enthusiast gaming rigs and demanding creative workloads.",
+  technicalDetails: "8 Performance-cores + 12 Efficient-cores (20 cores/28 threads), up to 5.6GHz boost clock, 33MB Intel Smart Cache, LGA1700 socket, unlocked for overclocking, Intel UHD Graphics 770.",
+  useCase: "Built for enthusiast gaming builds, streaming, and heavy multitasking or content creation workloads.",
+  performanceNotes: "20-core hybrid design delivers excellent gaming frame rates alongside strong multi-threaded rendering and encoding performance.",
+  qualityNotes: "Genuine Intel boxed processor with 1-year manufacturer warranty.",
+  features: ["Unlocked for overclocking", "33MB Smart Cache", "Integrated UHD Graphics 770", "PCIe 5.0 & 4.0 support"],
+  boxContents: ["Processor", "Documentation"],
+  compatibility: ["LGA1700 motherboards (Z690/Z790 for overclocking)", "DDR4/DDR5 RAM"], upgradeOptions: ["Pair with discrete GPU", "Pair with high-end AIO cooler"],
+  recommendedAccessories: ["Z790 Motherboard", "AIO Liquid Cooler", "DDR5 RAM Kit"],
+  seo: { slug: "intel-core-i7-14700k", keywords: ["intel i7 14700k", "high-end cpu", "14th gen intel"], metaTitle: "Intel Core i7-14700K | DESKTO", metaDescription: "Buy Intel Core i7-14700K 20-core unlocked processor at DESKTO with warranty.", tags: ["intel i7 14700k", "high-end cpu", "14th gen intel"] },
+});
+
+const AMD_RYZEN5_5600_PRODUCT = draftCatalogProduct({
+  id: 50, name: "AMD Ryzen 5 5600", category: "cpu", brand: "AMD", model: "Ryzen 5 5600",
+  sku: "AMD-R5-5600", price: 10990, orig: 12990, stock: 20,
+  specs: ["6 Cores / 12 Threads", "Up to 4.4GHz Boost Clock", "AM4 Socket", "No Integrated Graphics", "65W TDP"],
+  processor: "AMD Ryzen 5 5600 (6-core/12-thread, up to 4.4GHz)", gpu: "None — requires discrete GPU", powerRequirement: "65W TDP",
+  description: "The AMD Ryzen 5 5600 is a proven, cost-effective six-core AM4 processor ideal for budget-to-mid-range gaming builds and easy platform upgrades.",
+  technicalDetails: "6 cores, 12 threads, up to 4.4GHz boost clock, 32MB L3 cache, AM4 socket, 65W TDP, no integrated graphics (requires discrete GPU).",
+  useCase: "Great for budget and mid-range gaming builds, and a popular upgrade path for existing AM4 motherboards.",
+  performanceNotes: "Strong gaming performance per rupee, especially attractive for AM4 platform upgrades with existing motherboards.",
+  qualityNotes: "Genuine AMD boxed processor with 1-year manufacturer warranty, includes stock Wraith Stealth cooler.",
+  features: ["Includes Wraith Stealth cooler", "32MB L3 Cache", "PCIe 4.0 support", "AM4 platform longevity"],
+  boxContents: ["Processor", "Wraith Stealth Cooler", "Documentation"],
+  compatibility: ["AM4 motherboards", "DDR4 RAM"], upgradeOptions: ["Pair with discrete GPU", "Pair with aftermarket cooler"],
+  recommendedAccessories: ["AM4 Motherboard", "DDR4 RAM Kit"],
+  seo: { slug: "amd-ryzen-5-5600", keywords: ["amd ryzen 5 5600", "am4 cpu", "budget gaming cpu"], metaTitle: "AMD Ryzen 5 5600 | DESKTO", metaDescription: "Buy AMD Ryzen 5 5600 six-core AM4 processor at DESKTO with warranty.", tags: ["amd ryzen 5 5600", "am4 cpu", "budget gaming cpu"] },
+});
+
+const AMD_RYZEN5_7600_PRODUCT = draftCatalogProduct({
+  id: 51, name: "AMD Ryzen 5 7600", category: "cpu", brand: "AMD", model: "Ryzen 5 7600",
+  sku: "AMD-R5-7600", price: 17990, orig: 20990, stock: 14,
+  specs: ["6 Cores / 12 Threads", "Up to 5.1GHz Boost Clock", "AM5 Socket", "AMD Radeon Graphics", "65W TDP"],
+  processor: "AMD Ryzen 5 7600 (6-core/12-thread, up to 5.1GHz)", gpu: "AMD Radeon Graphics (integrated)", powerRequirement: "65W TDP",
+  description: "The AMD Ryzen 5 7600 brings Zen 4 architecture to the mainstream segment, offering high clock speeds and DDR5/PCIe 5.0 support on the modern AM5 platform.",
+  technicalDetails: "6 cores, 12 threads, up to 5.1GHz boost clock, 32MB L3 cache, AM5 socket, integrated AMD Radeon Graphics, 65W TDP.",
+  useCase: "Ideal for gamers building on the future-proof AM5 platform who want strong single-core performance.",
+  performanceNotes: "Zen 4 architecture delivers excellent gaming frame rates and snappy single-core responsiveness.",
+  qualityNotes: "Genuine AMD boxed processor with 1-year manufacturer warranty.",
+  features: ["Integrated Radeon Graphics", "32MB L3 Cache", "PCIe 5.0 & 4.0 support", "DDR5 memory support"],
+  boxContents: ["Processor", "Documentation"],
+  compatibility: ["AM5 motherboards", "DDR5 RAM"], upgradeOptions: ["Pair with discrete GPU", "Pair with aftermarket cooler"],
+  recommendedAccessories: ["AM5 Motherboard", "DDR5 RAM Kit", "CPU Cooler"],
+  seo: { slug: "amd-ryzen-5-7600", keywords: ["amd ryzen 5 7600", "am5 cpu", "zen 4 cpu"], metaTitle: "AMD Ryzen 5 7600 | DESKTO", metaDescription: "Buy AMD Ryzen 5 7600 six-core AM5 processor at DESKTO with warranty.", tags: ["amd ryzen 5 7600", "am5 cpu", "zen 4 cpu"] },
+});
+
+const AMD_RYZEN7_7800X3D_PRODUCT = draftCatalogProduct({
+  id: 52, name: "AMD Ryzen 7 7800X3D", category: "cpu", brand: "AMD", model: "Ryzen 7 7800X3D",
+  sku: "AMD-R7-7800X3D", price: 36990, orig: 41990, stock: 8,
+  specs: ["8 Cores / 16 Threads", "Up to 5.0GHz Boost Clock", "AM5 Socket", "96MB 3D V-Cache", "120W TDP"],
+  processor: "AMD Ryzen 7 7800X3D (8-core/16-thread, up to 5.0GHz, 3D V-Cache)", gpu: "AMD Radeon Graphics (integrated)", powerRequirement: "120W TDP",
+  description: "The AMD Ryzen 7 7800X3D is widely regarded as one of the best gaming CPUs available, using 3D V-Cache technology to deliver exceptional in-game frame rates.",
+  technicalDetails: "8 cores, 16 threads, up to 5.0GHz boost clock, 96MB 3D V-Cache (L2+L3), AM5 socket, integrated AMD Radeon Graphics, 120W TDP.",
+  useCase: "The go-to choice for enthusiast gaming builds prioritizing maximum in-game frame rates over pure multi-core workloads.",
+  performanceNotes: "3D V-Cache technology delivers class-leading gaming performance, often outperforming higher-core-count CPUs in games.",
+  qualityNotes: "Genuine AMD boxed processor with 1-year manufacturer warranty.",
+  features: ["96MB 3D V-Cache", "Integrated Radeon Graphics", "PCIe 5.0 & 4.0 support", "DDR5 memory support"],
+  boxContents: ["Processor", "Documentation"],
+  compatibility: ["AM5 motherboards", "DDR5 RAM"], upgradeOptions: ["Pair with high-end discrete GPU", "Pair with high-end AIO cooler"],
+  recommendedAccessories: ["AM5 Motherboard", "DDR5 RAM Kit", "AIO Liquid Cooler"],
+  seo: { slug: "amd-ryzen-7-7800x3d", keywords: ["amd ryzen 7 7800x3d", "best gaming cpu", "3d v-cache"], metaTitle: "AMD Ryzen 7 7800X3D | DESKTO", metaDescription: "Buy AMD Ryzen 7 7800X3D 3D V-Cache gaming processor at DESKTO with warranty.", tags: ["amd ryzen 7 7800x3d", "best gaming cpu", "3d v-cache"] },
+});
+
+const AMD_RYZEN9_9950X_PRODUCT = draftCatalogProduct({
+  id: 53, name: "AMD Ryzen 9 9950X", category: "cpu", brand: "AMD", model: "Ryzen 9 9950X",
+  sku: "AMD-R9-9950X", price: 58990, orig: 64990, stock: 5,
+  specs: ["16 Cores / 32 Threads", "Up to 5.7GHz Boost Clock", "AM5 Socket", "Zen 5 Architecture", "170W TDP"],
+  processor: "AMD Ryzen 9 9950X (16-core/32-thread, up to 5.7GHz, Zen 5)", gpu: "AMD Radeon Graphics (integrated)", powerRequirement: "170W TDP",
+  description: "The AMD Ryzen 9 9950X is a flagship Zen 5 processor delivering exceptional multi-core performance for the most demanding gaming, creative, and workstation workloads.",
+  technicalDetails: "16 cores, 32 threads, up to 5.7GHz boost clock, 80MB L3+L2 cache, AM5 socket, Zen 5 architecture, integrated AMD Radeon Graphics, 170W TDP.",
+  useCase: "Built for content creators, streamers, and power users who need top-tier multi-core performance alongside strong gaming capability.",
+  performanceNotes: "16-core Zen 5 design delivers flagship-tier rendering, encoding, and compilation performance while remaining highly capable for gaming.",
+  qualityNotes: "Genuine AMD boxed processor with 1-year manufacturer warranty.",
+  features: ["Zen 5 architecture", "80MB total cache", "Integrated Radeon Graphics", "PCIe 5.0 support", "DDR5 memory support"],
+  boxContents: ["Processor", "Documentation"],
+  compatibility: ["AM5 motherboards (X670/X870 recommended)", "DDR5 RAM"], upgradeOptions: ["Pair with flagship discrete GPU", "Pair with high-end AIO cooler"],
+  recommendedAccessories: ["X870 Motherboard", "DDR5 RAM Kit", "High-end AIO Cooler"],
+  seo: { slug: "amd-ryzen-9-9950x", keywords: ["amd ryzen 9 9950x", "flagship cpu", "zen 5 cpu"], metaTitle: "AMD Ryzen 9 9950X | DESKTO", metaDescription: "Buy AMD Ryzen 9 9950X flagship 16-core Zen 5 processor at DESKTO with warranty.", tags: ["amd ryzen 9 9950x", "flagship cpu", "zen 5 cpu"] },
+});
+
+// Legacy demo catalog products removed at admin request — kept as an id set so any
+// existing browser session (localStorage) also has them stripped out on next load.
+const REMOVED_SEED_PRODUCT_IDS = new Set<number>([1, 2, 3, 7, 8, 11, 12, 15, 19, 20, 21]);
+
+// ── GPUs ──
+const RTX_3050_PRODUCT = draftCatalogProduct({
+  id: 54, name: "NVIDIA GeForce RTX 3050 8GB", category: "gpu", brand: "NVIDIA", model: "GeForce RTX 3050 8GB",
+  sku: "NV-RTX3050-8G", price: 19990, orig: 22990, stock: 15,
+  specs: ["2560 CUDA Cores", "8GB GDDR6, 128-bit bus", "Boost Clock 1777 MHz", "130W TDP", "PCIe 4.0"],
+  gpu: "NVIDIA GeForce RTX 3050 (2560 CUDA cores, boost 1777 MHz)", ram: "8GB GDDR6 (128-bit)", powerRequirement: "130W TDP, 550W PSU recommended",
+  ports: "3x DisplayPort 1.4a, 1x HDMI 2.1",
+  description: "The NVIDIA GeForce RTX 3050 8GB is an entry-level ray-tracing capable GPU offering solid 1080p gaming performance for budget builds.",
+  technicalDetails: "2560 CUDA cores, 8GB GDDR6 memory on a 128-bit bus, 1777 MHz boost clock, 130W TDP, PCIe 4.0 interface, 2nd-gen ray tracing cores.",
+  useCase: "Ideal for budget 1080p gaming builds and as an entry point into ray tracing and DLSS.",
+  performanceNotes: "Handles most modern titles at 1080p medium-high settings with DLSS support for extra performance.",
+  qualityNotes: "Genuine NVIDIA-based card with 1-year manufacturer warranty.",
+  features: ["Ray tracing cores", "DLSS support", "PCIe 4.0", "Low power draw"],
+  boxContents: ["Graphics card", "Documentation"], compatibility: ["PCIe 4.0/3.0 motherboards", "550W+ PSU"],
+  upgradeOptions: ["Pair with higher wattage PSU for overclocking headroom"], recommendedAccessories: ["550W PSU", "PCIe Riser Cable"],
+  seo: { slug: "nvidia-geforce-rtx-3050-8gb", keywords: ["rtx 3050", "budget gpu", "1080p gaming gpu"], metaTitle: "NVIDIA GeForce RTX 3050 8GB | DESKTO", metaDescription: "Buy NVIDIA GeForce RTX 3050 8GB budget gaming GPU at DESKTO with warranty.", tags: ["rtx 3050", "budget gpu", "1080p gaming gpu"] },
+});
+
+const RTX_4060_PRODUCT = draftCatalogProduct({
+  id: 55, name: "NVIDIA GeForce RTX 4060 8GB", category: "gpu", brand: "NVIDIA", model: "GeForce RTX 4060 8GB",
+  sku: "NV-RTX4060-8G", price: 28990, orig: 32990, stock: 14,
+  specs: ["3072 CUDA Cores", "8GB GDDR6, 128-bit bus", "Boost Clock 2460 MHz", "115W TDP", "PCIe 4.0"],
+  gpu: "NVIDIA GeForce RTX 4060 (3072 CUDA cores, boost 2460 MHz)", ram: "8GB GDDR6 (128-bit)", powerRequirement: "115W TDP, 550W PSU recommended",
+  ports: "3x DisplayPort 1.4a, 1x HDMI 2.1",
+  description: "The NVIDIA GeForce RTX 4060 delivers efficient Ada Lovelace performance for smooth 1080p/1440p gaming with DLSS 3 frame generation.",
+  technicalDetails: "3072 CUDA cores, 8GB GDDR6 memory on a 128-bit bus, 2460 MHz boost clock, 115W TDP, PCIe 4.0 interface, 3rd-gen ray tracing cores, DLSS 3.",
+  useCase: "Great for 1080p high-refresh and 1440p gaming with excellent power efficiency.",
+  performanceNotes: "DLSS 3 Frame Generation significantly boosts frame rates in supported titles at 1080p/1440p.",
+  qualityNotes: "Genuine NVIDIA-based card with 1-year manufacturer warranty.",
+  features: ["DLSS 3 Frame Generation", "3rd-gen RT cores", "AV1 encoding", "Low power draw"],
+  boxContents: ["Graphics card", "Documentation"], compatibility: ["PCIe 4.0/3.0 motherboards", "550W+ PSU"],
+  upgradeOptions: ["Pair with higher wattage PSU for overclocking headroom"], recommendedAccessories: ["550W PSU", "PCIe Riser Cable"],
+  seo: { slug: "nvidia-geforce-rtx-4060-8gb", keywords: ["rtx 4060", "1080p gaming gpu", "dlss 3 gpu"], metaTitle: "NVIDIA GeForce RTX 4060 8GB | DESKTO", metaDescription: "Buy NVIDIA GeForce RTX 4060 8GB gaming GPU at DESKTO with warranty.", tags: ["rtx 4060", "1080p gaming gpu", "dlss 3 gpu"] },
+});
+
+const RTX_4060TI_PRODUCT = draftCatalogProduct({
+  id: 56, name: "NVIDIA GeForce RTX 4060 Ti 8GB", category: "gpu", brand: "NVIDIA", model: "GeForce RTX 4060 Ti 8GB",
+  sku: "NV-RTX4060TI-8G", price: 38990, orig: 43990, stock: 10,
+  specs: ["4352 CUDA Cores", "8GB GDDR6, 128-bit bus", "Boost Clock 2535 MHz", "160W TDP", "PCIe 4.0"],
+  gpu: "NVIDIA GeForce RTX 4060 Ti (4352 CUDA cores, boost 2535 MHz)", ram: "8GB GDDR6 (128-bit)", powerRequirement: "160W TDP, 600W PSU recommended",
+  ports: "3x DisplayPort 1.4a, 1x HDMI 2.1",
+  description: "The NVIDIA GeForce RTX 4060 Ti steps up performance for smooth 1440p gaming with strong ray tracing and DLSS 3 capability.",
+  technicalDetails: "4352 CUDA cores, 8GB GDDR6 memory on a 128-bit bus, 2535 MHz boost clock, 160W TDP, PCIe 4.0 interface, DLSS 3 Frame Generation.",
+  useCase: "Suited for 1440p gaming at high settings and 1080p high-refresh esports.",
+  performanceNotes: "Strong 1440p performance with DLSS 3 Frame Generation delivering large frame rate boosts in supported titles.",
+  qualityNotes: "Genuine NVIDIA-based card with 1-year manufacturer warranty.",
+  features: ["DLSS 3 Frame Generation", "3rd-gen RT cores", "AV1 encoding", "Efficient Ada Lovelace architecture"],
+  boxContents: ["Graphics card", "Documentation"], compatibility: ["PCIe 4.0/3.0 motherboards", "600W+ PSU"],
+  upgradeOptions: ["Pair with higher wattage PSU for overclocking headroom"], recommendedAccessories: ["650W PSU", "PCIe Riser Cable"],
+  seo: { slug: "nvidia-geforce-rtx-4060-ti-8gb", keywords: ["rtx 4060 ti", "1440p gaming gpu", "dlss 3 gpu"], metaTitle: "NVIDIA GeForce RTX 4060 Ti 8GB | DESKTO", metaDescription: "Buy NVIDIA GeForce RTX 4060 Ti 8GB gaming GPU at DESKTO with warranty.", tags: ["rtx 4060 ti", "1440p gaming gpu", "dlss 3 gpu"] },
+});
+
+const RTX_4070SUPER_PRODUCT = draftCatalogProduct({
+  id: 57, name: "NVIDIA GeForce RTX 4070 Super 12GB", category: "gpu", brand: "NVIDIA", model: "GeForce RTX 4070 Super 12GB",
+  sku: "NV-RTX4070S-12G", price: 59990, orig: 66990, stock: 8,
+  specs: ["7168 CUDA Cores", "12GB GDDR6X, 192-bit bus", "Boost Clock 2475 MHz", "220W TDP", "PCIe 4.0"],
+  gpu: "NVIDIA GeForce RTX 4070 Super (7168 CUDA cores, boost 2475 MHz)", ram: "12GB GDDR6X (192-bit)", powerRequirement: "220W TDP, 750W PSU recommended",
+  ports: "3x DisplayPort 1.4a, 1x HDMI 2.1",
+  description: "The NVIDIA GeForce RTX 4070 Super delivers excellent 1440p and entry-4K gaming performance with strong ray tracing headroom.",
+  technicalDetails: "7168 CUDA cores, 12GB GDDR6X memory on a 192-bit bus, 2475 MHz boost clock, 220W TDP, PCIe 4.0 interface, DLSS 3 Frame Generation.",
+  useCase: "Built for high-settings 1440p gaming and capable 4K gaming with DLSS upscaling.",
+  performanceNotes: "Handles demanding AAA titles at 1440p ultra settings and 4K with DLSS enabled.",
+  qualityNotes: "Genuine NVIDIA-based card with 1-year manufacturer warranty.",
+  features: ["DLSS 3 Frame Generation", "3rd-gen RT cores", "12GB GDDR6X memory", "AV1 encoding"],
+  boxContents: ["Graphics card", "Documentation"], compatibility: ["PCIe 4.0/3.0 motherboards", "750W+ PSU"],
+  upgradeOptions: ["Pair with higher wattage PSU for overclocking headroom"], recommendedAccessories: ["750W PSU", "PCIe Riser Cable"],
+  seo: { slug: "nvidia-geforce-rtx-4070-super-12gb", keywords: ["rtx 4070 super", "1440p gaming gpu", "4k gaming gpu"], metaTitle: "NVIDIA GeForce RTX 4070 Super 12GB | DESKTO", metaDescription: "Buy NVIDIA GeForce RTX 4070 Super 12GB gaming GPU at DESKTO with warranty.", tags: ["rtx 4070 super", "1440p gaming gpu", "4k gaming gpu"] },
+});
+
+const RTX_5070_PRODUCT = draftCatalogProduct({
+  id: 58, name: "NVIDIA GeForce RTX 5070 12GB", category: "gpu", brand: "NVIDIA", model: "GeForce RTX 5070 12GB",
+  sku: "NV-RTX5070-12G", price: 64990, orig: 71990, stock: 6,
+  specs: ["6144 CUDA Cores (Blackwell)", "12GB GDDR7, 192-bit bus", "Boost Clock 2510 MHz", "250W TDP", "PCIe 5.0"],
+  gpu: "NVIDIA GeForce RTX 5070 (6144 CUDA cores, Blackwell, boost 2510 MHz)", ram: "12GB GDDR7 (192-bit)", powerRequirement: "250W TDP, 750W PSU recommended",
+  ports: "3x DisplayPort 2.1, 1x HDMI 2.1b",
+  description: "The NVIDIA GeForce RTX 5070 brings next-generation Blackwell architecture and GDDR7 memory for exceptional 1440p/4K gaming with DLSS 4.",
+  technicalDetails: "6144 CUDA cores, 12GB GDDR7 memory on a 192-bit bus, 2510 MHz boost clock, 250W TDP, PCIe 5.0 interface, DLSS 4 with Multi Frame Generation.",
+  useCase: "Built for enthusiast 1440p and 4K gaming with the latest DLSS 4 upscaling and frame generation.",
+  performanceNotes: "GDDR7 memory and DLSS 4 Multi Frame Generation deliver class-leading frame rates at 1440p and 4K.",
+  qualityNotes: "Genuine NVIDIA-based card with 1-year manufacturer warranty.",
+  features: ["DLSS 4 Multi Frame Generation", "4th-gen RT cores", "12GB GDDR7 memory", "PCIe 5.0"],
+  boxContents: ["Graphics card", "Documentation"], compatibility: ["PCIe 5.0/4.0 motherboards", "750W+ PSU"],
+  upgradeOptions: ["Pair with higher wattage PSU for overclocking headroom"], recommendedAccessories: ["850W PSU", "PCIe Riser Cable"],
+  seo: { slug: "nvidia-geforce-rtx-5070-12gb", keywords: ["rtx 5070", "blackwell gpu", "4k gaming gpu"], metaTitle: "NVIDIA GeForce RTX 5070 12GB | DESKTO", metaDescription: "Buy NVIDIA GeForce RTX 5070 12GB Blackwell gaming GPU at DESKTO with warranty.", tags: ["rtx 5070", "blackwell gpu", "4k gaming gpu"] },
+});
+
+const RX_6600_PRODUCT = draftCatalogProduct({
+  id: 59, name: "AMD Radeon RX 6600 8GB", category: "gpu", brand: "AMD", model: "Radeon RX 6600 8GB",
+  sku: "AMD-RX6600-8G", price: 19490, orig: 22490, stock: 12,
+  specs: ["1792 Stream Processors", "8GB GDDR6, 128-bit bus", "Boost Clock 2491 MHz", "132W TDP", "PCIe 4.0"],
+  gpu: "AMD Radeon RX 6600 (1792 stream processors, boost 2491 MHz)", ram: "8GB GDDR6 (128-bit)", powerRequirement: "132W TDP, 500W PSU recommended",
+  ports: "1x DisplayPort 1.4, 1x HDMI 2.1",
+  description: "The AMD Radeon RX 6600 is a power-efficient 1080p gaming GPU offering strong value in the budget segment.",
+  technicalDetails: "1792 stream processors, 8GB GDDR6 memory on a 128-bit bus, 2491 MHz boost clock, 132W TDP, PCIe 4.0 interface, AMD FidelityFX Super Resolution support.",
+  useCase: "Ideal for smooth 1080p gaming on a budget with low power consumption.",
+  performanceNotes: "Efficient RDNA 2 architecture delivers strong 1080p frame rates at a competitive price point.",
+  qualityNotes: "Genuine AMD-based card with 1-year manufacturer warranty.",
+  features: ["AMD FidelityFX Super Resolution", "Low power draw", "PCIe 4.0", "RDNA 2 architecture"],
+  boxContents: ["Graphics card", "Documentation"], compatibility: ["PCIe 4.0/3.0 motherboards", "500W+ PSU"],
+  upgradeOptions: ["Pair with higher wattage PSU for overclocking headroom"], recommendedAccessories: ["550W PSU", "PCIe Riser Cable"],
+  seo: { slug: "amd-radeon-rx-6600-8gb", keywords: ["rx 6600", "budget gpu", "1080p gaming gpu"], metaTitle: "AMD Radeon RX 6600 8GB | DESKTO", metaDescription: "Buy AMD Radeon RX 6600 8GB budget gaming GPU at DESKTO with warranty.", tags: ["rx 6600", "budget gpu", "1080p gaming gpu"] },
+});
+
+const RX_7600_PRODUCT = draftCatalogProduct({
+  id: 60, name: "AMD Radeon RX 7600 8GB", category: "gpu", brand: "AMD", model: "Radeon RX 7600 8GB",
+  sku: "AMD-RX7600-8G", price: 27990, orig: 31990, stock: 11,
+  specs: ["2048 Stream Processors", "8GB GDDR6, 128-bit bus", "Boost Clock 2655 MHz", "165W TDP", "PCIe 4.0"],
+  gpu: "AMD Radeon RX 7600 (2048 stream processors, boost 2655 MHz)", ram: "8GB GDDR6 (128-bit)", powerRequirement: "165W TDP, 550W PSU recommended",
+  ports: "1x DisplayPort 2.1, 1x HDMI 2.1",
+  description: "The AMD Radeon RX 7600 brings RDNA 3 architecture to the mainstream segment for smooth 1080p gaming with modern encoding features.",
+  technicalDetails: "2048 stream processors, 8GB GDDR6 memory on a 128-bit bus, 2655 MHz boost clock, 165W TDP, PCIe 4.0 interface, AV1 encoding support.",
+  useCase: "Great for high-refresh 1080p gaming and content creators who need AV1 encoding.",
+  performanceNotes: "RDNA 3 architecture delivers smooth 1080p performance with efficient power draw.",
+  qualityNotes: "Genuine AMD-based card with 1-year manufacturer warranty.",
+  features: ["AV1 encoding", "AMD FidelityFX Super Resolution 3", "RDNA 3 architecture", "PCIe 4.0"],
+  boxContents: ["Graphics card", "Documentation"], compatibility: ["PCIe 4.0/3.0 motherboards", "550W+ PSU"],
+  upgradeOptions: ["Pair with higher wattage PSU for overclocking headroom"], recommendedAccessories: ["600W PSU", "PCIe Riser Cable"],
+  seo: { slug: "amd-radeon-rx-7600-8gb", keywords: ["rx 7600", "1080p gaming gpu", "rdna 3 gpu"], metaTitle: "AMD Radeon RX 7600 8GB | DESKTO", metaDescription: "Buy AMD Radeon RX 7600 8GB gaming GPU at DESKTO with warranty.", tags: ["rx 7600", "1080p gaming gpu", "rdna 3 gpu"] },
+});
+
+const RX_7700XT_PRODUCT = draftCatalogProduct({
+  id: 61, name: "AMD Radeon RX 7700 XT 12GB", category: "gpu", brand: "AMD", model: "Radeon RX 7700 XT 12GB",
+  sku: "AMD-RX7700XT-12G", price: 42990, orig: 47990, stock: 8,
+  specs: ["3456 Stream Processors", "12GB GDDR6, 192-bit bus", "Boost Clock 2544 MHz", "245W TDP", "PCIe 4.0"],
+  gpu: "AMD Radeon RX 7700 XT (3456 stream processors, boost 2544 MHz)", ram: "12GB GDDR6 (192-bit)", powerRequirement: "245W TDP, 700W PSU recommended",
+  ports: "1x DisplayPort 2.1, 1x HDMI 2.1",
+  description: "The AMD Radeon RX 7700 XT offers strong 1440p gaming performance with generous 12GB VRAM for demanding modern titles.",
+  technicalDetails: "3456 stream processors, 12GB GDDR6 memory on a 192-bit bus, 2544 MHz boost clock, 245W TDP, PCIe 4.0 interface, AV1 encoding support.",
+  useCase: "Suited for high-settings 1440p gaming with plenty of VRAM headroom for future titles.",
+  performanceNotes: "12GB VRAM and RDNA 3 architecture deliver excellent 1440p performance in VRAM-hungry titles.",
+  qualityNotes: "Genuine AMD-based card with 1-year manufacturer warranty.",
+  features: ["12GB GDDR6 memory", "AV1 encoding", "AMD FidelityFX Super Resolution 3", "RDNA 3 architecture"],
+  boxContents: ["Graphics card", "Documentation"], compatibility: ["PCIe 4.0/3.0 motherboards", "700W+ PSU"],
+  upgradeOptions: ["Pair with higher wattage PSU for overclocking headroom"], recommendedAccessories: ["750W PSU", "PCIe Riser Cable"],
+  seo: { slug: "amd-radeon-rx-7700-xt-12gb", keywords: ["rx 7700 xt", "1440p gaming gpu", "rdna 3 gpu"], metaTitle: "AMD Radeon RX 7700 XT 12GB | DESKTO", metaDescription: "Buy AMD Radeon RX 7700 XT 12GB gaming GPU at DESKTO with warranty.", tags: ["rx 7700 xt", "1440p gaming gpu", "rdna 3 gpu"] },
+});
+
+const RX_7800XT_PRODUCT = draftCatalogProduct({
+  id: 62, name: "AMD Radeon RX 7800 XT 16GB", category: "gpu", brand: "AMD", model: "Radeon RX 7800 XT 16GB",
+  sku: "AMD-RX7800XT-16G", price: 52990, orig: 58990, stock: 7,
+  specs: ["3840 Stream Processors", "16GB GDDR6, 256-bit bus", "Boost Clock 2430 MHz", "263W TDP", "PCIe 4.0"],
+  gpu: "AMD Radeon RX 7800 XT (3840 stream processors, boost 2430 MHz)", ram: "16GB GDDR6 (256-bit)", powerRequirement: "263W TDP, 750W PSU recommended",
+  ports: "1x DisplayPort 2.1, 1x HDMI 2.1",
+  description: "The AMD Radeon RX 7800 XT delivers excellent 1440p ultra and entry-4K gaming performance with a generous 16GB VRAM buffer.",
+  technicalDetails: "3840 stream processors, 16GB GDDR6 memory on a 256-bit bus, 2430 MHz boost clock, 263W TDP, PCIe 4.0 interface, AV1 encoding support.",
+  useCase: "Built for high-settings 1440p and capable 4K gaming with ample VRAM for future-proofing.",
+  performanceNotes: "16GB VRAM and RDNA 3 architecture handle demanding AAA titles at 1440p ultra and 4K high settings.",
+  qualityNotes: "Genuine AMD-based card with 1-year manufacturer warranty.",
+  features: ["16GB GDDR6 memory", "AV1 encoding", "AMD FidelityFX Super Resolution 3", "RDNA 3 architecture"],
+  boxContents: ["Graphics card", "Documentation"], compatibility: ["PCIe 4.0/3.0 motherboards", "750W+ PSU"],
+  upgradeOptions: ["Pair with higher wattage PSU for overclocking headroom"], recommendedAccessories: ["800W PSU", "PCIe Riser Cable"],
+  seo: { slug: "amd-radeon-rx-7800-xt-16gb", keywords: ["rx 7800 xt", "4k gaming gpu", "rdna 3 gpu"], metaTitle: "AMD Radeon RX 7800 XT 16GB | DESKTO", metaDescription: "Buy AMD Radeon RX 7800 XT 16GB gaming GPU at DESKTO with warranty.", tags: ["rx 7800 xt", "4k gaming gpu", "rdna 3 gpu"] },
+});
+
+const RX_9070XT_PRODUCT = draftCatalogProduct({
+  id: 63, name: "AMD Radeon RX 9070 XT 16GB", category: "gpu", brand: "AMD", model: "Radeon RX 9070 XT 16GB",
+  sku: "AMD-RX9070XT-16G", price: 74990, orig: 82990, stock: 5,
+  specs: ["4096 Stream Processors (RDNA 4)", "16GB GDDR6, 256-bit bus", "Boost Clock 2970 MHz", "304W TDP", "PCIe 5.0"],
+  gpu: "AMD Radeon RX 9070 XT (4096 stream processors, RDNA 4, boost 2970 MHz)", ram: "16GB GDDR6 (256-bit)", powerRequirement: "304W TDP, 750W PSU recommended",
+  ports: "1x DisplayPort 2.1a, 2x HDMI 2.1b",
+  description: "The AMD Radeon RX 9070 XT is a flagship RDNA 4 GPU delivering exceptional 1440p and 4K gaming performance with dramatically improved ray tracing.",
+  technicalDetails: "4096 stream processors, 16GB GDDR6 memory on a 256-bit bus, 2970 MHz boost clock, 304W TDP, PCIe 5.0 interface, RDNA 4 architecture with next-gen ray tracing.",
+  useCase: "Built for enthusiast 1440p and 4K gaming with high ray tracing fidelity and future-proof VRAM.",
+  performanceNotes: "RDNA 4 architecture delivers a major leap in ray tracing performance alongside excellent rasterized frame rates at 4K.",
+  qualityNotes: "Genuine AMD-based card with 1-year manufacturer warranty.",
+  features: ["RDNA 4 architecture", "Next-gen ray tracing", "16GB GDDR6 memory", "PCIe 5.0"],
+  boxContents: ["Graphics card", "Documentation"], compatibility: ["PCIe 5.0/4.0 motherboards", "750W+ PSU"],
+  upgradeOptions: ["Pair with higher wattage PSU for overclocking headroom"], recommendedAccessories: ["850W PSU", "PCIe Riser Cable"],
+  seo: { slug: "amd-radeon-rx-9070-xt-16gb", keywords: ["rx 9070 xt", "rdna 4 gpu", "4k gaming gpu"], metaTitle: "AMD Radeon RX 9070 XT 16GB | DESKTO", metaDescription: "Buy AMD Radeon RX 9070 XT 16GB RDNA 4 gaming GPU at DESKTO with warranty.", tags: ["rx 9070 xt", "rdna 4 gpu", "4k gaming gpu"] },
+});
+
+const ARC_A580_PRODUCT = draftCatalogProduct({
+  id: 64, name: "Intel Arc A580 8GB", category: "gpu", brand: "Intel", model: "Arc A580 8GB",
+  sku: "INTEL-ARCA580-8G", price: 17990, orig: 20990, stock: 10,
+  specs: ["24 Xe-cores", "8GB GDDR6, 256-bit bus", "Boost Clock 1700 MHz", "175W TDP", "PCIe 4.0"],
+  gpu: "Intel Arc A580 (24 Xe-cores, boost 1700 MHz)", ram: "8GB GDDR6 (256-bit)", powerRequirement: "175W TDP, 550W PSU recommended",
+  ports: "3x DisplayPort 2.0, 1x HDMI 2.1",
+  description: "The Intel Arc A580 is a value-focused GPU with a wide 256-bit memory bus, offering solid 1080p gaming performance with modern feature support.",
+  technicalDetails: "24 Xe-cores, 8GB GDDR6 memory on a 256-bit bus, 1700 MHz boost clock, 175W TDP, PCIe 4.0 interface, Intel XeSS upscaling support.",
+  useCase: "Good for budget 1080p gaming builds, especially in titles that benefit from Intel's wide memory bus.",
+  performanceNotes: "Wide 256-bit memory bus gives the A580 an edge in memory-bandwidth-sensitive titles at its price point.",
+  qualityNotes: "Genuine Intel-based card with 1-year manufacturer warranty.",
+  features: ["Intel XeSS upscaling", "AV1 encoding", "256-bit memory bus", "PCIe 4.0"],
+  boxContents: ["Graphics card", "Documentation"], compatibility: ["PCIe 4.0/3.0 motherboards", "550W+ PSU"],
+  upgradeOptions: ["Pair with higher wattage PSU for overclocking headroom"], recommendedAccessories: ["600W PSU", "PCIe Riser Cable"],
+  seo: { slug: "intel-arc-a580-8gb", keywords: ["intel arc a580", "budget gpu", "1080p gaming gpu"], metaTitle: "Intel Arc A580 8GB | DESKTO", metaDescription: "Buy Intel Arc A580 8GB budget gaming GPU at DESKTO with warranty.", tags: ["intel arc a580", "budget gpu", "1080p gaming gpu"] },
+});
+
+const ARC_A750_PRODUCT = draftCatalogProduct({
+  id: 65, name: "Intel Arc A750 8GB", category: "gpu", brand: "Intel", model: "Arc A750 8GB",
+  sku: "INTEL-ARCA750-8G", price: 21990, orig: 24990, stock: 9,
+  specs: ["28 Xe-cores", "8GB GDDR6, 256-bit bus", "Boost Clock 2050 MHz", "225W TDP", "PCIe 4.0"],
+  gpu: "Intel Arc A750 (28 Xe-cores, boost 2050 MHz)", ram: "8GB GDDR6 (256-bit)", powerRequirement: "225W TDP, 600W PSU recommended",
+  ports: "3x DisplayPort 2.0, 1x HDMI 2.1",
+  description: "The Intel Arc A750 offers competitive 1080p/1440p gaming performance with a wide memory bus and strong AV1 encoding for streamers.",
+  technicalDetails: "28 Xe-cores, 8GB GDDR6 memory on a 256-bit bus, 2050 MHz boost clock, 225W TDP, PCIe 4.0 interface, Intel XeSS upscaling support.",
+  useCase: "Suited for 1080p high-refresh and 1440p gaming, and popular with streamers for its AV1 encoder.",
+  performanceNotes: "Strong rasterized performance at 1080p/1440p, with driver improvements steadily closing the gap with competitors.",
+  qualityNotes: "Genuine Intel-based card with 1-year manufacturer warranty.",
+  features: ["Intel XeSS upscaling", "AV1 encoding", "256-bit memory bus", "PCIe 4.0"],
+  boxContents: ["Graphics card", "Documentation"], compatibility: ["PCIe 4.0/3.0 motherboards", "600W+ PSU"],
+  upgradeOptions: ["Pair with higher wattage PSU for overclocking headroom"], recommendedAccessories: ["650W PSU", "PCIe Riser Cable"],
+  seo: { slug: "intel-arc-a750-8gb", keywords: ["intel arc a750", "1080p gaming gpu", "streaming gpu"], metaTitle: "Intel Arc A750 8GB | DESKTO", metaDescription: "Buy Intel Arc A750 8GB gaming GPU at DESKTO with warranty.", tags: ["intel arc a750", "1080p gaming gpu", "streaming gpu"] },
+});
+
+const ARC_B580_PRODUCT = draftCatalogProduct({
+  id: 66, name: "Intel Arc B580 12GB", category: "gpu", brand: "Intel", model: "Arc B580 12GB",
+  sku: "INTEL-ARCB580-12G", price: 28990, orig: 32990, stock: 10,
+  specs: ["20 Xe2-cores (Battlemage)", "12GB GDDR6, 192-bit bus", "Boost Clock 2670 MHz", "190W TDP", "PCIe 4.0"],
+  gpu: "Intel Arc B580 (20 Xe2-cores, Battlemage, boost 2670 MHz)", ram: "12GB GDDR6 (192-bit)", powerRequirement: "190W TDP, 600W PSU recommended",
+  ports: "3x DisplayPort 2.1, 1x HDMI 2.1",
+  description: "The Intel Arc B580 is a second-generation Battlemage GPU offering excellent price-to-performance with 12GB VRAM for 1440p gaming.",
+  technicalDetails: "20 Xe2-cores, 12GB GDDR6 memory on a 192-bit bus, 2670 MHz boost clock, 190W TDP, PCIe 4.0 interface, Intel XeSS 2 upscaling support.",
+  useCase: "Strong value pick for 1080p/1440p gaming with generous VRAM for modern titles.",
+  performanceNotes: "Battlemage architecture brings major performance-per-dollar improvements over the previous Arc generation.",
+  qualityNotes: "Genuine Intel-based card with 1-year manufacturer warranty.",
+  features: ["Intel XeSS 2 upscaling", "AV1 encoding", "12GB GDDR6 memory", "PCIe 4.0"],
+  boxContents: ["Graphics card", "Documentation"], compatibility: ["PCIe 4.0/3.0 motherboards", "600W+ PSU"],
+  upgradeOptions: ["Pair with higher wattage PSU for overclocking headroom"], recommendedAccessories: ["650W PSU", "PCIe Riser Cable"],
+  seo: { slug: "intel-arc-b580-12gb", keywords: ["intel arc b580", "1440p gaming gpu", "battlemage gpu"], metaTitle: "Intel Arc B580 12GB | DESKTO", metaDescription: "Buy Intel Arc B580 12GB Battlemage gaming GPU at DESKTO with warranty.", tags: ["intel arc b580", "1440p gaming gpu", "battlemage gpu"] },
+});
+
+// ── RAM ──
+const CORSAIR_VENGEANCE_LPX_16_PRODUCT = draftCatalogProduct({
+  id: 67, name: "Corsair Vengeance LPX 16GB (2x8GB) DDR4 3200MHz", category: "ram", brand: "Corsair", model: "Vengeance LPX 16GB DDR4-3200",
+  sku: "CORS-VLPX-16-DDR4-3200", price: 3990, orig: 4690, stock: 25,
+  specs: ["16GB (2x8GB) Kit", "DDR4 3200MHz", "CL16 Latency", "Low-profile heatspreader", "1.35V"],
+  ram: "16GB (2x8GB) DDR4-3200 CL16, low-profile aluminum heatspreader",
+  description: "Corsair Vengeance LPX 16GB DDR4 3200MHz is a proven, low-profile memory kit offering reliable performance for mainstream gaming and productivity builds.",
+  technicalDetails: "16GB (2x8GB) dual-channel kit, DDR4 3200MHz, CL16-18-18-36 timings, 1.35V, low-profile design for CPU cooler clearance, XMP 2.0 support.",
+  useCase: "A dependable everyday RAM upgrade for gaming and productivity DDR4 builds.",
+  performanceNotes: "3200MHz CL16 timings offer a strong balance of speed and latency for AM4/older Intel platforms.",
+  qualityNotes: "Genuine Corsair product with lifetime manufacturer warranty and hand-tested memory chips.",
+  features: ["Low-profile heatspreader", "XMP 2.0 support", "Lifetime warranty", "Wide motherboard compatibility"],
+  boxContents: ["2x 8GB RAM modules", "Documentation"], compatibility: ["DDR4 motherboards (AM4/LGA1200/LGA1700 with DDR4)"],
+  upgradeOptions: ["Pair with a second kit for 32GB total (verify motherboard QVL)"], recommendedAccessories: ["Compatible DDR4 Motherboard"],
+  seo: { slug: "corsair-vengeance-lpx-16gb-ddr4-3200", keywords: ["corsair vengeance lpx", "ddr4 ram", "16gb ram kit"], metaTitle: "Corsair Vengeance LPX 16GB DDR4 3200MHz | DESKTO", metaDescription: "Buy Corsair Vengeance LPX 16GB DDR4 3200MHz RAM kit at DESKTO with warranty.", tags: ["corsair vengeance lpx", "ddr4 ram", "16gb ram kit"] },
+  warrantyMonths: 120,
+});
+
+const KINGSTON_FURY_BEAST_16_PRODUCT = draftCatalogProduct({
+  id: 68, name: "Kingston Fury Beast 16GB (2x8GB) DDR4 3200MHz", category: "ram", brand: "Kingston", model: "Fury Beast 16GB DDR4-3200",
+  sku: "KING-FURYBEAST-16-DDR4-3200", price: 3790, orig: 4490, stock: 28,
+  specs: ["16GB (2x8GB) Kit", "DDR4 3200MHz", "CL16 Latency", "Low-profile heatspreader", "1.35V"],
+  ram: "16GB (2x8GB) DDR4-3200 CL16, low-profile heatspreader",
+  description: "Kingston Fury Beast 16GB DDR4 3200MHz delivers plug-and-play performance and reliability for everyday gaming and productivity systems.",
+  technicalDetails: "16GB (2x8GB) dual-channel kit, DDR4 3200MHz, CL16 timings, 1.35V, Intel XMP 2.0 support, low-profile heatspreader design.",
+  useCase: "A solid, budget-friendly RAM upgrade for DDR4 gaming and everyday-use builds.",
+  performanceNotes: "3200MHz CL16 provides reliable performance across a wide range of DDR4 motherboards.",
+  qualityNotes: "Genuine Kingston product with lifetime manufacturer warranty.",
+  features: ["Low-profile heatspreader", "XMP 2.0 support", "Lifetime warranty", "Plug-and-play compatibility"],
+  boxContents: ["2x 8GB RAM modules", "Documentation"], compatibility: ["DDR4 motherboards (AM4/LGA1200/LGA1700 with DDR4)"],
+  upgradeOptions: ["Pair with a second kit for 32GB total (verify motherboard QVL)"], recommendedAccessories: ["Compatible DDR4 Motherboard"],
+  seo: { slug: "kingston-fury-beast-16gb-ddr4-3200", keywords: ["kingston fury beast", "ddr4 ram", "16gb ram kit"], metaTitle: "Kingston Fury Beast 16GB DDR4 3200MHz | DESKTO", metaDescription: "Buy Kingston Fury Beast 16GB DDR4 3200MHz RAM kit at DESKTO with warranty.", tags: ["kingston fury beast", "ddr4 ram", "16gb ram kit"] },
+  warrantyMonths: 120,
+});
+
+const GSKILL_RIPJAWS_V_16_PRODUCT = draftCatalogProduct({
+  id: 69, name: "G.Skill Ripjaws V 16GB (2x8GB) DDR4 3600MHz", category: "ram", brand: "G.Skill", model: "Ripjaws V 16GB DDR4-3600",
+  sku: "GSKILL-RIPJAWSV-16-DDR4-3600", price: 4190, orig: 4890, stock: 22,
+  specs: ["16GB (2x8GB) Kit", "DDR4 3600MHz", "CL16 Latency", "Aggressive heatspreader design", "1.35V"],
+  ram: "16GB (2x8GB) DDR4-3600 CL16, performance heatspreader",
+  description: "G.Skill Ripjaws V 16GB DDR4 3600MHz offers higher clock speeds for AM4 and Intel builds that benefit from faster memory bandwidth.",
+  technicalDetails: "16GB (2x8GB) dual-channel kit, DDR4 3600MHz, CL16-19-19-39 timings, 1.35V, Intel XMP 2.0 support.",
+  useCase: "Great for AMD Ryzen builds where higher memory clocks improve Infinity Fabric performance.",
+  performanceNotes: "3600MHz sweet-spot speed is particularly beneficial for AMD Ryzen platforms.",
+  qualityNotes: "Genuine G.Skill product with lifetime manufacturer warranty.",
+  features: ["Performance heatspreader", "XMP 2.0 support", "Lifetime warranty", "Ryzen-optimized speed"],
+  boxContents: ["2x 8GB RAM modules", "Documentation"], compatibility: ["DDR4 motherboards (AM4/LGA1200/LGA1700 with DDR4)"],
+  upgradeOptions: ["Pair with a second kit for 32GB total (verify motherboard QVL)"], recommendedAccessories: ["Compatible DDR4 Motherboard"],
+  seo: { slug: "gskill-ripjaws-v-16gb-ddr4-3600", keywords: ["gskill ripjaws v", "ddr4 ram", "16gb ram kit"], metaTitle: "G.Skill Ripjaws V 16GB DDR4 3600MHz | DESKTO", metaDescription: "Buy G.Skill Ripjaws V 16GB DDR4 3600MHz RAM kit at DESKTO with warranty.", tags: ["gskill ripjaws v", "ddr4 ram", "16gb ram kit"] },
+  warrantyMonths: 120,
+});
+
+const CRUCIAL_PRO_DDR5_16_PRODUCT = draftCatalogProduct({
+  id: 70, name: "Crucial Pro DDR5 16GB (2x8GB) 5600MHz", category: "ram", brand: "Crucial", model: "Pro DDR5 16GB-5600",
+  sku: "CRUCIAL-PRO-16-DDR5-5600", price: 5490, orig: 6290, stock: 20,
+  specs: ["16GB (2x8GB) Kit", "DDR5 5600MHz", "CL46 Latency", "Intel XMP 3.0 / AMD EXPO ready", "1.1V"],
+  ram: "16GB (2x8GB) DDR5-5600 CL46, XMP 3.0 / EXPO ready",
+  description: "Crucial Pro DDR5 16GB 5600MHz brings fast, reliable memory for modern AM5 and Intel LGA1700/1851 DDR5 platforms.",
+  technicalDetails: "16GB (2x8GB) dual-channel kit, DDR5 5600MHz, CL46 timings, 1.1V, Intel XMP 3.0 and AMD EXPO profile support.",
+  useCase: "Ideal for current-generation AM5 and Intel DDR5 builds needing reliable, plug-and-play high-speed memory.",
+  performanceNotes: "5600MHz native JEDEC speed with XMP/EXPO profiles for easy one-click overclocking.",
+  qualityNotes: "Genuine Crucial (Micron) product with limited lifetime manufacturer warranty.",
+  features: ["XMP 3.0 & AMD EXPO support", "Low-profile design", "Lifetime warranty", "Micron memory chips"],
+  boxContents: ["2x 8GB RAM modules", "Documentation"], compatibility: ["DDR5 motherboards (AM5/LGA1700/LGA1851)"],
+  upgradeOptions: ["Pair with a second kit for 32GB total (verify motherboard QVL)"], recommendedAccessories: ["Compatible DDR5 Motherboard"],
+  seo: { slug: "crucial-pro-ddr5-16gb-5600", keywords: ["crucial pro ddr5", "ddr5 ram", "16gb ram kit"], metaTitle: "Crucial Pro DDR5 16GB 5600MHz | DESKTO", metaDescription: "Buy Crucial Pro DDR5 16GB 5600MHz RAM kit at DESKTO with warranty.", tags: ["crucial pro ddr5", "ddr5 ram", "16gb ram kit"] },
+  warrantyMonths: 120,
+});
+
+const TEAMGROUP_TFORCE_VULCAN_PRODUCT = draftCatalogProduct({
+  id: 71, name: "TeamGroup T-Force Vulcan 16GB (2x8GB) DDR4 3200MHz", category: "ram", brand: "TeamGroup", model: "T-Force Vulcan 16GB DDR4-3200",
+  sku: "TEAMGROUP-TFVULCAN-16-DDR4-3200", price: 3690, orig: 4390, stock: 24,
+  specs: ["16GB (2x8GB) Kit", "DDR4 3200MHz", "CL16 Latency", "Gaming-styled heatspreader", "1.35V"],
+  ram: "16GB (2x8GB) DDR4-3200 CL16, gaming heatspreader design",
+  description: "TeamGroup T-Force Vulcan 16GB DDR4 3200MHz is an affordable, gaming-styled memory kit offering reliable performance for budget builds.",
+  technicalDetails: "16GB (2x8GB) dual-channel kit, DDR4 3200MHz, CL16 timings, 1.35V, Intel XMP 2.0 support, brushed aluminum heatspreader.",
+  useCase: "A cost-effective RAM choice for budget gaming and everyday-use DDR4 builds.",
+  performanceNotes: "3200MHz CL16 provides dependable performance for mainstream gaming builds.",
+  qualityNotes: "Genuine TeamGroup product with lifetime manufacturer warranty.",
+  features: ["Gaming-styled heatspreader", "XMP 2.0 support", "Lifetime warranty", "Budget-friendly"],
+  boxContents: ["2x 8GB RAM modules", "Documentation"], compatibility: ["DDR4 motherboards (AM4/LGA1200/LGA1700 with DDR4)"],
+  upgradeOptions: ["Pair with a second kit for 32GB total (verify motherboard QVL)"], recommendedAccessories: ["Compatible DDR4 Motherboard"],
+  seo: { slug: "teamgroup-tforce-vulcan-16gb-ddr4-3200", keywords: ["teamgroup t-force vulcan", "ddr4 ram", "16gb ram kit"], metaTitle: "TeamGroup T-Force Vulcan 16GB DDR4 3200MHz | DESKTO", metaDescription: "Buy TeamGroup T-Force Vulcan 16GB DDR4 3200MHz RAM kit at DESKTO with warranty.", tags: ["teamgroup t-force vulcan", "ddr4 ram", "16gb ram kit"] },
+  warrantyMonths: 120,
+});
+
+// ── SSDs ──
+const SAMSUNG_990PRO_PRODUCT = draftCatalogProduct({
+  id: 72, name: "Samsung 990 Pro 1TB NVMe SSD", category: "nvme", brand: "Samsung", model: "990 Pro 1TB",
+  sku: "SAM-990PRO-1TB", price: 9990, orig: 11990, stock: 20,
+  specs: ["1TB NVMe PCIe 4.0", "Sequential Read 7450 MB/s", "Sequential Write 6900 MB/s", "M.2 2280 Form Factor", "Samsung V-NAND"],
+  storage: "1TB NVMe PCIe 4.0 SSD, 7450/6900 MB/s read/write, M.2 2280",
+  description: "The Samsung 990 Pro 1TB is a flagship PCIe 4.0 NVMe SSD delivering top-tier sequential and random performance for gaming and creative workloads.",
+  technicalDetails: "1TB capacity, PCIe 4.0 x4 interface, M.2 2280 form factor, up to 7450 MB/s sequential read and 6900 MB/s sequential write, Samsung in-house controller and V-NAND.",
+  useCase: "Ideal for gaming PCs, content creation rigs, and anyone wanting the fastest available PCIe 4.0 storage.",
+  performanceNotes: "Class-leading PCIe 4.0 speeds with excellent sustained performance and thermal management.",
+  qualityNotes: "Genuine Samsung product with 5-year manufacturer warranty.",
+  features: ["Samsung V-NAND", "Nickel-coated controller for heat dissipation", "5-year warranty", "PCIe 4.0 x4"],
+  boxContents: ["NVMe SSD", "Documentation"], compatibility: ["M.2 NVMe PCIe 4.0/3.0 slots"],
+  upgradeOptions: ["Add heatsink for sustained high-load performance"], recommendedAccessories: ["M.2 Heatsink", "PCIe 4.0 Motherboard"],
+  seo: { slug: "samsung-990-pro-1tb", keywords: ["samsung 990 pro", "nvme ssd", "pcie 4.0 ssd"], metaTitle: "Samsung 990 Pro 1TB NVMe SSD | DESKTO", metaDescription: "Buy Samsung 990 Pro 1TB PCIe 4.0 NVMe SSD at DESKTO with warranty.", tags: ["samsung 990 pro", "nvme ssd", "pcie 4.0 ssd"] },
+  warrantyMonths: 60,
+});
+
+const WD_SN850X_PRODUCT = draftCatalogProduct({
+  id: 73, name: "WD Black SN850X 1TB NVMe SSD", category: "nvme", brand: "Western Digital", model: "Black SN850X 1TB",
+  sku: "WD-SN850X-1TB", price: 8990, orig: 10490, stock: 22,
+  specs: ["1TB NVMe PCIe 4.0", "Sequential Read 7300 MB/s", "Sequential Write 6300 MB/s", "M.2 2280 Form Factor", "Gaming-optimized firmware"],
+  storage: "1TB NVMe PCIe 4.0 SSD, 7300/6300 MB/s read/write, M.2 2280",
+  description: "The WD Black SN850X 1TB is a gaming-focused PCIe 4.0 NVMe SSD with Game Mode 2.0 for consistent low-latency performance.",
+  technicalDetails: "1TB capacity, PCIe 4.0 x4 interface, M.2 2280 form factor, up to 7300 MB/s sequential read and 6300 MB/s sequential write, WD in-house controller and 3D NAND.",
+  useCase: "Great for gaming rigs wanting fast load times and consistent frame delivery from storage.",
+  performanceNotes: "Game Mode 2.0 firmware optimization reduces latency spikes during active gameplay.",
+  qualityNotes: "Genuine Western Digital product with 5-year manufacturer warranty.",
+  features: ["Game Mode 2.0", "WD_BLACK Dashboard software", "5-year warranty", "PCIe 4.0 x4"],
+  boxContents: ["NVMe SSD", "Documentation"], compatibility: ["M.2 NVMe PCIe 4.0/3.0 slots"],
+  upgradeOptions: ["Add heatsink for sustained high-load performance"], recommendedAccessories: ["M.2 Heatsink", "PCIe 4.0 Motherboard"],
+  seo: { slug: "wd-black-sn850x-1tb", keywords: ["wd sn850x", "nvme ssd", "gaming ssd"], metaTitle: "WD Black SN850X 1TB NVMe SSD | DESKTO", metaDescription: "Buy WD Black SN850X 1TB PCIe 4.0 gaming NVMe SSD at DESKTO with warranty.", tags: ["wd sn850x", "nvme ssd", "gaming ssd"] },
+  warrantyMonths: 60,
+});
+
+const CRUCIAL_T500_PRODUCT = draftCatalogProduct({
+  id: 74, name: "Crucial T500 1TB NVMe SSD", category: "nvme", brand: "Crucial", model: "T500 1TB",
+  sku: "CRUCIAL-T500-1TB", price: 8490, orig: 9990, stock: 18,
+  specs: ["1TB NVMe PCIe 4.0", "Sequential Read 7400 MB/s", "Sequential Write 7000 MB/s", "M.2 2280 Form Factor", "Crucial Micron NAND"],
+  storage: "1TB NVMe PCIe 4.0 SSD, 7400/7000 MB/s read/write, M.2 2280",
+  description: "The Crucial T500 1TB is a high-performance PCIe 4.0 NVMe SSD combining fast sequential speeds with efficient power consumption.",
+  technicalDetails: "1TB capacity, PCIe 4.0 x4 interface, M.2 2280 form factor, up to 7400 MB/s sequential read and 7000 MB/s sequential write, Micron 3D NAND.",
+  useCase: "Well suited for gaming, video editing, and general high-performance storage upgrades.",
+  performanceNotes: "Near-flagship sequential speeds with strong sustained write performance thanks to SLC caching and DRAM cache.",
+  qualityNotes: "Genuine Crucial (Micron) product with 5-year manufacturer warranty.",
+  features: ["DRAM cache", "Crucial Storage Executive software", "5-year warranty", "PCIe 4.0 x4"],
+  boxContents: ["NVMe SSD", "Documentation"], compatibility: ["M.2 NVMe PCIe 4.0/3.0 slots"],
+  upgradeOptions: ["Add heatsink for sustained high-load performance"], recommendedAccessories: ["M.2 Heatsink", "PCIe 4.0 Motherboard"],
+  seo: { slug: "crucial-t500-1tb", keywords: ["crucial t500", "nvme ssd", "pcie 4.0 ssd"], metaTitle: "Crucial T500 1TB NVMe SSD | DESKTO", metaDescription: "Buy Crucial T500 1TB PCIe 4.0 NVMe SSD at DESKTO with warranty.", tags: ["crucial t500", "nvme ssd", "pcie 4.0 ssd"] },
+  warrantyMonths: 60,
+});
+
+const KINGSTON_KC3000_PRODUCT = draftCatalogProduct({
+  id: 75, name: "Kingston KC3000 1TB NVMe SSD", category: "nvme", brand: "Kingston", model: "KC3000 1TB",
+  sku: "KING-KC3000-1TB", price: 7990, orig: 9490, stock: 16,
+  specs: ["1TB NVMe PCIe 4.0", "Sequential Read 7000 MB/s", "Sequential Write 6000 MB/s", "M.2 2280 Form Factor", "Low-profile graphene heat spreader"],
+  storage: "1TB NVMe PCIe 4.0 SSD, 7000/6000 MB/s read/write, M.2 2280",
+  description: "The Kingston KC3000 1TB is a high-endurance PCIe 4.0 NVMe SSD designed for demanding workstation and gaming workloads.",
+  technicalDetails: "1TB capacity, PCIe 4.0 x4 interface, M.2 2280 form factor, up to 7000 MB/s sequential read and 6000 MB/s sequential write, low-profile graphene heat spreader.",
+  useCase: "Suited for workstation builds, gaming, and users who value high endurance ratings.",
+  performanceNotes: "Strong sustained performance with a low-profile design that fits under most M.2 heatsinks without modification.",
+  qualityNotes: "Genuine Kingston product with 5-year manufacturer warranty and high TBW endurance rating.",
+  features: ["Graphene heat spreader", "High endurance (TBW) rating", "5-year warranty", "PCIe 4.0 x4"],
+  boxContents: ["NVMe SSD", "Documentation"], compatibility: ["M.2 NVMe PCIe 4.0/3.0 slots"],
+  upgradeOptions: ["Add heatsink for sustained high-load performance"], recommendedAccessories: ["M.2 Heatsink", "PCIe 4.0 Motherboard"],
+  seo: { slug: "kingston-kc3000-1tb", keywords: ["kingston kc3000", "nvme ssd", "workstation ssd"], metaTitle: "Kingston KC3000 1TB NVMe SSD | DESKTO", metaDescription: "Buy Kingston KC3000 1TB PCIe 4.0 NVMe SSD at DESKTO with warranty.", tags: ["kingston kc3000", "nvme ssd", "workstation ssd"] },
+  warrantyMonths: 60,
+});
+
+const SEAGATE_FIRECUDA_530_PRODUCT = draftCatalogProduct({
+  id: 76, name: "Seagate FireCuda 530 1TB NVMe SSD", category: "nvme", brand: "Seagate", model: "FireCuda 530 1TB",
+  sku: "SEA-FIRECUDA530-1TB", price: 8790, orig: 10290, stock: 15,
+  specs: ["1TB NVMe PCIe 4.0", "Sequential Read 7300 MB/s", "Sequential Write 6000 MB/s", "M.2 2280 Form Factor", "PS5-compatible"],
+  storage: "1TB NVMe PCIe 4.0 SSD, 7300/6000 MB/s read/write, M.2 2280",
+  description: "The Seagate FireCuda 530 1TB is a high-performance, high-endurance PCIe 4.0 NVMe SSD built for gaming rigs and PS5 storage expansion.",
+  technicalDetails: "1TB capacity, PCIe 4.0 x4 interface, M.2 2280 form factor, up to 7300 MB/s sequential read and 6000 MB/s sequential write, rated for high TBW endurance.",
+  useCase: "Ideal for gaming PCs and PlayStation 5 storage expansion needing sustained high-speed performance.",
+  performanceNotes: "High endurance rating and consistent sustained speeds make it a reliable choice for heavy read/write workloads.",
+  qualityNotes: "Genuine Seagate product with 5-year manufacturer warranty and Rescue Data Recovery Services eligibility.",
+  features: ["PS5-compatible", "High endurance (TBW) rating", "5-year warranty", "PCIe 4.0 x4"],
+  boxContents: ["NVMe SSD", "Documentation"], compatibility: ["M.2 NVMe PCIe 4.0/3.0 slots", "PlayStation 5 M.2 expansion slot"],
+  upgradeOptions: ["Add heatsink for sustained high-load performance"], recommendedAccessories: ["M.2 Heatsink", "PCIe 4.0 Motherboard"],
+  seo: { slug: "seagate-firecuda-530-1tb", keywords: ["seagate firecuda 530", "nvme ssd", "ps5 ssd"], metaTitle: "Seagate FireCuda 530 1TB NVMe SSD | DESKTO", metaDescription: "Buy Seagate FireCuda 530 1TB PCIe 4.0 NVMe SSD at DESKTO with warranty.", tags: ["seagate firecuda 530", "nvme ssd", "ps5 ssd"] },
+  warrantyMonths: 60,
+});
+
+// ── Motherboards ──
+const ASUS_TUF_B650PLUS_PRODUCT = draftCatalogProduct({
+  id: 77, name: "ASUS TUF Gaming B650-Plus WiFi", category: "motherboard", brand: "ASUS", model: "TUF Gaming B650-Plus WiFi",
+  sku: "ASUS-TUF-B650PLUS-WIFI", price: 16990, orig: 18990, stock: 10,
+  specs: ["AM5 Socket, B650 Chipset", "DDR5 RAM, up to 128GB", "PCIe 4.0 x16", "WiFi 6 & Bluetooth 5.2", "ATX Form Factor"],
+  processor: "Supports AMD Ryzen 7000/8000/9000 series (AM5 socket)", ram: "4x DDR5 DIMM slots, up to 128GB, up to 6400MHz (OC)",
+  ports: "4x USB 3.2 Gen 2, HDMI 2.1, DisplayPort 1.4, RJ45 2.5G LAN, WiFi 6", powerRequirement: "24-pin ATX + 8-pin EPS12V",
+  description: "The ASUS TUF Gaming B650-Plus WiFi is a durable, feature-rich AM5 motherboard built for reliable everyday gaming performance.",
+  technicalDetails: "AM5 socket, B650 chipset, ATX form factor, 4x DDR5 slots up to 128GB, PCIe 4.0 x16 slot, 2.5G LAN, integrated WiFi 6 and Bluetooth 5.2, military-grade components.",
+  useCase: "A dependable AM5 platform choice for mid-range to high-end Ryzen gaming builds.",
+  performanceNotes: "Robust VRM design provides stable power delivery for Ryzen 7000/9000 series CPUs under sustained load.",
+  qualityNotes: "Genuine ASUS product with 3-year manufacturer warranty and TUF-grade military-spec components.",
+  features: ["TUF-grade durability", "Integrated WiFi 6", "2.5G LAN", "PCIe 4.0 support"],
+  boxContents: ["Motherboard", "SATA cables", "WiFi antenna", "Documentation"], compatibility: ["AMD Ryzen 7000/8000/9000 series", "DDR5 RAM", "ATX cases"],
+  upgradeOptions: ["Add NVMe SSD in M.2 slots", "Upgrade RAM up to 128GB"], recommendedAccessories: ["AM5 CPU Cooler", "DDR5 RAM Kit"],
+  seo: { slug: "asus-tuf-gaming-b650-plus-wifi", keywords: ["asus tuf b650-plus", "am5 motherboard", "b650 motherboard"], metaTitle: "ASUS TUF Gaming B650-Plus WiFi | DESKTO", metaDescription: "Buy ASUS TUF Gaming B650-Plus WiFi AM5 motherboard at DESKTO with warranty.", tags: ["asus tuf b650-plus", "am5 motherboard", "b650 motherboard"] },
+  warrantyMonths: 36,
+});
+
+const MSI_MAG_B650_TOMAHAWK_PRODUCT = draftCatalogProduct({
+  id: 78, name: "MSI MAG B650 Tomahawk WiFi", category: "motherboard", brand: "MSI", model: "MAG B650 Tomahawk WiFi",
+  sku: "MSI-MAG-B650TOMAHAWK-WIFI", price: 17990, orig: 19990, stock: 9,
+  specs: ["AM5 Socket, B650 Chipset", "DDR5 RAM, up to 128GB", "PCIe 4.0 x16", "WiFi 6E & Bluetooth 5.3", "ATX Form Factor"],
+  processor: "Supports AMD Ryzen 7000/8000/9000 series (AM5 socket)", ram: "4x DDR5 DIMM slots, up to 128GB, up to 6600MHz (OC)",
+  ports: "4x USB 3.2 Gen 2, HDMI 2.1, DisplayPort 1.4, RJ45 2.5G LAN, WiFi 6E", powerRequirement: "24-pin ATX + 8-pin EPS12V",
+  description: "The MSI MAG B650 Tomahawk WiFi is a well-rounded AM5 motherboard offering strong power delivery and connectivity for enthusiast builds.",
+  technicalDetails: "AM5 socket, B650 chipset, ATX form factor, 4x DDR5 slots up to 128GB, PCIe 4.0 x16 slot, 2.5G LAN, integrated WiFi 6E and Bluetooth 5.3, extended heatsinks.",
+  useCase: "A strong choice for mid-to-high-end Ryzen gaming and content creation builds needing reliable power delivery.",
+  performanceNotes: "Extended VRM heatsinks and robust power design support sustained overclocking on higher-end Ryzen CPUs.",
+  qualityNotes: "Genuine MSI product with 3-year manufacturer warranty.",
+  features: ["Extended VRM heatsinks", "Integrated WiFi 6E", "2.5G LAN", "PCIe 4.0 support"],
+  boxContents: ["Motherboard", "SATA cables", "WiFi antenna", "Documentation"], compatibility: ["AMD Ryzen 7000/8000/9000 series", "DDR5 RAM", "ATX cases"],
+  upgradeOptions: ["Add NVMe SSD in M.2 slots", "Upgrade RAM up to 128GB"], recommendedAccessories: ["AM5 CPU Cooler", "DDR5 RAM Kit"],
+  seo: { slug: "msi-mag-b650-tomahawk-wifi", keywords: ["msi mag b650 tomahawk", "am5 motherboard", "b650 motherboard"], metaTitle: "MSI MAG B650 Tomahawk WiFi | DESKTO", metaDescription: "Buy MSI MAG B650 Tomahawk WiFi AM5 motherboard at DESKTO with warranty.", tags: ["msi mag b650 tomahawk", "am5 motherboard", "b650 motherboard"] },
+  warrantyMonths: 36,
+});
+
+const GIGABYTE_B650_AORUS_ELITE_PRODUCT = draftCatalogProduct({
+  id: 79, name: "Gigabyte B650 Aorus Elite AX", category: "motherboard", brand: "Gigabyte", model: "B650 Aorus Elite AX",
+  sku: "GIGA-B650-AORUSELITE-AX", price: 16490, orig: 18490, stock: 11,
+  specs: ["AM5 Socket, B650 Chipset", "DDR5 RAM, up to 128GB", "PCIe 4.0 x16", "WiFi 6E & Bluetooth 5.2", "ATX Form Factor"],
+  processor: "Supports AMD Ryzen 7000/8000/9000 series (AM5 socket)", ram: "4x DDR5 DIMM slots, up to 128GB, up to 6400MHz (OC)",
+  ports: "4x USB 3.2 Gen 2, HDMI 2.1, DisplayPort 1.4, RJ45 2.5G LAN, WiFi 6E", powerRequirement: "24-pin ATX + 8-pin EPS12V",
+  description: "The Gigabyte B650 Aorus Elite AX offers a balanced feature set with a durable 12+2+2 power design for AM5 gaming builds.",
+  technicalDetails: "AM5 socket, B650 chipset, ATX form factor, 4x DDR5 slots up to 128GB, PCIe 4.0 x16 slot, 2.5G LAN, integrated WiFi 6E and Bluetooth 5.2, 12+2+2 power stages.",
+  useCase: "Good fit for mid-range to high-end Ryzen gaming builds wanting solid VRM headroom.",
+  performanceNotes: "12+2+2 power stage design provides stable delivery for higher core-count Ryzen CPUs.",
+  qualityNotes: "Genuine Gigabyte product with 3-year manufacturer warranty.",
+  features: ["12+2+2 power design", "Integrated WiFi 6E", "2.5G LAN", "PCIe 4.0 support"],
+  boxContents: ["Motherboard", "SATA cables", "WiFi antenna", "Documentation"], compatibility: ["AMD Ryzen 7000/8000/9000 series", "DDR5 RAM", "ATX cases"],
+  upgradeOptions: ["Add NVMe SSD in M.2 slots", "Upgrade RAM up to 128GB"], recommendedAccessories: ["AM5 CPU Cooler", "DDR5 RAM Kit"],
+  seo: { slug: "gigabyte-b650-aorus-elite-ax", keywords: ["gigabyte b650 aorus elite", "am5 motherboard", "b650 motherboard"], metaTitle: "Gigabyte B650 Aorus Elite AX | DESKTO", metaDescription: "Buy Gigabyte B650 Aorus Elite AX AM5 motherboard at DESKTO with warranty.", tags: ["gigabyte b650 aorus elite", "am5 motherboard", "b650 motherboard"] },
+  warrantyMonths: 36,
+});
+
+const ASROCK_B650M_PRO_RS_PRODUCT = draftCatalogProduct({
+  id: 80, name: "ASRock B650M Pro RS WiFi", category: "motherboard", brand: "ASRock", model: "B650M Pro RS WiFi",
+  sku: "ASROCK-B650M-PRORS-WIFI", price: 13990, orig: 15990, stock: 12,
+  specs: ["AM5 Socket, B650 Chipset", "DDR5 RAM, up to 128GB", "PCIe 4.0 x16", "WiFi 6 & Bluetooth 5.2", "mATX Form Factor"],
+  processor: "Supports AMD Ryzen 7000/8000/9000 series (AM5 socket)", ram: "4x DDR5 DIMM slots, up to 128GB, up to 6400MHz (OC)",
+  ports: "4x USB 3.2 Gen 2, HDMI 2.1, DisplayPort 1.4, RJ45 2.5G LAN, WiFi 6", powerRequirement: "24-pin ATX + 8-pin EPS12V",
+  description: "The ASRock B650M Pro RS WiFi is a compact, value-oriented mATX AM5 motherboard for budget-conscious Ryzen gaming builds.",
+  technicalDetails: "AM5 socket, B650 chipset, mATX form factor, 4x DDR5 slots up to 128GB, PCIe 4.0 x16 slot, 2.5G LAN, integrated WiFi 6 and Bluetooth 5.2.",
+  useCase: "Great for compact mATX Ryzen builds that don't need full ATX expansion.",
+  performanceNotes: "Solid power delivery for mainstream Ryzen CPUs in a space-saving mATX footprint.",
+  qualityNotes: "Genuine ASRock product with 3-year manufacturer warranty.",
+  features: ["Compact mATX form factor", "Integrated WiFi 6", "2.5G LAN", "PCIe 4.0 support"],
+  boxContents: ["Motherboard", "SATA cables", "WiFi antenna", "Documentation"], compatibility: ["AMD Ryzen 7000/8000/9000 series", "DDR5 RAM", "ATX/mATX cases"],
+  upgradeOptions: ["Add NVMe SSD in M.2 slots", "Upgrade RAM up to 128GB"], recommendedAccessories: ["AM5 CPU Cooler", "DDR5 RAM Kit"],
+  seo: { slug: "asrock-b650m-pro-rs-wifi", keywords: ["asrock b650m pro rs", "am5 motherboard", "matx motherboard"], metaTitle: "ASRock B650M Pro RS WiFi | DESKTO", metaDescription: "Buy ASRock B650M Pro RS WiFi mATX AM5 motherboard at DESKTO with warranty.", tags: ["asrock b650m pro rs", "am5 motherboard", "matx motherboard"] },
+  warrantyMonths: 36,
+});
+
+const BIOSTAR_B760MX_PRODUCT = draftCatalogProduct({
+  id: 81, name: "Biostar B760MX-E Pro", category: "motherboard", brand: "Biostar", model: "B760MX-E Pro",
+  sku: "BIOSTAR-B760MX-E-PRO", price: 9990, orig: 11490, stock: 14,
+  specs: ["LGA1700 Socket, B760 Chipset", "DDR5 RAM, up to 128GB", "PCIe 4.0 x16", "Gigabit LAN", "mATX Form Factor"],
+  processor: "Supports Intel Core 12th/13th/14th Gen (LGA1700 socket)", ram: "2x DDR5 DIMM slots, up to 128GB, up to 5600MHz (OC)",
+  ports: "4x USB 3.2 Gen 1, HDMI 2.1, DisplayPort 1.2, RJ45 Gigabit LAN", powerRequirement: "24-pin ATX + 8-pin EPS12V",
+  description: "The Biostar B760MX-E Pro is a budget-friendly mATX motherboard for Intel 12th/13th/14th Gen builds needing essential features at a low price.",
+  technicalDetails: "LGA1700 socket, B760 chipset, mATX form factor, 2x DDR5 slots up to 128GB, PCIe 4.0 x16 slot, Gigabit LAN, essential I/O for budget builds.",
+  useCase: "A cost-effective choice for budget Intel 12th/13th/14th Gen builds without discrete GPU overclocking needs.",
+  performanceNotes: "Delivers reliable performance for non-K Intel CPUs and everyday computing/gaming workloads.",
+  qualityNotes: "Genuine Biostar product with 3-year manufacturer warranty.",
+  features: ["Budget-friendly mATX design", "Gigabit LAN", "PCIe 4.0 support", "DDR5 memory support"],
+  boxContents: ["Motherboard", "SATA cables", "Documentation"], compatibility: ["Intel Core 12th/13th/14th Gen", "DDR5 RAM", "ATX/mATX cases"],
+  upgradeOptions: ["Add NVMe SSD in M.2 slot", "Upgrade RAM up to 128GB"], recommendedAccessories: ["LGA1700 CPU Cooler", "DDR5 RAM Kit"],
+  seo: { slug: "biostar-b760mx-e-pro", keywords: ["biostar b760mx", "lga1700 motherboard", "budget motherboard"], metaTitle: "Biostar B760MX-E Pro | DESKTO", metaDescription: "Buy Biostar B760MX-E Pro budget LGA1700 motherboard at DESKTO with warranty.", tags: ["biostar b760mx", "lga1700 motherboard", "budget motherboard"] },
+  warrantyMonths: 36,
+});
+
+// ── Power supplies ──
+const CORSAIR_RM750E_PRODUCT = draftCatalogProduct({
+  id: 82, name: "Corsair RM750e 750W 80+ Gold", category: "psu", brand: "Corsair", model: "RM750e",
+  sku: "CORS-RM750E-750W-GOLD", price: 8490, orig: 9490, stock: 12,
+  specs: ["750W Output", "80+ Gold Certified", "Fully Modular", "ATX 3.0 & PCIe 5.0 ready", "135mm Fluid Dynamic Bearing Fan"],
+  powerRequirement: "750W continuous output, 80+ Gold efficiency",
+  description: "The Corsair RM750e is a fully modular 80+ Gold PSU delivering clean, stable power with near-silent operation for mid-to-high-end builds.",
+  technicalDetails: "750W continuous output, 80+ Gold certified, fully modular cabling, ATX 3.0 and PCIe 5.0 12VHPWR ready, 135mm fluid dynamic bearing fan, zero RPM fan mode.",
+  useCase: "Well suited for mid-to-high-end gaming PCs including builds with RTX 40/50-series GPUs.",
+  performanceNotes: "Zero RPM fan mode keeps the PSU silent under light-to-moderate loads.",
+  qualityNotes: "Genuine Corsair product with 7-year manufacturer warranty.",
+  features: ["Fully modular cabling", "Zero RPM fan mode", "ATX 3.0 / PCIe 5.0 ready", "80+ Gold efficiency"],
+  boxContents: ["PSU unit", "Modular cables", "Power cord", "Mounting screws", "Documentation"],
+  compatibility: ["ATX cases", "PCIe 5.0 GPUs", "Standard ATX motherboards"],
+  upgradeOptions: ["Add individually sleeved cables"], recommendedAccessories: ["Cable Management Kit"],
+  seo: { slug: "corsair-rm750e-750w", keywords: ["corsair rm750e", "80+ gold psu", "modular psu"], metaTitle: "Corsair RM750e 750W 80+ Gold PSU | DESKTO", metaDescription: "Buy Corsair RM750e 750W 80+ Gold fully modular PSU at DESKTO with warranty.", tags: ["corsair rm750e", "80+ gold psu", "modular psu"] },
+  warrantyMonths: 84,
+});
+
+const CM_MWE_650_BRONZE_PRODUCT = draftCatalogProduct({
+  id: 83, name: "Cooler Master MWE 650 Bronze V2", category: "psu", brand: "Cooler Master", model: "MWE 650 Bronze V2",
+  sku: "CM-MWE650-BRONZE-V2", price: 3990, orig: 4490, stock: 18,
+  specs: ["650W Output", "80+ Bronze Certified", "Non-Modular", "120mm HDB Fan", "Flat Black Cables"],
+  powerRequirement: "650W continuous output, 80+ Bronze efficiency",
+  description: "The Cooler Master MWE 650 Bronze V2 is a dependable, budget-friendly PSU offering solid power delivery for mainstream builds.",
+  technicalDetails: "650W continuous output, 80+ Bronze certified, non-modular cabling, 120mm hydraulic dynamic bearing fan, flat black ribbon-style cables.",
+  useCase: "A cost-effective choice for budget-to-mid-range gaming and office PC builds.",
+  performanceNotes: "Stable voltage regulation and quiet operation for everyday use.",
+  qualityNotes: "Genuine Cooler Master product with 5-year manufacturer warranty.",
+  features: ["80+ Bronze efficiency", "Flat black cables", "Quiet HDB fan", "Protection circuits (OVP/UVP/SCP/OPP)"],
+  boxContents: ["PSU unit", "Power cord", "Mounting screws", "Documentation"],
+  compatibility: ["ATX cases", "Standard ATX motherboards"],
+  upgradeOptions: ["Upgrade to a modular PSU for cleaner cable routing"], recommendedAccessories: ["Cable Management Kit"],
+  seo: { slug: "cooler-master-mwe-650-bronze-v2", keywords: ["cooler master mwe 650", "80+ bronze psu", "budget psu"], metaTitle: "Cooler Master MWE 650 Bronze V2 | DESKTO", metaDescription: "Buy Cooler Master MWE 650 Bronze V2 PSU at DESKTO with warranty.", tags: ["cooler master mwe 650", "80+ bronze psu", "budget psu"] },
+  warrantyMonths: 60,
+});
+
+const DEEPCOOL_PK650D_PRODUCT = draftCatalogProduct({
+  id: 84, name: "DeepCool PK650D 650W 80+ Bronze", category: "psu", brand: "DeepCool", model: "PK650D",
+  sku: "DEEPCOOL-PK650D-650W", price: 3490, orig: 3990, stock: 20,
+  specs: ["650W Output", "80+ Bronze Certified", "Non-Modular", "120mm Fan", "Compact ATX Design"],
+  powerRequirement: "650W continuous output, 80+ Bronze efficiency",
+  description: "The DeepCool PK650D is an affordable 650W PSU offering reliable power delivery for budget gaming and everyday-use builds.",
+  technicalDetails: "650W continuous output, 80+ Bronze certified, non-modular cabling, 120mm cooling fan, compact ATX form factor.",
+  useCase: "A practical choice for entry-level gaming PCs and office builds on a tight budget.",
+  performanceNotes: "Stable power delivery suitable for single mid-range GPU configurations.",
+  qualityNotes: "Genuine DeepCool product with 3-year manufacturer warranty.",
+  features: ["80+ Bronze efficiency", "Compact design", "Built-in protection circuits", "Quiet operation"],
+  boxContents: ["PSU unit", "Power cord", "Mounting screws", "Documentation"],
+  compatibility: ["ATX cases", "Standard ATX motherboards"],
+  upgradeOptions: ["Upgrade to a modular PSU for cleaner cable routing"], recommendedAccessories: ["Cable Management Kit"],
+  seo: { slug: "deepcool-pk650d-650w", keywords: ["deepcool pk650d", "80+ bronze psu", "budget psu"], metaTitle: "DeepCool PK650D 650W 80+ Bronze PSU | DESKTO", metaDescription: "Buy DeepCool PK650D 650W 80+ Bronze PSU at DESKTO with warranty.", tags: ["deepcool pk650d", "80+ bronze psu", "budget psu"] },
+  warrantyMonths: 36,
+});
+
+const MSI_MAG_A650BN_PRODUCT = draftCatalogProduct({
+  id: 85, name: "MSI MAG A650BN 650W 80+ Bronze", category: "psu", brand: "MSI", model: "MAG A650BN",
+  sku: "MSI-MAGA650BN-650W", price: 3790, orig: 4290, stock: 16,
+  specs: ["650W Output", "80+ Bronze Certified", "Non-Modular", "120mm Fan", "Flat Cable Design"],
+  powerRequirement: "650W continuous output, 80+ Bronze efficiency",
+  description: "The MSI MAG A650BN delivers reliable 80+ Bronze efficiency and stable power delivery for mainstream gaming builds.",
+  technicalDetails: "650W continuous output, 80+ Bronze certified, non-modular flat cable design, 120mm cooling fan, built-in protection circuits.",
+  useCase: "Suited for budget-to-mid-range gaming PCs needing dependable single-GPU power delivery.",
+  performanceNotes: "Consistent voltage regulation for stable performance under gaming loads.",
+  qualityNotes: "Genuine MSI product with 5-year manufacturer warranty.",
+  features: ["80+ Bronze efficiency", "Flat cable design", "Protection circuits (OVP/UVP/SCP/OPP)", "120mm cooling fan"],
+  boxContents: ["PSU unit", "Power cord", "Mounting screws", "Documentation"],
+  compatibility: ["ATX cases", "Standard ATX motherboards"],
+  upgradeOptions: ["Upgrade to a modular PSU for cleaner cable routing"], recommendedAccessories: ["Cable Management Kit"],
+  seo: { slug: "msi-mag-a650bn-650w", keywords: ["msi mag a650bn", "80+ bronze psu", "budget psu"], metaTitle: "MSI MAG A650BN 650W 80+ Bronze PSU | DESKTO", metaDescription: "Buy MSI MAG A650BN 650W 80+ Bronze PSU at DESKTO with warranty.", tags: ["msi mag a650bn", "80+ bronze psu", "budget psu"] },
+  warrantyMonths: 60,
+});
+
+const TT_TOUGHPOWER_GF_A3_PRODUCT = draftCatalogProduct({
+  id: 86, name: "Thermaltake Toughpower GF A3 750W 80+ Gold", category: "psu", brand: "Thermaltake", model: "Toughpower GF A3 750W",
+  sku: "TT-TOUGHPOWER-GFA3-750W", price: 7990, orig: 8990, stock: 10,
+  specs: ["750W Output", "80+ Gold Certified", "Fully Modular", "ATX 3.0 & PCIe 5.0 ready", "140mm Fan"],
+  powerRequirement: "750W continuous output, 80+ Gold efficiency",
+  description: "The Thermaltake Toughpower GF A3 750W is a fully modular 80+ Gold PSU with native PCIe 5.0 support for modern high-performance builds.",
+  technicalDetails: "750W continuous output, 80+ Gold certified, fully modular cabling, ATX 3.0 and native PCIe 5.0 12VHPWR connector, 140mm hydraulic bearing fan, smart zero fan mode.",
+  useCase: "A strong choice for high-end gaming builds running RTX 40/50-series GPUs.",
+  performanceNotes: "Native PCIe 5.0 connector eliminates the need for adapter cables with newer GPUs.",
+  qualityNotes: "Genuine Thermaltake product with 10-year manufacturer warranty.",
+  features: ["Native PCIe 5.0 connector", "Fully modular cabling", "Smart zero fan mode", "80+ Gold efficiency"],
+  boxContents: ["PSU unit", "Modular cables", "Power cord", "Mounting screws", "Documentation"],
+  compatibility: ["ATX cases", "PCIe 5.0 GPUs", "Standard ATX motherboards"],
+  upgradeOptions: ["Add individually sleeved cables"], recommendedAccessories: ["Cable Management Kit"],
+  seo: { slug: "thermaltake-toughpower-gf-a3-750w", keywords: ["thermaltake toughpower gf a3", "80+ gold psu", "pcie 5.0 psu"], metaTitle: "Thermaltake Toughpower GF A3 750W | DESKTO", metaDescription: "Buy Thermaltake Toughpower GF A3 750W 80+ Gold PSU at DESKTO with warranty.", tags: ["thermaltake toughpower gf a3", "80+ gold psu", "pcie 5.0 psu"] },
+  warrantyMonths: 120,
+});
+
+// ── Cabinets ──
+const NZXT_H5_FLOW_PRODUCT = draftCatalogProduct({
+  id: 87, name: "NZXT H5 Flow", category: "cabinet", brand: "NZXT", model: "H5 Flow",
+  sku: "NZXT-H5-FLOW", price: 6490, orig: 7490, stock: 12,
+  specs: ["Mid-Tower ATX Case", "High-Airflow Front Mesh", "Tempered Glass Side Panel", "2x 120mm Fans Included", "Supports up to 360mm Radiator"],
+  weight: "6.8 kg", dimensions: "43.0 x 21 x 45 cm", ports: "1x USB-C, 2x USB-A 3.2, Audio/Mic combo jack",
+  description: "The NZXT H5 Flow is a clean, high-airflow mid-tower case with a minimalist design and excellent thermal performance out of the box.",
+  technicalDetails: "ATX mid-tower, high-airflow perforated front panel, tempered glass side panel, 2x 120mm fans pre-installed, supports up to 360mm radiators, cable management channels.",
+  useCase: "A great all-around case for gaming builds prioritizing airflow and clean aesthetics.",
+  performanceNotes: "High-airflow front mesh keeps internal temperatures low even with mid-to-high-end components.",
+  qualityNotes: "Genuine NZXT product with 2-year manufacturer warranty.",
+  features: ["High-airflow mesh front", "Tempered glass side panel", "Cable management channels", "Up to 360mm radiator support"],
+  boxContents: ["Case", "2x 120mm fans (pre-installed)", "Screws & standoffs", "Documentation"],
+  compatibility: ["ATX/mATX/ITX motherboards", "Standard ATX PSUs"],
+  upgradeOptions: ["Add more case fans", "Add AIO liquid cooler"], recommendedAccessories: ["Additional Case Fans", "AIO Liquid Cooler"],
+  seo: { slug: "nzxt-h5-flow", keywords: ["nzxt h5 flow", "pc case", "airflow case"], metaTitle: "NZXT H5 Flow PC Case | DESKTO", metaDescription: "Buy NZXT H5 Flow high-airflow mid-tower case at DESKTO with warranty.", tags: ["nzxt h5 flow", "pc case", "airflow case"] },
+  warrantyMonths: 24,
+});
+
+const CORSAIR_4000D_AIRFLOW_PRODUCT = draftCatalogProduct({
+  id: 88, name: "Corsair 4000D Airflow", category: "cabinet", brand: "Corsair", model: "4000D Airflow",
+  sku: "CORS-4000D-AIRFLOW", price: 7990, orig: 8990, stock: 14,
+  specs: ["Mid-Tower ATX Case", "High-Airflow Front Panel", "Tempered Glass Side Panel", "2x 120mm Fans Included", "Supports up to 360mm Radiator"],
+  weight: "7.2 kg", dimensions: "45.3 x 23 x 46.6 cm", ports: "1x USB-C, 2x USB-A 3.2, Audio/Mic combo jack",
+  description: "The Corsair 4000D Airflow is one of the most popular mid-tower cases, balancing excellent airflow, spacious interior, and clean cable management.",
+  technicalDetails: "ATX mid-tower, high-airflow front panel, tempered glass side panel, 2x 120mm AirGuide fans pre-installed, supports up to 360mm radiators, generous cable routing space.",
+  useCase: "A versatile, widely recommended case for gaming and general PC builds of all budgets.",
+  performanceNotes: "AirGuide fan technology directs airflow efficiently across internal components.",
+  qualityNotes: "Genuine Corsair product with 2-year manufacturer warranty.",
+  features: ["High-airflow front panel", "AirGuide fan technology", "Generous cable routing space", "Up to 360mm radiator support"],
+  boxContents: ["Case", "2x 120mm AirGuide fans (pre-installed)", "Screws & standoffs", "Documentation"],
+  compatibility: ["ATX/mATX/ITX motherboards", "Standard ATX PSUs"],
+  upgradeOptions: ["Add more case fans", "Add AIO liquid cooler"], recommendedAccessories: ["Additional Case Fans", "AIO Liquid Cooler"],
+  seo: { slug: "corsair-4000d-airflow", keywords: ["corsair 4000d airflow", "pc case", "airflow case"], metaTitle: "Corsair 4000D Airflow PC Case | DESKTO", metaDescription: "Buy Corsair 4000D Airflow mid-tower case at DESKTO with warranty.", tags: ["corsair 4000d airflow", "pc case", "airflow case"] },
+  warrantyMonths: 24,
+});
+
+const LIAN_LI_LANCOOL_216_PRODUCT = draftCatalogProduct({
+  id: 89, name: "Lian Li Lancool 216", category: "cabinet", brand: "Lian Li", model: "Lancool 216",
+  sku: "LIANLI-LANCOOL216", price: 7490, orig: 8490, stock: 10,
+  specs: ["Mid-Tower ATX Case", "Dual Mesh Front Design", "Tempered Glass Side Panel", "2x 160mm Fans Included", "Supports up to 360mm Radiator"],
+  weight: "8.6 kg", dimensions: "49.9 x 23 x 48.98 cm", ports: "1x USB-C, 2x USB-A 3.2, Audio/Mic combo jack",
+  description: "The Lian Li Lancool 216 features a distinctive dual-mesh front design with large 160mm fans, delivering exceptional airflow for high-performance builds.",
+  technicalDetails: "ATX mid-tower, dual-mesh front panel, tempered glass side panel, 2x 160mm fans pre-installed, supports up to 360mm radiators, spacious interior for large GPUs.",
+  useCase: "Ideal for high-performance gaming builds that need maximum airflow for hot-running components.",
+  performanceNotes: "Large 160mm intake fans move significantly more air than standard 120mm fans, improving thermal headroom.",
+  qualityNotes: "Genuine Lian Li product with 2-year manufacturer warranty.",
+  features: ["Dual-mesh front design", "Large 160mm fans", "Spacious GPU clearance", "Up to 360mm radiator support"],
+  boxContents: ["Case", "2x 160mm fans (pre-installed)", "Screws & standoffs", "Documentation"],
+  compatibility: ["ATX/mATX/ITX motherboards", "Standard ATX PSUs"],
+  upgradeOptions: ["Add more case fans", "Add AIO liquid cooler"], recommendedAccessories: ["Additional Case Fans", "AIO Liquid Cooler"],
+  seo: { slug: "lian-li-lancool-216", keywords: ["lian li lancool 216", "pc case", "airflow case"], metaTitle: "Lian Li Lancool 216 PC Case | DESKTO", metaDescription: "Buy Lian Li Lancool 216 high-airflow mid-tower case at DESKTO with warranty.", tags: ["lian li lancool 216", "pc case", "airflow case"] },
+  warrantyMonths: 24,
+});
+
+const CM_TD500_MESH_PRODUCT = draftCatalogProduct({
+  id: 90, name: "Cooler Master TD500 Mesh", category: "cabinet", brand: "Cooler Master", model: "TD500 Mesh",
+  sku: "CM-TD500-MESH", price: 6990, orig: 7990, stock: 11,
+  specs: ["Mid-Tower ATX Case", "Polygonal Mesh Front", "Tempered Glass Side Panel", "3x ARGB Fans Included", "Supports up to 360mm Radiator"],
+  weight: "7.5 kg", dimensions: "46.2 x 21.5 x 47.6 cm", ports: "1x USB-C, 2x USB-A 3.2, Audio/Mic combo jack",
+  description: "The Cooler Master TD500 Mesh combines a distinctive polygonal mesh front with pre-installed ARGB fans for strong airflow and eye-catching aesthetics.",
+  technicalDetails: "ATX mid-tower, polygonal mesh front panel, tempered glass side panel, 3x ARGB fans pre-installed, supports up to 360mm radiators, built-in ARGB controller.",
+  useCase: "Great for gaming builds wanting strong airflow combined with RGB lighting aesthetics.",
+  performanceNotes: "Polygonal mesh front maximizes intake airflow while the pre-installed ARGB fans add visual flair.",
+  qualityNotes: "Genuine Cooler Master product with 2-year manufacturer warranty.",
+  features: ["Polygonal mesh front", "3x pre-installed ARGB fans", "Built-in ARGB controller", "Up to 360mm radiator support"],
+  boxContents: ["Case", "3x ARGB fans (pre-installed)", "Screws & standoffs", "Documentation"],
+  compatibility: ["ATX/mATX/ITX motherboards", "Standard ATX PSUs"],
+  upgradeOptions: ["Add more case fans", "Add AIO liquid cooler"], recommendedAccessories: ["Additional Case Fans", "AIO Liquid Cooler"],
+  seo: { slug: "cooler-master-td500-mesh", keywords: ["cooler master td500 mesh", "pc case", "argb case"], metaTitle: "Cooler Master TD500 Mesh PC Case | DESKTO", metaDescription: "Buy Cooler Master TD500 Mesh ARGB mid-tower case at DESKTO with warranty.", tags: ["cooler master td500 mesh", "pc case", "argb case"] },
+  warrantyMonths: 24,
+});
+
+const DEEPCOOL_CH560_PRODUCT = draftCatalogProduct({
+  id: 91, name: "DeepCool CH560", category: "cabinet", brand: "DeepCool", model: "CH560",
+  sku: "DEEPCOOL-CH560", price: 6290, orig: 7290, stock: 13,
+  specs: ["Mid-Tower ATX Case", "Mesh Front Panel", "Dual Tempered Glass Panels", "4x ARGB Fans Included", "Supports up to 360mm Radiator"],
+  weight: "8.0 kg", dimensions: "46.5 x 22.5 x 49 cm", ports: "1x USB-C, 2x USB-A 3.2, Audio/Mic combo jack",
+  description: "The DeepCool CH560 offers a showcase build aesthetic with dual tempered glass panels and four pre-installed ARGB fans at a competitive price.",
+  technicalDetails: "ATX mid-tower, mesh front panel, dual tempered glass side and top panels, 4x ARGB fans pre-installed, supports up to 360mm radiators, built-in ARGB hub.",
+  useCase: "A strong value pick for RGB showcase builds wanting maximum visual impact on a budget.",
+  performanceNotes: "Mesh front panel maintains solid airflow despite the dual tempered glass showcase design.",
+  qualityNotes: "Genuine DeepCool product with 2-year manufacturer warranty.",
+  features: ["Dual tempered glass panels", "4x pre-installed ARGB fans", "Built-in ARGB hub", "Up to 360mm radiator support"],
+  boxContents: ["Case", "4x ARGB fans (pre-installed)", "Screws & standoffs", "Documentation"],
+  compatibility: ["ATX/mATX/ITX motherboards", "Standard ATX PSUs"],
+  upgradeOptions: ["Add more case fans", "Add AIO liquid cooler"], recommendedAccessories: ["Additional Case Fans", "AIO Liquid Cooler"],
+  seo: { slug: "deepcool-ch560", keywords: ["deepcool ch560", "pc case", "argb case"], metaTitle: "DeepCool CH560 PC Case | DESKTO", metaDescription: "Buy DeepCool CH560 ARGB mid-tower case at DESKTO with warranty.", tags: ["deepcool ch560", "pc case", "argb case"] },
+  warrantyMonths: 24,
+});
+
+// ── Keyboards ──
+const LOGITECH_G213_PRODUCT = draftCatalogProduct({
+  id: 92, name: "Logitech G213 Prodigy", category: "keyboard", brand: "Logitech", model: "G213 Prodigy",
+  sku: "LOGI-G213-PRODIGY", price: 3490, orig: 3990, stock: 20,
+  specs: ["Membrane Keys with Mech-Dome switches", "5-Zone RGB Lighting", "Spill-Resistant Design", "Dedicated Media Controls", "Wired USB Connection"],
+  ports: "Wired USB-A connection", weight: "1.01 kg",
+  description: "The Logitech G213 Prodigy is a budget-friendly RGB gaming keyboard with responsive Mech-Dome keys and dedicated media controls.",
+  technicalDetails: "Membrane keyboard with Mech-Dome key switches, 5-zone customizable RGB lighting via Logitech G HUB, spill-resistant design, dedicated multimedia keys, wired USB connection.",
+  useCase: "A solid entry-level gaming keyboard for casual and competitive gamers on a budget.",
+  performanceNotes: "Mech-Dome switches offer more tactile feedback than standard membrane keys at a lower price than full mechanical boards.",
+  qualityNotes: "Genuine Logitech product with 1-year manufacturer warranty.",
+  features: ["5-zone RGB lighting", "Spill-resistant design", "Dedicated media controls", "Logitech G HUB software support"],
+  boxContents: ["Keyboard", "Documentation"], compatibility: ["Windows", "macOS", "USB-A port"],
+  upgradeOptions: ["Pair with a gaming mouse for a matching setup"], recommendedAccessories: ["Gaming Mouse", "Mouse Pad"],
+  seo: { slug: "logitech-g213-prodigy", keywords: ["logitech g213", "rgb gaming keyboard", "budget keyboard"], metaTitle: "Logitech G213 Prodigy RGB Keyboard | DESKTO", metaDescription: "Buy Logitech G213 Prodigy RGB gaming keyboard at DESKTO with warranty.", tags: ["logitech g213", "rgb gaming keyboard", "budget keyboard"] },
+  rgb: true,
+});
+
+const RAZER_BLACKWIDOW_V4_PRODUCT = draftCatalogProduct({
+  id: 93, name: "Razer BlackWidow V4", category: "keyboard", brand: "Razer", model: "BlackWidow V4",
+  sku: "RAZER-BLACKWIDOW-V4", price: 12990, orig: 14990, stock: 8,
+  specs: ["Razer Green Mechanical Switches", "Per-Key RGB Chroma Lighting", "Dedicated Media Roller & Macro Keys", "Ergonomic Wrist Rest Included", "Wired USB Connection"],
+  ports: "Wired USB-A connection (passthrough included)", weight: "1.45 kg",
+  description: "The Razer BlackWidow V4 is a full-size mechanical gaming keyboard with tactile Razer Green switches, per-key RGB, and dedicated macro controls.",
+  technicalDetails: "Razer Green clicky mechanical switches, per-key Chroma RGB lighting, dedicated macro keys and multi-function roller, USB passthrough, magnetic ergonomic wrist rest.",
+  useCase: "Built for enthusiast gamers who want tactile mechanical feedback and extensive customization.",
+  performanceNotes: "Razer Green switches provide crisp tactile and audible feedback favored for competitive gaming.",
+  qualityNotes: "Genuine Razer product with 2-year manufacturer warranty.",
+  features: ["Per-key Chroma RGB", "Dedicated macro keys", "USB passthrough", "Magnetic wrist rest"],
+  boxContents: ["Keyboard", "Magnetic wrist rest", "Documentation"], compatibility: ["Windows", "macOS", "USB-A port"],
+  upgradeOptions: ["Pair with a Razer gaming mouse for Chroma sync"], recommendedAccessories: ["Gaming Mouse", "Mouse Pad"],
+  seo: { slug: "razer-blackwidow-v4", keywords: ["razer blackwidow v4", "mechanical keyboard", "rgb keyboard"], metaTitle: "Razer BlackWidow V4 Mechanical Keyboard | DESKTO", metaDescription: "Buy Razer BlackWidow V4 mechanical RGB gaming keyboard at DESKTO with warranty.", tags: ["razer blackwidow v4", "mechanical keyboard", "rgb keyboard"] },
+  rgb: true, warrantyMonths: 24,
+});
+
+const CORSAIR_K55_RGB_PRODUCT = draftCatalogProduct({
+  id: 94, name: "Corsair K55 RGB Pro", category: "keyboard", brand: "Corsair", model: "K55 RGB Pro",
+  sku: "CORS-K55-RGB-PRO", price: 5490, orig: 6290, stock: 15,
+  specs: ["Membrane Keys", "6-Zone RGB Lighting", "Spill-Resistant Design", "Dedicated Media Controls & Macro Keys", "Detachable Palm Rest"],
+  ports: "Wired USB-A connection", weight: "1.1 kg",
+  description: "The Corsair K55 RGB Pro is a feature-rich membrane gaming keyboard with 6-zone RGB lighting, macro keys, and a detachable palm rest.",
+  technicalDetails: "Membrane keyboard, 6-zone customizable RGB lighting via Corsair iCUE, spill-resistant design, dedicated media controls and macro keys, detachable palm rest.",
+  useCase: "A comfortable, feature-packed choice for gamers who prefer membrane keys with full RGB customization.",
+  performanceNotes: "Anti-ghosting key matrix ensures reliable input registration during fast-paced gameplay.",
+  qualityNotes: "Genuine Corsair product with 2-year manufacturer warranty.",
+  features: ["6-zone RGB lighting", "Detachable palm rest", "Dedicated macro keys", "Corsair iCUE software support"],
+  boxContents: ["Keyboard", "Detachable palm rest", "Documentation"], compatibility: ["Windows", "macOS", "USB-A port"],
+  upgradeOptions: ["Pair with a Corsair gaming mouse for iCUE sync"], recommendedAccessories: ["Gaming Mouse", "Mouse Pad"],
+  seo: { slug: "corsair-k55-rgb-pro", keywords: ["corsair k55 rgb", "rgb gaming keyboard", "membrane keyboard"], metaTitle: "Corsair K55 RGB Pro Keyboard | DESKTO", metaDescription: "Buy Corsair K55 RGB Pro gaming keyboard at DESKTO with warranty.", tags: ["corsair k55 rgb", "rgb gaming keyboard", "membrane keyboard"] },
+  rgb: true, warrantyMonths: 24,
+});
+
+const REDRAGON_K552_PRODUCT = draftCatalogProduct({
+  id: 95, name: "Redragon K552 Kumara", category: "keyboard", brand: "Redragon", model: "K552 Kumara",
+  sku: "REDRAGON-K552-KUMARA", price: 3290, orig: 3790, stock: 22,
+  specs: ["Outemu Blue Mechanical Switches", "Red LED Backlighting", "Compact Tenkeyless Layout", "Anti-Ghosting", "Wired USB Connection"],
+  ports: "Wired USB-A connection", weight: "0.8 kg",
+  description: "The Redragon K552 Kumara is a compact tenkeyless mechanical keyboard offering genuine mechanical switches at an entry-level price.",
+  technicalDetails: "Outemu Blue clicky mechanical switches, red LED backlighting, compact tenkeyless (87-key) layout, anti-ghosting key rollover, durable metal top plate.",
+  useCase: "A great entry point into mechanical keyboards for budget-conscious gamers.",
+  performanceNotes: "Genuine mechanical switches deliver noticeably better feel and durability than membrane keyboards at this price.",
+  qualityNotes: "Genuine Redragon product with 1-year manufacturer warranty.",
+  features: ["Mechanical switches", "Compact tenkeyless layout", "Metal top plate", "Anti-ghosting"],
+  boxContents: ["Keyboard", "Keycap puller", "Documentation"], compatibility: ["Windows", "macOS", "USB-A port"],
+  upgradeOptions: ["Add keycap set for customization"], recommendedAccessories: ["Gaming Mouse", "Wrist Rest"],
+  seo: { slug: "redragon-k552-kumara", keywords: ["redragon k552", "mechanical keyboard", "budget mechanical keyboard"], metaTitle: "Redragon K552 Kumara Mechanical Keyboard | DESKTO", metaDescription: "Buy Redragon K552 Kumara mechanical gaming keyboard at DESKTO with warranty.", tags: ["redragon k552", "mechanical keyboard", "budget mechanical keyboard"] },
+  rgb: false,
+});
+
+const HYPERX_ALLOY_ORIGINS_PRODUCT = draftCatalogProduct({
+  id: 96, name: "HyperX Alloy Origins", category: "keyboard", brand: "HyperX", model: "Alloy Origins",
+  sku: "HYPERX-ALLOY-ORIGINS", price: 8990, orig: 9990, stock: 10,
+  specs: ["HyperX Red Mechanical Switches", "Per-Key RGB Lighting", "Aircraft-Grade Aluminum Body", "Compact Tenkeyless Layout", "Wired USB-C Connection"],
+  ports: "Wired USB-C connection (detachable cable)", weight: "0.98 kg",
+  description: "The HyperX Alloy Origins is a premium tenkeyless mechanical keyboard with an aircraft-grade aluminum frame and in-house HyperX switches.",
+  technicalDetails: "HyperX Red linear mechanical switches, per-key RGB lighting, solid aircraft-grade aluminum body, tenkeyless layout, detachable USB-C cable.",
+  useCase: "Built for competitive gamers who want a durable, compact keyboard with premium build quality.",
+  performanceNotes: "HyperX Red linear switches offer fast, smooth actuation ideal for rapid key presses in competitive titles.",
+  qualityNotes: "Genuine HyperX product with 2-year manufacturer warranty.",
+  features: ["Aircraft-grade aluminum body", "Per-key RGB lighting", "Detachable USB-C cable", "Compact tenkeyless layout"],
+  boxContents: ["Keyboard", "USB-C cable", "Keycap puller", "Documentation"], compatibility: ["Windows", "macOS", "USB-C port"],
+  upgradeOptions: ["Add custom keycap set"], recommendedAccessories: ["Gaming Mouse", "Wrist Rest"],
+  seo: { slug: "hyperx-alloy-origins", keywords: ["hyperx alloy origins", "mechanical keyboard", "premium keyboard"], metaTitle: "HyperX Alloy Origins Mechanical Keyboard | DESKTO", metaDescription: "Buy HyperX Alloy Origins mechanical gaming keyboard at DESKTO with warranty.", tags: ["hyperx alloy origins", "mechanical keyboard", "premium keyboard"] },
+  rgb: true, warrantyMonths: 24,
+});
+
+// ── Mice ──
+const LOGITECH_G102_PRODUCT = draftCatalogProduct({
+  id: 97, name: "Logitech G102 Lightsync", category: "mouse", brand: "Logitech", model: "G102 Lightsync",
+  sku: "LOGI-G102-LIGHTSYNC", price: 1290, orig: 1490, stock: 30,
+  specs: ["8000 DPI Optical Sensor", "RGB Lightsync Lighting", "6 Programmable Buttons", "Lightweight Design", "Wired USB Connection"],
+  ports: "Wired USB-A connection", weight: "85 g",
+  description: "The Logitech G102 Lightsync is a lightweight, affordable gaming mouse with a precise optical sensor and customizable RGB lighting.",
+  technicalDetails: "8000 DPI optical sensor, RGB Lightsync lighting via Logitech G HUB, 6 programmable buttons, lightweight 85g design, wired USB connection.",
+  useCase: "A reliable entry-level gaming mouse suited for esports titles and everyday use.",
+  performanceNotes: "Accurate optical sensor tracking with adjustable DPI for both precision aiming and fast flick shots.",
+  qualityNotes: "Genuine Logitech product with 1-year manufacturer warranty.",
+  features: ["RGB Lightsync lighting", "6 programmable buttons", "Lightweight design", "Logitech G HUB software support"],
+  boxContents: ["Mouse", "Documentation"], compatibility: ["Windows", "macOS", "USB-A port"],
+  upgradeOptions: ["Pair with a mouse pad for consistent tracking"], recommendedAccessories: ["Gaming Mouse Pad", "Gaming Keyboard"],
+  seo: { slug: "logitech-g102-lightsync", keywords: ["logitech g102", "budget gaming mouse", "rgb mouse"], metaTitle: "Logitech G102 Lightsync Gaming Mouse | DESKTO", metaDescription: "Buy Logitech G102 Lightsync gaming mouse at DESKTO with warranty.", tags: ["logitech g102", "budget gaming mouse", "rgb mouse"] },
+  rgb: true,
+});
+
+const RAZER_DEATHADDER_V3_PRODUCT = draftCatalogProduct({
+  id: 98, name: "Razer DeathAdder V3", category: "mouse", brand: "Razer", model: "DeathAdder V3",
+  sku: "RAZER-DEATHADDER-V3", price: 6490, orig: 7490, stock: 14,
+  specs: ["30000 DPI Focus Pro Sensor", "Ergonomic Right-Handed Shape", "59g Ultra-Lightweight Design", "5 Programmable Buttons", "Wired USB Connection"],
+  ports: "Wired USB-A connection", weight: "59 g",
+  description: "The Razer DeathAdder V3 refines Razer's iconic ergonomic shape into an ultra-lightweight 59g design with a flagship-grade optical sensor.",
+  technicalDetails: "30000 DPI Focus Pro 30K optical sensor, ergonomic right-handed shape, 59g ultra-lightweight shell, 5 programmable buttons, wired USB connection with braided cable.",
+  useCase: "Built for competitive and casual gamers who want a proven ergonomic shape with top-tier sensor performance.",
+  performanceNotes: "Focus Pro 30K sensor delivers exceptional tracking accuracy with zero smoothing or acceleration.",
+  qualityNotes: "Genuine Razer product with 2-year manufacturer warranty.",
+  features: ["Focus Pro 30K sensor", "Ultra-lightweight 59g shell", "Ergonomic right-handed shape", "Razer Speedflex cable"],
+  boxContents: ["Mouse", "Documentation"], compatibility: ["Windows", "macOS", "USB-A port"],
+  upgradeOptions: ["Pair with a mouse pad for consistent tracking"], recommendedAccessories: ["Gaming Mouse Pad", "Gaming Keyboard"],
+  seo: { slug: "razer-deathadder-v3", keywords: ["razer deathadder v3", "gaming mouse", "lightweight mouse"], metaTitle: "Razer DeathAdder V3 Gaming Mouse | DESKTO", metaDescription: "Buy Razer DeathAdder V3 lightweight gaming mouse at DESKTO with warranty.", tags: ["razer deathadder v3", "gaming mouse", "lightweight mouse"] },
+  warrantyMonths: 24,
+});
+
+const STEELSERIES_RIVAL_3_PRODUCT = draftCatalogProduct({
+  id: 99, name: "SteelSeries Rival 3", category: "mouse", brand: "SteelSeries", model: "Rival 3",
+  sku: "STEELSERIES-RIVAL-3", price: 2490, orig: 2890, stock: 20,
+  specs: ["8500 DPI TrueMove Core Sensor", "8-Zone RGB Lighting", "6 Programmable Buttons", "IP54 Water/Dust Resistance", "Wired USB Connection"],
+  ports: "Wired USB-A connection", weight: "77 g",
+  description: "The SteelSeries Rival 3 is a durable, budget-friendly gaming mouse with IP54 water and dust resistance and vivid 8-zone RGB lighting.",
+  technicalDetails: "8500 DPI TrueMove Core optical sensor, 8-zone customizable RGB lighting via SteelSeries GG, 6 programmable buttons, IP54-rated shell, wired USB connection.",
+  useCase: "A great value pick for gamers wanting durability and RGB customization on a budget.",
+  performanceNotes: "TrueMove Core sensor delivers reliable, accurate tracking for casual and competitive play.",
+  qualityNotes: "Genuine SteelSeries product with 2-year manufacturer warranty and IP54 durability rating.",
+  features: ["IP54 water/dust resistance", "8-zone RGB lighting", "6 programmable buttons", "SteelSeries GG software support"],
+  boxContents: ["Mouse", "Documentation"], compatibility: ["Windows", "macOS", "USB-A port"],
+  upgradeOptions: ["Pair with a mouse pad for consistent tracking"], recommendedAccessories: ["Gaming Mouse Pad", "Gaming Keyboard"],
+  seo: { slug: "steelseries-rival-3", keywords: ["steelseries rival 3", "budget gaming mouse", "rgb mouse"], metaTitle: "SteelSeries Rival 3 Gaming Mouse | DESKTO", metaDescription: "Buy SteelSeries Rival 3 gaming mouse at DESKTO with warranty.", tags: ["steelseries rival 3", "budget gaming mouse", "rgb mouse"] },
+  rgb: true, warrantyMonths: 24,
+});
+
+const CORSAIR_HARPOON_RGB_PRODUCT = draftCatalogProduct({
+  id: 100, name: "Corsair Harpoon RGB", category: "mouse", brand: "Corsair", model: "Harpoon RGB",
+  sku: "CORS-HARPOON-RGB", price: 1990, orig: 2390, stock: 18,
+  specs: ["6000 DPI Optical Sensor", "RGB Lighting", "6 Programmable Buttons", "Lightweight 85g Design", "Wired USB Connection"],
+  ports: "Wired USB-A connection", weight: "85 g",
+  description: "The Corsair Harpoon RGB is a compact, lightweight gaming mouse offering solid everyday performance with customizable RGB lighting.",
+  technicalDetails: "6000 DPI optical sensor, single-zone RGB lighting via Corsair iCUE, 6 programmable buttons, lightweight 85g design, wired USB connection.",
+  useCase: "A comfortable, affordable everyday gaming mouse for casual play and general use.",
+  performanceNotes: "Reliable optical tracking for everyday gaming and productivity tasks.",
+  qualityNotes: "Genuine Corsair product with 2-year manufacturer warranty.",
+  features: ["RGB lighting", "6 programmable buttons", "Lightweight design", "Corsair iCUE software support"],
+  boxContents: ["Mouse", "Documentation"], compatibility: ["Windows", "macOS", "USB-A port"],
+  upgradeOptions: ["Pair with a mouse pad for consistent tracking"], recommendedAccessories: ["Gaming Mouse Pad", "Gaming Keyboard"],
+  seo: { slug: "corsair-harpoon-rgb", keywords: ["corsair harpoon rgb", "budget gaming mouse", "rgb mouse"], metaTitle: "Corsair Harpoon RGB Gaming Mouse | DESKTO", metaDescription: "Buy Corsair Harpoon RGB gaming mouse at DESKTO with warranty.", tags: ["corsair harpoon rgb", "budget gaming mouse", "rgb mouse"] },
+  rgb: true, warrantyMonths: 24,
+});
+
+const HYPERX_PULSEFIRE_HASTE2_PRODUCT = draftCatalogProduct({
+  id: 101, name: "HyperX Pulsefire Haste 2", category: "mouse", brand: "HyperX", model: "Pulsefire Haste 2",
+  sku: "HYPERX-PULSEFIRE-HASTE2", price: 4990, orig: 5690, stock: 12,
+  specs: ["26000 DPI Sensor", "Wireless 2.4GHz Connection", "Honeycomb Lightweight Shell", "61g Weight", "Up to 100 hours battery life"],
+  ports: "Wireless 2.4GHz USB dongle (USB-C charging)", weight: "61 g",
+  description: "The HyperX Pulsefire Haste 2 is an ultra-lightweight wireless gaming mouse with a honeycomb shell design and long battery life.",
+  technicalDetails: "26000 DPI optical sensor, wireless 2.4GHz connection, honeycomb-perforated lightweight shell, 61g weight, up to 100 hours battery life, USB-C charging.",
+  useCase: "Great for competitive gamers who want wireless freedom without sacrificing weight or responsiveness.",
+  performanceNotes: "2.4GHz wireless connection delivers near-zero latency comparable to wired mice.",
+  qualityNotes: "Genuine HyperX product with 2-year manufacturer warranty.",
+  features: ["Honeycomb lightweight shell", "Up to 100 hours battery life", "2.4GHz low-latency wireless", "USB-C charging"],
+  boxContents: ["Mouse", "USB dongle", "USB-C charging cable", "Documentation"], compatibility: ["Windows", "macOS", "USB-A port"],
+  upgradeOptions: ["Pair with a mouse pad for consistent tracking"], recommendedAccessories: ["Gaming Mouse Pad", "Gaming Keyboard"],
+  seo: { slug: "hyperx-pulsefire-haste-2", keywords: ["hyperx pulsefire haste 2", "wireless gaming mouse", "lightweight mouse"], metaTitle: "HyperX Pulsefire Haste 2 Wireless Mouse | DESKTO", metaDescription: "Buy HyperX Pulsefire Haste 2 wireless gaming mouse at DESKTO with warranty.", tags: ["hyperx pulsefire haste 2", "wireless gaming mouse", "lightweight mouse"] },
+  warrantyMonths: 24,
+});
+
+// ── Headsets ──
+const HYPERX_CLOUD_II_PRODUCT = draftCatalogProduct({
+  id: 102, name: "HyperX Cloud II", category: "headset", brand: "HyperX", model: "Cloud II",
+  sku: "HYPERX-CLOUD-II", price: 6990, orig: 7990, stock: 16,
+  specs: ["53mm Drivers", "7.1 Virtual Surround Sound (USB)", "Detachable Noise-Cancelling Mic", "Memory Foam Ear Cushions", "Wired 3.5mm / USB Connection"],
+  ports: "Wired 3.5mm + USB sound card adapter", weight: "320 g",
+  description: "The HyperX Cloud II is a legendary comfort-focused gaming headset with 7.1 virtual surround sound and memory foam ear cushions.",
+  technicalDetails: "53mm drivers, 7.1 virtual surround sound via USB sound card, detachable noise-cancelling microphone, memory foam ear cushions and headband, braided cable.",
+  useCase: "A long-session comfort favorite for gamers who prioritize all-day wearability and clear audio.",
+  performanceNotes: "Memory foam cushions and a durable steel frame make this one of the most comfortable headsets for extended gaming sessions.",
+  qualityNotes: "Genuine HyperX product with 2-year manufacturer warranty.",
+  features: ["7.1 virtual surround (USB)", "Detachable noise-cancelling mic", "Memory foam ear cushions", "In-line audio controls"],
+  boxContents: ["Headset", "USB sound card adapter", "Detachable microphone", "Documentation"], compatibility: ["PC", "PS5", "Xbox", "Mobile (3.5mm)"],
+  upgradeOptions: ["Add a headset stand"], recommendedAccessories: ["Headset Stand", "Gaming Mouse"],
+  seo: { slug: "hyperx-cloud-ii", keywords: ["hyperx cloud ii", "gaming headset", "7.1 surround headset"], metaTitle: "HyperX Cloud II Gaming Headset | DESKTO", metaDescription: "Buy HyperX Cloud II 7.1 surround gaming headset at DESKTO with warranty.", tags: ["hyperx cloud ii", "gaming headset", "7.1 surround headset"] },
+  warrantyMonths: 24,
+});
+
+const LOGITECH_G435_PRODUCT = draftCatalogProduct({
+  id: 103, name: "Logitech G435 Lightspeed", category: "headset", brand: "Logitech", model: "G435 Lightspeed",
+  sku: "LOGI-G435-LIGHTSPEED", price: 4990, orig: 5690, stock: 15,
+  specs: ["40mm Drivers", "Bluetooth + 2.4GHz Lightspeed Wireless", "18g Ultra-Lightweight Design", "Dual Beamforming Mics", "Up to 18 hours battery life"],
+  ports: "Bluetooth 5.1 & 2.4GHz USB dongle (dual wireless)", weight: "18 g",
+  description: "The Logitech G435 Lightspeed is an ultra-lightweight wireless headset offering dual Bluetooth and 2.4GHz connectivity in a compact, comfortable design.",
+  technicalDetails: "40mm drivers, dual wireless via Bluetooth 5.1 and 2.4GHz Lightspeed USB dongle, 18g weight, dual beamforming microphones, up to 18 hours battery life.",
+  useCase: "Great for gamers who want a lightweight, portable headset that works across PC, console, and mobile.",
+  performanceNotes: "Dual wireless modes let you connect to a PC via Lightspeed while staying paired to a phone via Bluetooth simultaneously.",
+  qualityNotes: "Genuine Logitech product with 1-year manufacturer warranty.",
+  features: ["Dual wireless (BT + 2.4GHz)", "Ultra-lightweight 18g", "Dual beamforming mics", "18-hour battery life"],
+  boxContents: ["Headset", "USB-C charging cable", "2.4GHz USB dongle", "Documentation"], compatibility: ["PC", "PS5", "Nintendo Switch", "Mobile (Bluetooth)"],
+  upgradeOptions: ["Add a headset stand"], recommendedAccessories: ["Headset Stand", "Gaming Mouse"],
+  seo: { slug: "logitech-g435-lightspeed", keywords: ["logitech g435", "wireless gaming headset", "lightweight headset"], metaTitle: "Logitech G435 Lightspeed Headset | DESKTO", metaDescription: "Buy Logitech G435 Lightspeed wireless gaming headset at DESKTO with warranty.", tags: ["logitech g435", "wireless gaming headset", "lightweight headset"] },
+});
+
+const STEELSERIES_ARCTIS_NOVA5_PRODUCT = draftCatalogProduct({
+  id: 104, name: "SteelSeries Arctis Nova 5", category: "headset", brand: "SteelSeries", model: "Arctis Nova 5",
+  sku: "STEELSERIES-ARCTIS-NOVA5", price: 10990, orig: 12490, stock: 10,
+  specs: ["40mm Neodymium Drivers", "Hi-Res Audio Certified", "Active Noise Cancelling Mic", "Wireless 2.4GHz + Bluetooth", "Up to 60 hours battery life"],
+  ports: "2.4GHz USB-C dongle + Bluetooth 5.3", weight: "310 g",
+  description: "The SteelSeries Arctis Nova 5 is a Hi-Res certified wireless headset with active noise-cancelling microphone and multi-platform dual wireless connectivity.",
+  technicalDetails: "40mm neodymium drivers with Hi-Res Audio certification, active noise-cancelling microphone, dual wireless via 2.4GHz USB-C dongle and Bluetooth 5.3, up to 60 hours battery life.",
+  useCase: "Suited for gamers and streamers who want premium audio quality and long battery life across multiple devices.",
+  performanceNotes: "Hi-Res Audio certification delivers noticeably richer detail compared to standard gaming headsets.",
+  qualityNotes: "Genuine SteelSeries product with 2-year manufacturer warranty.",
+  features: ["Hi-Res Audio certified", "ClearCast Gen 2 noise-cancelling mic", "Dual wireless (2.4GHz + BT)", "60-hour battery life"],
+  boxContents: ["Headset", "USB-C dongle", "USB-C charging cable", "Documentation"], compatibility: ["PC", "PS5", "Xbox", "Mobile (Bluetooth)"],
+  upgradeOptions: ["Add a headset stand"], recommendedAccessories: ["Headset Stand", "Gaming Mouse"],
+  seo: { slug: "steelseries-arctis-nova-5", keywords: ["steelseries arctis nova 5", "wireless gaming headset", "hi-res headset"], metaTitle: "SteelSeries Arctis Nova 5 Headset | DESKTO", metaDescription: "Buy SteelSeries Arctis Nova 5 wireless gaming headset at DESKTO with warranty.", tags: ["steelseries arctis nova 5", "wireless gaming headset", "hi-res headset"] },
+  warrantyMonths: 24,
+});
+
+const RAZER_BLACKSHARK_V2_PRODUCT = draftCatalogProduct({
+  id: 105, name: "Razer BlackShark V2", category: "headset", brand: "Razer", model: "BlackShark V2",
+  sku: "RAZER-BLACKSHARK-V2", price: 7990, orig: 8990, stock: 9,
+  specs: ["50mm Titanium Drivers", "THX Spatial Audio", "Detachable Noise-Cancelling Mic", "Memory Foam Ear Cushions", "Wired 3.5mm / USB"],
+  ports: "Wired 3.5mm + USB sound card adapter", weight: "262 g",
+  description: "The Razer BlackShark V2 is an esports-focused headset with THX Spatial Audio and titanium drivers tuned for precise positional sound.",
+  technicalDetails: "50mm Titanium drivers, THX Spatial Audio via USB sound card, detachable noise-cancelling microphone, memory foam ear cushions, wired connection.",
+  useCase: "Built for competitive esports players who rely on precise positional audio cues.",
+  performanceNotes: "THX Spatial Audio and titanium-coated drivers deliver sharp, accurate directional sound for competitive play.",
+  qualityNotes: "Genuine Razer product with 2-year manufacturer warranty.",
+  features: ["THX Spatial Audio", "Titanium-coated 50mm drivers", "Detachable noise-cancelling mic", "Memory foam cushions"],
+  boxContents: ["Headset", "USB sound card adapter", "Detachable microphone", "Documentation"], compatibility: ["PC", "PS5", "Xbox", "Mobile (3.5mm)"],
+  upgradeOptions: ["Add a headset stand"], recommendedAccessories: ["Headset Stand", "Gaming Mouse"],
+  seo: { slug: "razer-blackshark-v2", keywords: ["razer blackshark v2", "esports headset", "thx spatial audio headset"], metaTitle: "Razer BlackShark V2 Headset | DESKTO", metaDescription: "Buy Razer BlackShark V2 esports gaming headset at DESKTO with warranty.", tags: ["razer blackshark v2", "esports headset", "thx spatial audio headset"] },
+  warrantyMonths: 24,
+});
+
+const CORSAIR_HS55_PRODUCT = draftCatalogProduct({
+  id: 106, name: "Corsair HS55 Stereo", category: "headset", brand: "Corsair", model: "HS55 Stereo",
+  sku: "CORS-HS55-STEREO", price: 4490, orig: 5190, stock: 14,
+  specs: ["50mm Neodymium Drivers", "Memory Foam Ear Cushions", "Detachable Omni-Directional Mic", "Lightweight Aluminum Frame", "Wired 3.5mm Connection"],
+  ports: "Wired 3.5mm connection", weight: "319 g",
+  description: "The Corsair HS55 Stereo is a comfortable, multi-platform wired headset with a durable aluminum frame and memory foam cushions.",
+  technicalDetails: "50mm neodymium drivers, detachable omni-directional broadcast microphone, memory foam ear cushions, lightweight aluminum frame, wired 3.5mm connection.",
+  useCase: "A dependable everyday headset for gaming and calls across PC, console, and mobile via 3.5mm.",
+  performanceNotes: "Balanced sound signature with clear mids and detailed highs suited for both gaming and music.",
+  qualityNotes: "Genuine Corsair product with 2-year manufacturer warranty.",
+  features: ["Aluminum frame construction", "Detachable broadcast mic", "Memory foam cushions", "Multi-platform 3.5mm compatibility"],
+  boxContents: ["Headset", "Detachable microphone", "Documentation"], compatibility: ["PC", "PS5", "Xbox", "Mobile (3.5mm)"],
+  upgradeOptions: ["Add a headset stand"], recommendedAccessories: ["Headset Stand", "Gaming Mouse"],
+  seo: { slug: "corsair-hs55-stereo", keywords: ["corsair hs55", "wired gaming headset", "budget headset"], metaTitle: "Corsair HS55 Stereo Headset | DESKTO", metaDescription: "Buy Corsair HS55 Stereo wired gaming headset at DESKTO with warranty.", tags: ["corsair hs55", "wired gaming headset", "budget headset"] },
+  warrantyMonths: 24,
+});
+
+// ── Routers ──
+const TPLINK_ARCHER_C6_PRODUCT = draftCatalogProduct({
+  id: 107, name: "TP-Link Archer C6", category: "router", brand: "TP-Link", model: "Archer C6",
+  sku: "TPLINK-ARCHER-C6", price: 2190, orig: 2590, stock: 20,
+  specs: ["AC1200 Dual-Band WiFi", "4x Gigabit LAN Ports", "4 External Antennas", "MU-MIMO Support", "Beamforming Technology"],
+  ports: "4x Gigabit LAN, 1x Gigabit WAN", powerRequirement: "12V DC power adapter",
+  description: "The TP-Link Archer C6 is an affordable AC1200 dual-band router offering reliable Gigabit wired and wireless connectivity for home networks.",
+  technicalDetails: "AC1200 dual-band (300+867 Mbps), 4x Gigabit LAN ports, 4 external antennas, MU-MIMO support, beamforming technology, TP-Link Tether app management.",
+  useCase: "Suited for home networks needing dependable dual-band WiFi and Gigabit wired connections on a budget.",
+  performanceNotes: "Beamforming technology focuses signal strength toward connected devices for more consistent coverage.",
+  qualityNotes: "Genuine TP-Link product with 2-year manufacturer warranty.",
+  features: ["Dual-band AC1200", "Gigabit LAN ports", "MU-MIMO support", "TP-Link Tether app"],
+  boxContents: ["Router", "Power adapter", "Ethernet cable", "Documentation"], compatibility: ["Broadband/fiber modems", "2.4GHz & 5GHz devices"],
+  upgradeOptions: ["Add a WiFi extender for larger homes"], recommendedAccessories: ["WiFi Extender", "Ethernet Cable"],
+  seo: { slug: "tp-link-archer-c6", keywords: ["tp-link archer c6", "dual-band router", "budget router"], metaTitle: "TP-Link Archer C6 Router | DESKTO", metaDescription: "Buy TP-Link Archer C6 AC1200 dual-band router at DESKTO with warranty.", tags: ["tp-link archer c6", "dual-band router", "budget router"] },
+  warrantyMonths: 24,
+});
+
+const ASUS_RT_AX58U_PRODUCT = draftCatalogProduct({
+  id: 108, name: "ASUS RT-AX58U", category: "router", brand: "ASUS", model: "RT-AX58U",
+  sku: "ASUS-RT-AX58U", price: 6990, orig: 7990, stock: 12,
+  specs: ["AX3000 WiFi 6 Dual-Band", "4x Gigabit LAN Ports", "OFDMA & MU-MIMO", "AiProtection Security", "ASUS Router App"],
+  ports: "4x Gigabit LAN, 1x Gigabit WAN, 1x USB 3.2", powerRequirement: "19V DC power adapter",
+  description: "The ASUS RT-AX58U is a WiFi 6 router delivering faster speeds and better multi-device performance with built-in AiProtection security.",
+  technicalDetails: "AX3000 WiFi 6 dual-band (574+2402 Mbps), 4x Gigabit LAN ports, OFDMA and MU-MIMO for efficient multi-device handling, AiProtection Pro security, USB 3.2 port.",
+  useCase: "Great for modern homes with many connected devices wanting WiFi 6 speed and built-in network security.",
+  performanceNotes: "WiFi 6 OFDMA technology significantly improves performance in congested, multi-device households.",
+  qualityNotes: "Genuine ASUS product with 2-year manufacturer warranty.",
+  features: ["WiFi 6 (802.11ax)", "AiProtection Pro security", "USB 3.2 port for network storage", "ASUS Router app management"],
+  boxContents: ["Router", "Power adapter", "Ethernet cable", "Documentation"], compatibility: ["Broadband/fiber modems", "WiFi 6 & legacy devices"],
+  upgradeOptions: ["Add AiMesh nodes for whole-home coverage"], recommendedAccessories: ["AiMesh Node", "Ethernet Cable"],
+  seo: { slug: "asus-rt-ax58u", keywords: ["asus rt-ax58u", "wifi 6 router", "ax3000 router"], metaTitle: "ASUS RT-AX58U WiFi 6 Router | DESKTO", metaDescription: "Buy ASUS RT-AX58U AX3000 WiFi 6 router at DESKTO with warranty.", tags: ["asus rt-ax58u", "wifi 6 router", "ax3000 router"] },
+  warrantyMonths: 24,
+});
+
+const DLINK_DIRX1560_PRODUCT = draftCatalogProduct({
+  id: 109, name: "D-Link DIR-X1560", category: "router", brand: "D-Link", model: "DIR-X1560",
+  sku: "DLINK-DIRX1560", price: 3990, orig: 4590, stock: 14,
+  specs: ["AX1500 WiFi 6 Dual-Band", "4x Gigabit LAN Ports", "OFDMA Support", "Voice Assistant Compatible", "D-Link Wi-Fi App"],
+  ports: "4x Gigabit LAN, 1x Gigabit WAN", powerRequirement: "12V DC power adapter",
+  description: "The D-Link DIR-X1560 brings entry-level WiFi 6 performance and Gigabit wired ports to budget-conscious home networks.",
+  technicalDetails: "AX1500 WiFi 6 dual-band (300+1201 Mbps), 4x Gigabit LAN ports, OFDMA support, voice assistant compatibility, D-Link Wi-Fi app management.",
+  useCase: "A cost-effective entry point into WiFi 6 for small-to-medium homes.",
+  performanceNotes: "OFDMA support improves efficiency when multiple devices are connected simultaneously.",
+  qualityNotes: "Genuine D-Link product with 2-year manufacturer warranty.",
+  features: ["WiFi 6 (802.11ax)", "Gigabit LAN ports", "Voice assistant compatible", "D-Link Wi-Fi app"],
+  boxContents: ["Router", "Power adapter", "Ethernet cable", "Documentation"], compatibility: ["Broadband/fiber modems", "WiFi 6 & legacy devices"],
+  upgradeOptions: ["Add a WiFi extender for larger homes"], recommendedAccessories: ["WiFi Extender", "Ethernet Cable"],
+  seo: { slug: "d-link-dir-x1560", keywords: ["d-link dir-x1560", "wifi 6 router", "budget wifi 6 router"], metaTitle: "D-Link DIR-X1560 WiFi 6 Router | DESKTO", metaDescription: "Buy D-Link DIR-X1560 AX1500 WiFi 6 router at DESKTO with warranty.", tags: ["d-link dir-x1560", "wifi 6 router", "budget wifi 6 router"] },
+  warrantyMonths: 24,
+});
+
+const NETGEAR_NIGHTHAWK_AX4_PRODUCT = draftCatalogProduct({
+  id: 110, name: "Netgear Nighthawk AX4", category: "router", brand: "Netgear", model: "Nighthawk AX4 (RAX20)",
+  sku: "NETGEAR-NIGHTHAWK-AX4", price: 5490, orig: 6290, stock: 11,
+  specs: ["AX1800 WiFi 6 Dual-Band", "4x Gigabit LAN Ports", "MU-MIMO & OFDMA", "Netgear Armor Security Ready", "Nighthawk App"],
+  ports: "4x Gigabit LAN, 1x Gigabit WAN, 1x USB 3.0", powerRequirement: "12V DC power adapter",
+  description: "The Netgear Nighthawk AX4 delivers solid WiFi 6 speeds and coverage for mid-size homes with an easy-to-use Nighthawk app.",
+  technicalDetails: "AX1800 WiFi 6 dual-band (600+1201 Mbps), 4x Gigabit LAN ports, MU-MIMO and OFDMA support, USB 3.0 port, Netgear Armor security subscription ready.",
+  useCase: "A solid mid-range router for households wanting reliable WiFi 6 coverage and simple app-based setup.",
+  performanceNotes: "MU-MIMO and OFDMA together improve simultaneous streaming and gaming performance across multiple devices.",
+  qualityNotes: "Genuine Netgear product with 2-year manufacturer warranty.",
+  features: ["WiFi 6 (802.11ax)", "USB 3.0 port", "Netgear Armor security ready", "Nighthawk app management"],
+  boxContents: ["Router", "Power adapter", "Ethernet cable", "Documentation"], compatibility: ["Broadband/fiber modems", "WiFi 6 & legacy devices"],
+  upgradeOptions: ["Subscribe to Netgear Armor for advanced security"], recommendedAccessories: ["Ethernet Cable", "WiFi Extender"],
+  seo: { slug: "netgear-nighthawk-ax4", keywords: ["netgear nighthawk ax4", "wifi 6 router", "ax1800 router"], metaTitle: "Netgear Nighthawk AX4 Router | DESKTO", metaDescription: "Buy Netgear Nighthawk AX4 WiFi 6 router at DESKTO with warranty.", tags: ["netgear nighthawk ax4", "wifi 6 router", "ax1800 router"] },
+  warrantyMonths: 24,
+});
+
+const TENDA_AC10_PRODUCT = draftCatalogProduct({
+  id: 111, name: "Tenda AC10", category: "router", brand: "Tenda", model: "AC10",
+  sku: "TENDA-AC10", price: 1890, orig: 2190, stock: 18,
+  specs: ["AC1200 Dual-Band WiFi", "4x Gigabit LAN Ports", "4 High-Gain Antennas", "Beamforming+ Technology", "Tenda WiFi App"],
+  ports: "4x Gigabit LAN, 1x Gigabit WAN", powerRequirement: "12V DC power adapter",
+  description: "The Tenda AC10 is a budget dual-band router with Gigabit ports, offering solid coverage for small home networks.",
+  technicalDetails: "AC1200 dual-band (300+867 Mbps), 4x Gigabit LAN ports, 4 high-gain external antennas, Beamforming+ technology, Tenda WiFi app management.",
+  useCase: "A practical, affordable choice for small homes needing basic dual-band WiFi with Gigabit wired ports.",
+  performanceNotes: "High-gain antennas and Beamforming+ improve signal reach in small-to-medium apartments.",
+  qualityNotes: "Genuine Tenda product with 2-year manufacturer warranty.",
+  features: ["Dual-band AC1200", "Gigabit LAN ports", "4 high-gain antennas", "Tenda WiFi app"],
+  boxContents: ["Router", "Power adapter", "Ethernet cable", "Documentation"], compatibility: ["Broadband/fiber modems", "2.4GHz & 5GHz devices"],
+  upgradeOptions: ["Add a WiFi extender for larger homes"], recommendedAccessories: ["WiFi Extender", "Ethernet Cable"],
+  seo: { slug: "tenda-ac10", keywords: ["tenda ac10", "budget router", "dual-band router"], metaTitle: "Tenda AC10 Router | DESKTO", metaDescription: "Buy Tenda AC10 AC1200 dual-band router at DESKTO with warranty.", tags: ["tenda ac10", "budget router", "dual-band router"] },
+  warrantyMonths: 24,
+});
+
+// ── UPS ──
+const APC_BX600C_PRODUCT = draftCatalogProduct({
+  id: 112, name: "APC BX600C-IN", category: "ups", brand: "APC", model: "BX600C-IN",
+  sku: "APC-BX600C-IN", price: 3290, orig: 3790, stock: 16,
+  specs: ["600VA / 360W Capacity", "Line Interactive Topology", "4x Battery Backup Outlets", "Automatic Voltage Regulation", "USB Charging Port"],
+  powerRequirement: "600VA / 360W output capacity",
+  description: "The APC BX600C-IN is a compact line-interactive UPS providing reliable backup power and surge protection for home PCs and networking gear.",
+  technicalDetails: "600VA/360W capacity, line-interactive topology, 4 battery backup outlets, automatic voltage regulation (AVR), USB charging port, LED status indicators.",
+  useCase: "Ideal for protecting a home PC, monitor, and router/modem from power cuts and voltage fluctuations.",
+  performanceNotes: "Automatic voltage regulation corrects minor fluctuations without switching to battery, extending battery life.",
+  qualityNotes: "Genuine APC (Schneider Electric) product with 2-year manufacturer warranty.",
+  features: ["Automatic voltage regulation", "4 backup outlets", "USB charging port", "LED status indicators"],
+  boxContents: ["UPS unit", "Power cord", "USB cable (for monitoring)", "Documentation"], compatibility: ["Standard 5/15A Indian sockets", "PC, monitor, router loads"],
+  upgradeOptions: ["Upgrade to higher VA rating for more connected devices"], recommendedAccessories: ["Surge Protector", "Extension Cord"],
+  seo: { slug: "apc-bx600c-in", keywords: ["apc bx600c", "home ups", "600va ups"], metaTitle: "APC BX600C-IN UPS | DESKTO", metaDescription: "Buy APC BX600C-IN 600VA line-interactive UPS at DESKTO with warranty.", tags: ["apc bx600c", "home ups", "600va ups"] },
+  warrantyMonths: 24,
+});
+
+const MICROTEK_LEGEND1000_PRODUCT = draftCatalogProduct({
+  id: 113, name: "Microtek Legend 1000VA", category: "ups", brand: "Microtek", model: "Legend 1000",
+  sku: "MICROTEK-LEGEND-1000", price: 3990, orig: 4590, stock: 14,
+  specs: ["1000VA / 600W Capacity", "Line Interactive Topology", "Cold Start Function", "Overload & Short-Circuit Protection", "LED Indicators"],
+  powerRequirement: "1000VA / 600W output capacity",
+  description: "The Microtek Legend 1000VA is a widely trusted home UPS offering dependable backup power for PCs and essential home electronics.",
+  technicalDetails: "1000VA/600W capacity, line-interactive topology, cold start function, overload and short-circuit protection, LED status indicators, intelligent battery management.",
+  useCase: "A popular choice for Indian homes needing reliable backup during frequent power cuts.",
+  performanceNotes: "Intelligent battery management extends battery lifespan through optimized charging cycles.",
+  qualityNotes: "Genuine Microtek product with 2-year manufacturer warranty.",
+  features: ["Cold start function", "Overload protection", "Intelligent battery management", "LED status indicators"],
+  boxContents: ["UPS unit", "Power cord", "Documentation"], compatibility: ["Standard 5/15A Indian sockets", "PC and home electronics loads"],
+  upgradeOptions: ["Add external battery for extended backup time"], recommendedAccessories: ["Surge Protector", "External Battery"],
+  seo: { slug: "microtek-legend-1000", keywords: ["microtek legend 1000", "home ups", "1000va ups"], metaTitle: "Microtek Legend 1000VA UPS | DESKTO", metaDescription: "Buy Microtek Legend 1000VA UPS at DESKTO with warranty.", tags: ["microtek legend 1000", "home ups", "1000va ups"] },
+  warrantyMonths: 24,
+});
+
+const CYBERPOWER_UT1500E_PRODUCT = draftCatalogProduct({
+  id: 114, name: "CyberPower UT1500E", category: "ups", brand: "CyberPower", model: "UT1500E",
+  sku: "CYBERPOWER-UT1500E", price: 6490, orig: 7290, stock: 10,
+  specs: ["1500VA / 900W Capacity", "Line Interactive Topology", "6x Battery Backup Outlets", "Automatic Voltage Regulation", "LCD Status Display"],
+  powerRequirement: "1500VA / 900W output capacity",
+  description: "The CyberPower UT1500E offers higher-capacity backup power with an LCD status display, suited for multi-device home office setups.",
+  technicalDetails: "1500VA/900W capacity, line-interactive topology, 6 battery backup outlets, automatic voltage regulation, LCD status display, GreenPower UPS energy-saving design.",
+  useCase: "Well suited for home office setups running a PC, monitor, router, and other peripherals simultaneously.",
+  performanceNotes: "Higher 900W capacity provides longer runtime for multiple connected devices during outages.",
+  qualityNotes: "Genuine CyberPower product with 2-year manufacturer warranty.",
+  features: ["LCD status display", "6 backup outlets", "Automatic voltage regulation", "GreenPower energy-saving design"],
+  boxContents: ["UPS unit", "Power cord", "Documentation"], compatibility: ["Standard 5/15A Indian sockets", "Home office multi-device loads"],
+  upgradeOptions: ["Add external battery for extended backup time"], recommendedAccessories: ["Surge Protector", "External Battery"],
+  seo: { slug: "cyberpower-ut1500e", keywords: ["cyberpower ut1500e", "home office ups", "1500va ups"], metaTitle: "CyberPower UT1500E UPS | DESKTO", metaDescription: "Buy CyberPower UT1500E 1500VA UPS at DESKTO with warranty.", tags: ["cyberpower ut1500e", "home office ups", "1500va ups"] },
+  warrantyMonths: 24,
+});
+
+const EATON_5E_1100VA_PRODUCT = draftCatalogProduct({
+  id: 115, name: "Eaton 5E 1100VA", category: "ups", brand: "Eaton", model: "5E 1100VA",
+  sku: "EATON-5E-1100VA", price: 4990, orig: 5690, stock: 12,
+  specs: ["1100VA / 660W Capacity", "Line Interactive Topology", "4x Battery Backup Outlets", "Automatic Voltage Regulation", "Audible Alarms"],
+  powerRequirement: "1100VA / 660W output capacity",
+  description: "The Eaton 5E 1100VA is a reliable line-interactive UPS from a leading power management brand, built for consistent home and small-office backup power.",
+  technicalDetails: "1100VA/660W capacity, line-interactive topology, 4 battery backup outlets, automatic voltage regulation, audible alarms, cold-start capability.",
+  useCase: "Good for small offices and home setups needing trusted, industrial-grade power protection.",
+  performanceNotes: "Automatic voltage regulation and reliable switchover protect connected equipment from power fluctuations.",
+  qualityNotes: "Genuine Eaton product with 2-year manufacturer warranty.",
+  features: ["Automatic voltage regulation", "Audible alarms", "Cold-start capability", "4 backup outlets"],
+  boxContents: ["UPS unit", "Power cord", "Documentation"], compatibility: ["Standard 5/15A Indian sockets", "PC and small office loads"],
+  upgradeOptions: ["Add external battery for extended backup time"], recommendedAccessories: ["Surge Protector", "External Battery"],
+  seo: { slug: "eaton-5e-1100va", keywords: ["eaton 5e 1100va", "home ups", "line interactive ups"], metaTitle: "Eaton 5E 1100VA UPS | DESKTO", metaDescription: "Buy Eaton 5E 1100VA UPS at DESKTO with warranty.", tags: ["eaton 5e 1100va", "home ups", "line interactive ups"] },
+  warrantyMonths: 24,
+});
+
+const ZEBRONICS_ZEBU725_PRODUCT = draftCatalogProduct({
+  id: 116, name: "Zebronics Zeb-U725", category: "ups", brand: "Zebronics", model: "Zeb-U725",
+  sku: "ZEBRONICS-ZEBU725", price: 1990, orig: 2290, stock: 20,
+  specs: ["600VA / 360W Capacity", "Offline/Standby Topology", "2x Battery Backup Outlets", "Overload Protection", "LED Indicators"],
+  powerRequirement: "600VA / 360W output capacity",
+  description: "The Zebronics Zeb-U725 is a budget offline UPS providing basic backup power for a home PC during short outages.",
+  technicalDetails: "600VA/360W capacity, offline/standby topology, 2 battery backup outlets, overload and short-circuit protection, LED status indicators.",
+  useCase: "A cost-effective option for protecting a single PC from short power interruptions.",
+  performanceNotes: "Offline topology provides basic protection suited for short outages and minor voltage dips.",
+  qualityNotes: "Genuine Zebronics product with 1-year manufacturer warranty.",
+  features: ["Overload protection", "LED status indicators", "Compact design", "Budget-friendly"],
+  boxContents: ["UPS unit", "Power cord", "Documentation"], compatibility: ["Standard 5/15A Indian sockets", "Single PC loads"],
+  upgradeOptions: ["Upgrade to a line-interactive UPS for better voltage regulation"], recommendedAccessories: ["Surge Protector"],
+  seo: { slug: "zebronics-zeb-u725", keywords: ["zebronics zeb-u725", "budget ups", "offline ups"], metaTitle: "Zebronics Zeb-U725 UPS | DESKTO", metaDescription: "Buy Zebronics Zeb-U725 600VA offline UPS at DESKTO with warranty.", tags: ["zebronics zeb-u725", "budget ups", "offline ups"] },
+});
+
+// ── Printers ──
+const HP_SMARTTANK_580_PRODUCT = draftCatalogProduct({
+  id: 117, name: "HP Smart Tank 580", category: "printer", brand: "HP", model: "Smart Tank 580",
+  sku: "HP-SMARTTANK-580", price: 15990, orig: 17990, stock: 8,
+  specs: ["Print, Scan, Copy (All-in-One)", "Wireless & Wi-Fi Direct", "Ink Tank System", "Up to 12 ppm (black)", "USB Connectivity"],
+  ports: "USB 2.0, Wi-Fi 802.11 b/g/n",
+  description: "The HP Smart Tank 580 is a wireless all-in-one ink tank printer offering low running costs for high-volume home and small-office printing.",
+  technicalDetails: "Print/scan/copy all-in-one, refillable ink tank system, wireless and Wi-Fi Direct connectivity, up to 12 ppm black / 5 ppm color print speed, HP Smart app support.",
+  useCase: "Great for households and small offices with high print volumes wanting low per-page ink costs.",
+  performanceNotes: "Ink tank system dramatically reduces cost per page compared to traditional cartridge printers.",
+  qualityNotes: "Genuine HP product with 1-year manufacturer warranty.",
+  features: ["Refillable ink tank system", "Wireless & Wi-Fi Direct", "HP Smart app support", "All-in-one print/scan/copy"],
+  boxContents: ["Printer", "Ink bottles (initial fill)", "Power cable", "USB cable", "Documentation"], compatibility: ["Windows", "macOS", "Mobile printing (HP Smart app)"],
+  upgradeOptions: ["Add extra ink bottle refills"], recommendedAccessories: ["Extra Ink Bottles", "A4 Paper Ream"],
+  seo: { slug: "hp-smart-tank-580", keywords: ["hp smart tank 580", "ink tank printer", "wireless printer"], metaTitle: "HP Smart Tank 580 Printer | DESKTO", metaDescription: "Buy HP Smart Tank 580 wireless all-in-one ink tank printer at DESKTO with warranty.", tags: ["hp smart tank 580", "ink tank printer", "wireless printer"] },
+});
+
+const CANON_PIXMA_G3770_PRODUCT = draftCatalogProduct({
+  id: 118, name: "Canon PIXMA G3770", category: "printer", brand: "Canon", model: "PIXMA G3770",
+  sku: "CANON-PIXMA-G3770", price: 14490, orig: 16490, stock: 9,
+  specs: ["Print, Scan, Copy (All-in-One)", "Wireless & Wi-Fi Direct", "MegaTank Ink System", "Up to 11 ipm (black)", "USB Connectivity"],
+  ports: "USB 2.0, Wi-Fi 802.11 b/g/n",
+  description: "The Canon PIXMA G3770 is a wireless MegaTank all-in-one printer designed for high-volume, low-cost home and small-office printing.",
+  technicalDetails: "Print/scan/copy all-in-one, Canon MegaTank refillable ink system, wireless and Wi-Fi Direct connectivity, up to 11 ipm black / 6 ipm color print speed, Canon PRINT app support.",
+  useCase: "Suited for homes and small offices needing frequent, cost-efficient printing.",
+  performanceNotes: "MegaTank ink bottles can print thousands of pages before needing a refill, minimizing running costs.",
+  qualityNotes: "Genuine Canon product with 1-year manufacturer warranty.",
+  features: ["MegaTank refillable ink system", "Wireless & Wi-Fi Direct", "Canon PRINT app support", "All-in-one print/scan/copy"],
+  boxContents: ["Printer", "Ink bottles (initial fill)", "Power cable", "USB cable", "Documentation"], compatibility: ["Windows", "macOS", "Mobile printing (Canon PRINT app)"],
+  upgradeOptions: ["Add extra ink bottle refills"], recommendedAccessories: ["Extra Ink Bottles", "A4 Paper Ream"],
+  seo: { slug: "canon-pixma-g3770", keywords: ["canon pixma g3770", "megatank printer", "wireless printer"], metaTitle: "Canon PIXMA G3770 Printer | DESKTO", metaDescription: "Buy Canon PIXMA G3770 wireless MegaTank all-in-one printer at DESKTO with warranty.", tags: ["canon pixma g3770", "megatank printer", "wireless printer"] },
+});
+
+const EPSON_ECOTANK_L3250_PRODUCT = draftCatalogProduct({
+  id: 119, name: "Epson EcoTank L3250", category: "printer", brand: "Epson", model: "EcoTank L3250",
+  sku: "EPSON-ECOTANK-L3250", price: 15490, orig: 17490, stock: 8,
+  specs: ["Print, Scan, Copy (All-in-One)", "Wireless & Wi-Fi Direct", "EcoTank Ink System", "Up to 33 ppm (black draft)", "USB Connectivity"],
+  ports: "USB 2.0, Wi-Fi 802.11 b/g/n",
+  description: "The Epson EcoTank L3250 is a compact wireless all-in-one printer with Epson's EcoTank refillable ink system for economical everyday printing.",
+  technicalDetails: "Print/scan/copy all-in-one, Epson EcoTank refillable ink system, wireless and Wi-Fi Direct connectivity, up to 33 ppm black draft print speed, Epson Smart Panel app support.",
+  useCase: "A great fit for home and student use where frequent printing at low cost matters most.",
+  performanceNotes: "EcoTank ink system offers one of the lowest cost-per-page ratios among home printers.",
+  qualityNotes: "Genuine Epson product with 1-year manufacturer warranty.",
+  features: ["EcoTank refillable ink system", "Wireless & Wi-Fi Direct", "Epson Smart Panel app support", "Compact all-in-one design"],
+  boxContents: ["Printer", "Ink bottles (initial fill)", "Power cable", "USB cable", "Documentation"], compatibility: ["Windows", "macOS", "Mobile printing (Epson Smart Panel)"],
+  upgradeOptions: ["Add extra ink bottle refills"], recommendedAccessories: ["Extra Ink Bottles", "A4 Paper Ream"],
+  seo: { slug: "epson-ecotank-l3250", keywords: ["epson ecotank l3250", "ink tank printer", "wireless printer"], metaTitle: "Epson EcoTank L3250 Printer | DESKTO", metaDescription: "Buy Epson EcoTank L3250 wireless all-in-one ink tank printer at DESKTO with warranty.", tags: ["epson ecotank l3250", "ink tank printer", "wireless printer"] },
+});
+
+const BROTHER_DCPB7500D_PRODUCT = draftCatalogProduct({
+  id: 120, name: "Brother DCP-B7500D", category: "printer", brand: "Brother", model: "DCP-B7500D",
+  sku: "BROTHER-DCPB7500D", price: 16990, orig: 18990, stock: 6,
+  specs: ["Monochrome Laser All-in-One", "Auto Duplex Printing", "Print, Scan, Copy", "Up to 34 ppm", "USB & Network Connectivity"],
+  ports: "USB 2.0, Ethernet LAN",
+  description: "The Brother DCP-B7500D is a fast monochrome laser all-in-one with automatic duplex printing, ideal for busy home offices.",
+  technicalDetails: "Monochrome laser print/scan/copy all-in-one, automatic duplex printing, up to 34 ppm print speed, USB and Ethernet network connectivity, high-yield toner support.",
+  useCase: "Well suited for home offices and small businesses with high-volume document printing needs.",
+  performanceNotes: "Laser printing delivers crisp text output at high speed with lower per-page cost than inkjet for text documents.",
+  qualityNotes: "Genuine Brother product with 1-year manufacturer warranty.",
+  features: ["Automatic duplex printing", "Fast 34 ppm laser engine", "Network (Ethernet) connectivity", "High-yield toner compatible"],
+  boxContents: ["Printer", "Starter toner cartridge", "Power cable", "USB cable", "Documentation"], compatibility: ["Windows", "macOS", "Network printing"],
+  upgradeOptions: ["Add high-yield replacement toner"], recommendedAccessories: ["Replacement Toner Cartridge", "A4 Paper Ream"],
+  seo: { slug: "brother-dcp-b7500d", keywords: ["brother dcp-b7500d", "laser printer", "duplex printer"], metaTitle: "Brother DCP-B7500D Laser Printer | DESKTO", metaDescription: "Buy Brother DCP-B7500D monochrome laser all-in-one printer at DESKTO with warranty.", tags: ["brother dcp-b7500d", "laser printer", "duplex printer"] },
+});
+
+const PANTUM_P2509W_PRODUCT = draftCatalogProduct({
+  id: 121, name: "Pantum P2509W", category: "printer", brand: "Pantum", model: "P2509W",
+  sku: "PANTUM-P2509W", price: 8990, orig: 9990, stock: 12,
+  specs: ["Monochrome Laser Printer", "Wireless & USB Connectivity", "Up to 22 ppm", "150-Sheet Paper Tray", "Compact Design"],
+  ports: "USB 2.0, Wi-Fi 802.11 b/g/n",
+  description: "The Pantum P2509W is an affordable wireless monochrome laser printer, well suited for budget home and small-office document printing.",
+  technicalDetails: "Monochrome laser printing, wireless and USB connectivity, up to 22 ppm print speed, 150-sheet input tray, compact footprint.",
+  useCase: "A budget-friendly choice for home and small-office users needing simple, reliable document printing.",
+  performanceNotes: "Laser printing delivers sharp text output well suited for documents and forms.",
+  qualityNotes: "Genuine Pantum product with 1-year manufacturer warranty.",
+  features: ["Wireless printing", "Compact laser design", "150-sheet paper tray", "Low-cost toner cartridges"],
+  boxContents: ["Printer", "Starter toner cartridge", "Power cable", "USB cable", "Documentation"], compatibility: ["Windows", "macOS", "Wireless printing"],
+  upgradeOptions: ["Add replacement toner cartridge"], recommendedAccessories: ["Replacement Toner Cartridge", "A4 Paper Ream"],
+  seo: { slug: "pantum-p2509w", keywords: ["pantum p2509w", "budget laser printer", "wireless laser printer"], metaTitle: "Pantum P2509W Laser Printer | DESKTO", metaDescription: "Buy Pantum P2509W wireless monochrome laser printer at DESKTO with warranty.", tags: ["pantum p2509w", "budget laser printer", "wireless laser printer"] },
+});
+
+// ── Scanners ──
+const CANON_CANOSCAN_LIDE400_PRODUCT = draftCatalogProduct({
+  id: 122, name: "Canon CanoScan LiDE 400", category: "scanner", brand: "Canon", model: "CanoScan LiDE 400",
+  sku: "CANON-CANOSCAN-LIDE400", price: 6990, orig: 7990, stock: 10,
+  specs: ["Flatbed Scanner", "4800 x 4800 dpi Optical Resolution", "USB-Powered (No Adapter Needed)", "A4 Document & Photo Scanning", "Compact Slim Design"],
+  ports: "USB-C (bus-powered, no external adapter needed)",
+  description: "The Canon CanoScan LiDE 400 is a slim, USB-powered flatbed scanner delivering high-resolution scans for documents and photos.",
+  technicalDetails: "Flatbed scanner, 4800 x 4800 dpi optical resolution, USB bus-powered (no separate power adapter needed), A4 scan bed, Canon IJ Scan Utility software.",
+  useCase: "Great for home users and small offices needing occasional high-quality document and photo scanning.",
+  performanceNotes: "High optical resolution captures fine detail suitable for archiving photos and important documents.",
+  qualityNotes: "Genuine Canon product with 1-year manufacturer warranty.",
+  features: ["USB bus-powered", "4800 dpi optical resolution", "Slim, compact design", "Canon IJ Scan Utility software"],
+  boxContents: ["Scanner", "USB-C cable", "Documentation"], compatibility: ["Windows", "macOS", "USB-C port"],
+  upgradeOptions: ["Pair with document management software"], recommendedAccessories: ["USB-C Extension Cable"],
+  seo: { slug: "canon-canoscan-lide-400", keywords: ["canon canoscan lide 400", "flatbed scanner", "photo scanner"], metaTitle: "Canon CanoScan LiDE 400 Scanner | DESKTO", metaDescription: "Buy Canon CanoScan LiDE 400 flatbed scanner at DESKTO with warranty.", tags: ["canon canoscan lide 400", "flatbed scanner", "photo scanner"] },
+});
+
+const EPSON_PERFECTION_V39II_PRODUCT = draftCatalogProduct({
+  id: 123, name: "Epson Perfection V39 II", category: "scanner", brand: "Epson", model: "Perfection V39 II",
+  sku: "EPSON-PERFECTION-V39II", price: 9990, orig: 11290, stock: 8,
+  specs: ["Flatbed Photo Scanner", "4800 x 4800 dpi Optical Resolution", "USB-Powered", "One-Touch Scan Buttons", "A4 Document & Photo Scanning"],
+  ports: "USB 2.0 (bus-powered)",
+  description: "The Epson Perfection V39 II is a compact photo-focused flatbed scanner with high optical resolution and convenient one-touch scan buttons.",
+  technicalDetails: "Flatbed scanner, 4800 x 4800 dpi optical resolution, USB bus-powered, one-touch scan buttons for common tasks, Epson Scan software with restoration tools.",
+  useCase: "Well suited for digitizing family photos, artwork, and documents at home.",
+  performanceNotes: "High optical resolution and Epson's image restoration tools help revive faded or damaged photos during scanning.",
+  qualityNotes: "Genuine Epson product with 1-year manufacturer warranty.",
+  features: ["One-touch scan buttons", "4800 dpi optical resolution", "USB bus-powered", "Epson Scan restoration software"],
+  boxContents: ["Scanner", "USB cable", "Documentation"], compatibility: ["Windows", "macOS", "USB port"],
+  upgradeOptions: ["Pair with photo editing software"], recommendedAccessories: ["USB Extension Cable"],
+  seo: { slug: "epson-perfection-v39-ii", keywords: ["epson perfection v39 ii", "photo scanner", "flatbed scanner"], metaTitle: "Epson Perfection V39 II Scanner | DESKTO", metaDescription: "Buy Epson Perfection V39 II flatbed photo scanner at DESKTO with warranty.", tags: ["epson perfection v39 ii", "photo scanner", "flatbed scanner"] },
+});
+
+const HP_SCANJET_PRO2600_PRODUCT = draftCatalogProduct({
+  id: 124, name: "HP ScanJet Pro 2600 f1", category: "scanner", brand: "HP", model: "ScanJet Pro 2600 f1",
+  sku: "HP-SCANJET-PRO2600", price: 18990, orig: 21290, stock: 6,
+  specs: ["Flatbed + ADF Document Scanner", "1200 x 1200 dpi Optical Resolution", "Up to 25 ppm / 50 ipm Duplex", "USB Connectivity", "35-Sheet Auto Document Feeder"],
+  ports: "USB 3.0",
+  description: "The HP ScanJet Pro 2600 f1 is a fast flatbed-plus-ADF document scanner built for high-volume office scanning workflows.",
+  technicalDetails: "Flatbed scanner with 35-sheet automatic document feeder, 1200 x 1200 dpi optical resolution, up to 25 ppm simplex / 50 ipm duplex scanning, USB 3.0 connectivity, HP Smart software.",
+  useCase: "Built for offices needing to digitize large batches of documents quickly and reliably.",
+  performanceNotes: "Auto document feeder with duplex scanning dramatically speeds up multi-page document digitization.",
+  qualityNotes: "Genuine HP product with 1-year manufacturer warranty.",
+  features: ["35-sheet auto document feeder", "Duplex scanning", "Fast USB 3.0 connectivity", "HP Smart software support"],
+  boxContents: ["Scanner", "USB 3.0 cable", "Power cable", "Documentation"], compatibility: ["Windows", "macOS", "USB 3.0 port"],
+  upgradeOptions: ["Pair with document management software"], recommendedAccessories: ["USB 3.0 Extension Cable"],
+  seo: { slug: "hp-scanjet-pro-2600-f1", keywords: ["hp scanjet pro 2600", "document scanner", "adf scanner"], metaTitle: "HP ScanJet Pro 2600 f1 Scanner | DESKTO", metaDescription: "Buy HP ScanJet Pro 2600 f1 document scanner with ADF at DESKTO with warranty.", tags: ["hp scanjet pro 2600", "document scanner", "adf scanner"] },
+});
+
+const BROTHER_ADS1300_PRODUCT = draftCatalogProduct({
+  id: 125, name: "Brother ADS-1300", category: "scanner", brand: "Brother", model: "ADS-1300",
+  sku: "BROTHER-ADS1300", price: 15990, orig: 17990, stock: 7,
+  specs: ["Compact Sheet-Fed Scanner", "600 x 600 dpi Optical Resolution", "Up to 30 ppm / 60 ipm Duplex", "20-Sheet Auto Document Feeder", "USB Connectivity"],
+  ports: "USB 2.0",
+  description: "The Brother ADS-1300 is a compact, portable sheet-fed document scanner designed for quick desktop digitization of documents and receipts.",
+  technicalDetails: "Compact sheet-fed scanner, 600 x 600 dpi optical resolution, up to 30 ppm simplex / 60 ipm duplex scanning, 20-sheet automatic document feeder, USB connectivity.",
+  useCase: "Ideal for home offices and small businesses needing a compact, fast desktop document scanner.",
+  performanceNotes: "Fast duplex scanning and a compact footprint make it easy to keep on a desk for regular use.",
+  qualityNotes: "Genuine Brother product with 1-year manufacturer warranty.",
+  features: ["20-sheet auto document feeder", "Duplex scanning", "Compact portable design", "Brother iPrint&Scan app support"],
+  boxContents: ["Scanner", "USB cable", "Power cable", "Documentation"], compatibility: ["Windows", "macOS", "USB port"],
+  upgradeOptions: ["Pair with document management software"], recommendedAccessories: ["USB Extension Cable"],
+  seo: { slug: "brother-ads-1300", keywords: ["brother ads-1300", "sheet-fed scanner", "document scanner"], metaTitle: "Brother ADS-1300 Scanner | DESKTO", metaDescription: "Buy Brother ADS-1300 compact sheet-fed document scanner at DESKTO with warranty.", tags: ["brother ads-1300", "sheet-fed scanner", "document scanner"] },
+});
+
+// ── HDDs ──
+const SEAGATE_BARRACUDA_1TB_PRODUCT = draftCatalogProduct({
+  id: 126, name: "Seagate Barracuda 1TB", category: "hdd", brand: "Seagate", model: "Barracuda 1TB",
+  sku: "SEAGATE-BARRACUDA-1TB", price: 3290, orig: 3790, stock: 20,
+  specs: ["1TB Capacity", "3.5-inch SATA III", "7200 RPM", "64MB Cache", "SATA 6Gb/s Interface"],
+  storage: "1TB 3.5-inch SATA HDD, 7200 RPM, 64MB cache",
+  description: "The Seagate Barracuda 1TB is a reliable, high-capacity SATA hard drive well suited for mass storage in desktop PCs.",
+  technicalDetails: "1TB capacity, 3.5-inch form factor, 7200 RPM spindle speed, 64MB cache, SATA 6Gb/s interface.",
+  useCase: "Great for bulk storage of games, media, and files alongside a smaller NVMe boot drive.",
+  performanceNotes: "7200 RPM spindle speed offers solid sequential throughput for large file storage and transfers.",
+  qualityNotes: "Genuine Seagate product with 2-year manufacturer warranty.",
+  features: ["7200 RPM spindle speed", "64MB cache", "High storage capacity per rupee", "SATA 6Gb/s interface"],
+  boxContents: ["Hard drive", "Documentation"], compatibility: ["SATA III motherboards/controllers", "3.5-inch drive bays"],
+  upgradeOptions: ["Add a second drive for RAID or extra storage"], recommendedAccessories: ["SATA Cable", "3.5-inch Drive Bay Adapter"],
+  seo: { slug: "seagate-barracuda-1tb", keywords: ["seagate barracuda 1tb", "sata hdd", "desktop hard drive"], metaTitle: "Seagate Barracuda 1TB HDD | DESKTO", metaDescription: "Buy Seagate Barracuda 1TB 3.5-inch SATA hard drive at DESKTO with warranty.", tags: ["seagate barracuda 1tb", "sata hdd", "desktop hard drive"] },
+  warrantyMonths: 24,
+});
+
+const WD_BLUE_1TB_PRODUCT = draftCatalogProduct({
+  id: 127, name: "WD Blue 1TB", category: "hdd", brand: "Western Digital", model: "Blue 1TB",
+  sku: "WD-BLUE-1TB", price: 3390, orig: 3890, stock: 22,
+  specs: ["1TB Capacity", "3.5-inch SATA III", "7200 RPM", "64MB Cache", "SATA 6Gb/s Interface"],
+  storage: "1TB 3.5-inch SATA HDD, 7200 RPM, 64MB cache",
+  description: "The WD Blue 1TB is a trusted mainstream SATA hard drive offering reliable performance for everyday desktop storage needs.",
+  technicalDetails: "1TB capacity, 3.5-inch form factor, 7200 RPM spindle speed, 64MB cache, SATA 6Gb/s interface.",
+  useCase: "A dependable choice for everyday desktop storage, backups, and media libraries.",
+  performanceNotes: "Consistent 7200 RPM performance suited for general-purpose desktop storage workloads.",
+  qualityNotes: "Genuine Western Digital product with 2-year manufacturer warranty.",
+  features: ["7200 RPM spindle speed", "64MB cache", "Proven reliability", "SATA 6Gb/s interface"],
+  boxContents: ["Hard drive", "Documentation"], compatibility: ["SATA III motherboards/controllers", "3.5-inch drive bays"],
+  upgradeOptions: ["Add a second drive for RAID or extra storage"], recommendedAccessories: ["SATA Cable", "3.5-inch Drive Bay Adapter"],
+  seo: { slug: "wd-blue-1tb", keywords: ["wd blue 1tb", "sata hdd", "desktop hard drive"], metaTitle: "WD Blue 1TB HDD | DESKTO", metaDescription: "Buy WD Blue 1TB 3.5-inch SATA hard drive at DESKTO with warranty.", tags: ["wd blue 1tb", "sata hdd", "desktop hard drive"] },
+  warrantyMonths: 24,
+});
+
+const TOSHIBA_P300_1TB_PRODUCT = draftCatalogProduct({
+  id: 128, name: "Toshiba P300 1TB", category: "hdd", brand: "Toshiba", model: "P300 1TB",
+  sku: "TOSHIBA-P300-1TB", price: 3190, orig: 3690, stock: 18,
+  specs: ["1TB Capacity", "3.5-inch SATA III", "7200 RPM", "64MB Cache", "SATA 6Gb/s Interface"],
+  storage: "1TB 3.5-inch SATA HDD, 7200 RPM, 64MB cache",
+  description: "The Toshiba P300 1TB is a budget-friendly desktop hard drive offering solid capacity and performance for everyday storage needs.",
+  technicalDetails: "1TB capacity, 3.5-inch form factor, 7200 RPM spindle speed, 64MB cache, SATA 6Gb/s interface.",
+  useCase: "A cost-effective option for bulk storage in budget desktop builds.",
+  performanceNotes: "Solid sequential read/write performance for general file storage and everyday use.",
+  qualityNotes: "Genuine Toshiba product with 2-year manufacturer warranty.",
+  features: ["7200 RPM spindle speed", "64MB cache", "Budget-friendly pricing", "SATA 6Gb/s interface"],
+  boxContents: ["Hard drive", "Documentation"], compatibility: ["SATA III motherboards/controllers", "3.5-inch drive bays"],
+  upgradeOptions: ["Add a second drive for RAID or extra storage"], recommendedAccessories: ["SATA Cable", "3.5-inch Drive Bay Adapter"],
+  seo: { slug: "toshiba-p300-1tb", keywords: ["toshiba p300 1tb", "sata hdd", "budget hard drive"], metaTitle: "Toshiba P300 1TB HDD | DESKTO", metaDescription: "Buy Toshiba P300 1TB 3.5-inch SATA hard drive at DESKTO with warranty.", tags: ["toshiba p300 1tb", "sata hdd", "budget hard drive"] },
+  warrantyMonths: 24,
+});
+
+// ── SATA SSDs ──
+const SAMSUNG_870EVO_PRODUCT = draftCatalogProduct({
+  id: 129, name: "Samsung 870 EVO 1TB", category: "ssd", brand: "Samsung", model: "870 EVO 1TB",
+  sku: "SAM-870EVO-1TB", price: 6990, orig: 7990, stock: 20,
+  specs: ["1TB Capacity", "SATA III (6Gb/s)", "Sequential Read 560 MB/s", "Sequential Write 530 MB/s", "2.5-inch Form Factor"],
+  storage: "1TB SATA III SSD, 560/530 MB/s read/write, 2.5-inch",
+  description: "The Samsung 870 EVO 1TB is a top-tier SATA SSD offering near-maximum SATA interface performance and excellent reliability.",
+  technicalDetails: "1TB capacity, SATA III (6Gb/s) interface, up to 560 MB/s sequential read and 530 MB/s sequential write, 2.5-inch form factor, Samsung V-NAND and MJX controller.",
+  useCase: "Ideal for upgrading older PCs and laptops from HDD to SSD for a dramatic speed boost.",
+  performanceNotes: "Consistently hits near the theoretical maximum of the SATA III interface for reliable, predictable performance.",
+  qualityNotes: "Genuine Samsung product with 5-year manufacturer warranty.",
+  features: ["Samsung V-NAND", "Samsung Magician software", "5-year warranty", "2.5-inch universal form factor"],
+  boxContents: ["SSD", "Documentation"], compatibility: ["SATA III motherboards/laptops", "2.5-inch drive bays"],
+  upgradeOptions: ["Add SATA-to-USB enclosure for external use"], recommendedAccessories: ["SATA Cable", "2.5-inch to 3.5-inch Bay Adapter"],
+  seo: { slug: "samsung-870-evo-1tb", keywords: ["samsung 870 evo", "sata ssd", "2.5 inch ssd"], metaTitle: "Samsung 870 EVO 1TB SATA SSD | DESKTO", metaDescription: "Buy Samsung 870 EVO 1TB SATA SSD at DESKTO with warranty.", tags: ["samsung 870 evo", "sata ssd", "2.5 inch ssd"] },
+  warrantyMonths: 60,
+});
+
+const CRUCIAL_MX500_PRODUCT = draftCatalogProduct({
+  id: 130, name: "Crucial MX500 1TB", category: "ssd", brand: "Crucial", model: "MX500 1TB",
+  sku: "CRUCIAL-MX500-1TB", price: 6490, orig: 7490, stock: 18,
+  specs: ["1TB Capacity", "SATA III (6Gb/s)", "Sequential Read 560 MB/s", "Sequential Write 510 MB/s", "2.5-inch Form Factor"],
+  storage: "1TB SATA III SSD, 560/510 MB/s read/write, 2.5-inch",
+  description: "The Crucial MX500 1TB is a long-standing favorite SATA SSD known for reliable performance and strong endurance ratings.",
+  technicalDetails: "1TB capacity, SATA III (6Gb/s) interface, up to 560 MB/s sequential read and 510 MB/s sequential write, 2.5-inch form factor, Micron 3D NAND with hardware encryption support.",
+  useCase: "A proven choice for HDD-to-SSD upgrades in desktops and laptops alike.",
+  performanceNotes: "Strong sustained write performance and high endurance rating for long-term reliability.",
+  qualityNotes: "Genuine Crucial (Micron) product with 5-year manufacturer warranty.",
+  features: ["Micron 3D NAND", "Hardware-based encryption support", "Crucial Storage Executive software", "5-year warranty"],
+  boxContents: ["SSD", "Documentation"], compatibility: ["SATA III motherboards/laptops", "2.5-inch drive bays"],
+  upgradeOptions: ["Add SATA-to-USB enclosure for external use"], recommendedAccessories: ["SATA Cable", "2.5-inch to 3.5-inch Bay Adapter"],
+  seo: { slug: "crucial-mx500-1tb", keywords: ["crucial mx500", "sata ssd", "2.5 inch ssd"], metaTitle: "Crucial MX500 1TB SATA SSD | DESKTO", metaDescription: "Buy Crucial MX500 1TB SATA SSD at DESKTO with warranty.", tags: ["crucial mx500", "sata ssd", "2.5 inch ssd"] },
+  warrantyMonths: 60,
+});
+
+const KINGSTON_A400_PRODUCT = draftCatalogProduct({
+  id: 131, name: "Kingston A400 480GB", category: "ssd", brand: "Kingston", model: "A400 480GB",
+  sku: "KING-A400-480GB", price: 2690, orig: 3190, stock: 25,
+  specs: ["480GB Capacity", "SATA III (6Gb/s)", "Sequential Read 500 MB/s", "Sequential Write 450 MB/s", "2.5-inch Form Factor"],
+  storage: "480GB SATA III SSD, 500/450 MB/s read/write, 2.5-inch",
+  description: "The Kingston A400 480GB is an entry-level SATA SSD offering an affordable, reliable upgrade path from traditional hard drives.",
+  technicalDetails: "480GB capacity, SATA III (6Gb/s) interface, up to 500 MB/s sequential read and 450 MB/s sequential write, 2.5-inch form factor.",
+  useCase: "A budget-friendly way to breathe new life into older PCs and laptops still running on HDDs.",
+  performanceNotes: "Delivers a dramatic speed improvement over mechanical drives for boot times and app loading.",
+  qualityNotes: "Genuine Kingston product with 3-year manufacturer warranty.",
+  features: ["Affordable entry-level pricing", "2.5-inch universal form factor", "Low power consumption", "Quiet, no moving parts"],
+  boxContents: ["SSD", "Documentation"], compatibility: ["SATA III motherboards/laptops", "2.5-inch drive bays"],
+  upgradeOptions: ["Add SATA-to-USB enclosure for external use"], recommendedAccessories: ["SATA Cable", "2.5-inch to 3.5-inch Bay Adapter"],
+  seo: { slug: "kingston-a400-480gb", keywords: ["kingston a400", "budget sata ssd", "2.5 inch ssd"], metaTitle: "Kingston A400 480GB SATA SSD | DESKTO", metaDescription: "Buy Kingston A400 480GB SATA SSD at DESKTO with warranty.", tags: ["kingston a400", "budget sata ssd", "2.5 inch ssd"] },
+  warrantyMonths: 36,
+});
+
+const WD_BLUE_SA510_PRODUCT = draftCatalogProduct({
+  id: 132, name: "WD Blue SA510 1TB", category: "ssd", brand: "Western Digital", model: "Blue SA510 1TB",
+  sku: "WD-BLUE-SA510-1TB", price: 6290, orig: 7190, stock: 16,
+  specs: ["1TB Capacity", "SATA III (6Gb/s)", "Sequential Read 560 MB/s", "Sequential Write 520 MB/s", "2.5-inch Form Factor"],
+  storage: "1TB SATA III SSD, 560/520 MB/s read/write, 2.5-inch",
+  description: "The WD Blue SA510 1TB is Western Digital's latest-generation SATA SSD, offering strong everyday performance and reliability.",
+  technicalDetails: "1TB capacity, SATA III (6Gb/s) interface, up to 560 MB/s sequential read and 520 MB/s sequential write, 2.5-inch form factor, WD in-house controller.",
+  useCase: "A solid choice for upgrading desktops and laptops from HDD to SSD for faster everyday computing.",
+  performanceNotes: "Near-maximum SATA III speeds with consistent performance across sustained workloads.",
+  qualityNotes: "Genuine Western Digital product with 5-year manufacturer warranty.",
+  features: ["WD in-house controller", "WD Dashboard software", "5-year warranty", "2.5-inch universal form factor"],
+  boxContents: ["SSD", "Documentation"], compatibility: ["SATA III motherboards/laptops", "2.5-inch drive bays"],
+  upgradeOptions: ["Add SATA-to-USB enclosure for external use"], recommendedAccessories: ["SATA Cable", "2.5-inch to 3.5-inch Bay Adapter"],
+  seo: { slug: "wd-blue-sa510-1tb", keywords: ["wd blue sa510", "sata ssd", "2.5 inch ssd"], metaTitle: "WD Blue SA510 1TB SATA SSD | DESKTO", metaDescription: "Buy WD Blue SA510 1TB SATA SSD at DESKTO with warranty.", tags: ["wd blue sa510", "sata ssd", "2.5 inch ssd"] },
+  warrantyMonths: 60,
+});
+
+const SANDISK_SSD_PLUS_PRODUCT = draftCatalogProduct({
+  id: 133, name: "SanDisk SSD Plus 480GB", category: "ssd", brand: "SanDisk", model: "SSD Plus 480GB",
+  sku: "SANDISK-SSDPLUS-480GB", price: 2590, orig: 2990, stock: 22,
+  specs: ["480GB Capacity", "SATA III (6Gb/s)", "Sequential Read 535 MB/s", "Sequential Write 445 MB/s", "2.5-inch Form Factor"],
+  storage: "480GB SATA III SSD, 535/445 MB/s read/write, 2.5-inch",
+  description: "The SanDisk SSD Plus 480GB is a budget-friendly SATA SSD offering a simple, affordable path to faster storage.",
+  technicalDetails: "480GB capacity, SATA III (6Gb/s) interface, up to 535 MB/s sequential read and 445 MB/s sequential write, 2.5-inch form factor.",
+  useCase: "A practical, low-cost upgrade option for older HDD-equipped PCs and laptops.",
+  performanceNotes: "Delivers a significant real-world speed boost over mechanical drives for everyday tasks.",
+  qualityNotes: "Genuine SanDisk (Western Digital) product with 3-year manufacturer warranty.",
+  features: ["Affordable entry-level pricing", "SanDisk Dashboard software", "2.5-inch universal form factor", "Low power consumption"],
+  boxContents: ["SSD", "Documentation"], compatibility: ["SATA III motherboards/laptops", "2.5-inch drive bays"],
+  upgradeOptions: ["Add SATA-to-USB enclosure for external use"], recommendedAccessories: ["SATA Cable", "2.5-inch to 3.5-inch Bay Adapter"],
+  seo: { slug: "sandisk-ssd-plus-480gb", keywords: ["sandisk ssd plus", "budget sata ssd", "2.5 inch ssd"], metaTitle: "SanDisk SSD Plus 480GB SATA SSD | DESKTO", metaDescription: "Buy SanDisk SSD Plus 480GB SATA SSD at DESKTO with warranty.", tags: ["sandisk ssd plus", "budget sata ssd", "2.5 inch ssd"] },
+  warrantyMonths: 36,
+});
+
+// ── Accessories ──
+const LOGITECH_C270_WEBCAM_PRODUCT = draftCatalogProduct({
+  id: 134, name: "Logitech C270 HD Webcam", category: "accessories", brand: "Logitech", model: "C270",
+  sku: "LOGI-C270-WEBCAM", price: 1990, orig: 2290, stock: 25,
+  specs: ["HD 720p Video", "Built-in Noise-Reducing Mic", "Fixed Focus Lens", "USB Plug-and-Play", "Universal Clip Mount"],
+  ports: "Wired USB-A connection",
+  description: "The Logitech C270 HD Webcam is a reliable plug-and-play webcam offering clear 720p video for calls and streaming.",
+  technicalDetails: "HD 720p video resolution, built-in noise-reducing microphone, fixed focus lens, USB plug-and-play with no drivers required, universal clip mount.",
+  useCase: "Great for video calls, online classes, and light streaming needs.",
+  performanceNotes: "Automatic light correction keeps video clear in a range of typical indoor lighting conditions.",
+  qualityNotes: "Genuine Logitech product with 1-year manufacturer warranty.",
+  features: ["HD 720p video", "Built-in microphone", "Plug-and-play (no drivers)", "Universal clip mount"],
+  boxContents: ["Webcam", "Documentation"], compatibility: ["Windows", "macOS", "Chrome OS", "USB-A port"],
+  upgradeOptions: ["Pair with a ring light for better video quality"], recommendedAccessories: ["Ring Light", "Webcam Privacy Cover"],
+  seo: { slug: "logitech-c270-webcam", keywords: ["logitech c270", "hd webcam", "budget webcam"], metaTitle: "Logitech C270 HD Webcam | DESKTO", metaDescription: "Buy Logitech C270 HD 720p webcam at DESKTO with warranty.", tags: ["logitech c270", "hd webcam", "budget webcam"] },
+});
+
+const UGREEN_USB_HUB_PRODUCT = draftCatalogProduct({
+  id: 135, name: "UGREEN 4-Port USB 3.0 Hub", category: "accessories", brand: "UGREEN", model: "4-Port USB 3.0 Hub",
+  sku: "UGREEN-USB3-4PORT-HUB", price: 1290, orig: 1590, stock: 30,
+  specs: ["4x USB 3.0 Ports", "Up to 5Gbps Transfer Speed", "Compact Portable Design", "Plug-and-Play", "LED Power Indicator"],
+  ports: "4x USB 3.0 Type-A ports, 1x USB-A host connector",
+  description: "The UGREEN 4-Port USB 3.0 Hub expands a single USB port into four high-speed ports for connecting multiple peripherals.",
+  technicalDetails: "4x USB 3.0 Type-A ports, up to 5Gbps transfer speed, compact portable design, plug-and-play with no drivers required, LED power indicator per port.",
+  useCase: "Handy for laptops and PCs with limited USB ports needing to connect multiple peripherals simultaneously.",
+  performanceNotes: "USB 3.0 speeds support fast external drive transfers alongside connected peripherals.",
+  qualityNotes: "Genuine UGREEN product with 1-year manufacturer warranty.",
+  features: ["4x USB 3.0 ports", "5Gbps transfer speed", "Compact portable design", "Plug-and-play"],
+  boxContents: ["USB hub", "Documentation"], compatibility: ["Windows", "macOS", "Linux", "USB-A host port"],
+  upgradeOptions: ["Add a powered hub for high-draw devices"], recommendedAccessories: ["USB-C to USB-A Adapter"],
+  seo: { slug: "ugreen-4-port-usb3-hub", keywords: ["ugreen usb hub", "usb 3.0 hub", "4-port usb hub"], metaTitle: "UGREEN 4-Port USB 3.0 Hub | DESKTO", metaDescription: "Buy UGREEN 4-Port USB 3.0 Hub at DESKTO with warranty.", tags: ["ugreen usb hub", "usb 3.0 hub", "4-port usb hub"] },
+});
+
+const ANKER_735_CHARGER_PRODUCT = draftCatalogProduct({
+  id: 136, name: "Anker 735 Charger (Nano II 65W)", category: "accessories", brand: "Anker", model: "735 Charger (Nano II 65W)",
+  sku: "ANKER-735-NANOII-65W", price: 3990, orig: 4590, stock: 20,
+  specs: ["65W GaN Fast Charging", "3-Port (2x USB-C, 1x USB-A)", "Compact Foldable Plug", "PowerIQ 4.0 & GaNPrime Tech", "Multi-Device Charging"],
+  ports: "2x USB-C, 1x USB-A output ports", powerRequirement: "65W total output (GaN)",
+  description: "The Anker 735 Charger (Nano II 65W) is a compact GaN fast charger capable of powering laptops, tablets, and phones simultaneously.",
+  technicalDetails: "65W total output using GaN (Gallium Nitride) technology, 3 ports (2x USB-C, 1x USB-A), PowerIQ 4.0 and GaNPrime intelligent power distribution, compact foldable plug design.",
+  useCase: "Great for travelers and desk setups needing one compact charger for a laptop, tablet, and phone.",
+  performanceNotes: "GaNPrime technology intelligently distributes power across all three ports based on connected devices.",
+  qualityNotes: "Genuine Anker product with 1.5-year manufacturer warranty.",
+  features: ["65W GaN fast charging", "3-port simultaneous charging", "Compact foldable design", "PowerIQ 4.0 technology"],
+  boxContents: ["Charger", "Documentation"], compatibility: ["USB-C laptops", "Phones", "Tablets"],
+  upgradeOptions: ["Add USB-C cables for additional devices"], recommendedAccessories: ["USB-C to USB-C Cable", "USB-C to Lightning Cable"],
+  seo: { slug: "anker-735-charger-nano-ii-65w", keywords: ["anker 735 charger", "gan charger", "65w usb-c charger"], metaTitle: "Anker 735 Charger (Nano II 65W) | DESKTO", metaDescription: "Buy Anker 735 Nano II 65W GaN charger at DESKTO with warranty.", tags: ["anker 735 charger", "gan charger", "65w usb-c charger"] },
+  warrantyMonths: 18,
+});
+
+const BELKIN_SURGE_PROTECTOR_PRODUCT = draftCatalogProduct({
+  id: 137, name: "Belkin 6-Outlet Surge Protector", category: "accessories", brand: "Belkin", model: "6-Outlet Surge Protector",
+  sku: "BELKIN-SURGE-6OUTLET", price: 1990, orig: 2290, stock: 24,
+  specs: ["6 AC Outlets", "2x USB Charging Ports", "1050 Joules Surge Protection", "2m Power Cord", "Overload Protection"],
+  ports: "6x AC outlets, 2x USB-A charging ports", powerRequirement: "Rated for standard 230V AC input",
+  description: "The Belkin 6-Outlet Surge Protector protects connected electronics from power surges while adding convenient USB charging ports.",
+  technicalDetails: "6 AC outlets, 2 USB-A charging ports, 1050 joules of surge protection, 2-meter power cord, built-in overload protection with reset switch.",
+  useCase: "Ideal for protecting a PC, monitor, and peripherals from power surges while keeping devices charged.",
+  performanceNotes: "1050-joule surge rating provides solid protection against typical household power surges.",
+  qualityNotes: "Genuine Belkin product with 2-year manufacturer warranty.",
+  features: ["1050 joules surge protection", "2x USB charging ports", "Overload protection with reset switch", "2m power cord"],
+  boxContents: ["Surge protector strip", "Documentation"], compatibility: ["Standard 5/15A Indian sockets", "PC, monitor, peripheral loads"],
+  upgradeOptions: ["Pair with a UPS for backup power"], recommendedAccessories: ["UPS", "Extension Cord"],
+  seo: { slug: "belkin-6-outlet-surge-protector", keywords: ["belkin surge protector", "power strip", "surge protector"], metaTitle: "Belkin 6-Outlet Surge Protector | DESKTO", metaDescription: "Buy Belkin 6-Outlet Surge Protector with USB charging at DESKTO with warranty.", tags: ["belkin surge protector", "power strip", "surge protector"] },
+});
+
+const ZEBRONICS_WEBCAM_PRODUCT = draftCatalogProduct({
+  id: 138, name: "Zebronics Zeb-Crystal Pro Webcam", category: "accessories", brand: "Zebronics", model: "Zeb-Crystal Pro",
+  sku: "ZEBRONICS-WEBCAM-CRYSTALPRO", price: 1690, orig: 1990, stock: 26,
+  specs: ["Full HD 1080p Video", "Built-in Noise-Cancelling Mic", "Wide-Angle Lens", "USB Plug-and-Play", "Adjustable Clip Mount"],
+  ports: "Wired USB-A connection",
+  description: "The Zebronics Zeb-Crystal Pro Webcam is an affordable Full HD webcam offering clear video for calls, classes, and streaming.",
+  technicalDetails: "Full HD 1080p video resolution, built-in noise-cancelling microphone, wide-angle lens, USB plug-and-play with no drivers required, adjustable clip mount.",
+  useCase: "A budget-friendly upgrade for video calls, online classes, and casual streaming.",
+  performanceNotes: "Wide-angle lens captures more of the frame, useful for group calls or small workspace setups.",
+  qualityNotes: "Genuine Zebronics product with 1-year manufacturer warranty.",
+  features: ["Full HD 1080p video", "Built-in noise-cancelling mic", "Wide-angle lens", "Plug-and-play (no drivers)"],
+  boxContents: ["Webcam", "Documentation"], compatibility: ["Windows", "macOS", "USB-A port"],
+  upgradeOptions: ["Pair with a ring light for better video quality"], recommendedAccessories: ["Ring Light", "Webcam Privacy Cover"],
+  seo: { slug: "zebronics-zeb-crystal-pro-webcam", keywords: ["zebronics webcam", "1080p webcam", "budget webcam"], metaTitle: "Zebronics Zeb-Crystal Pro Webcam | DESKTO", metaDescription: "Buy Zebronics Zeb-Crystal Pro Full HD webcam at DESKTO with warranty.", tags: ["zebronics webcam", "1080p webcam", "budget webcam"] },
+});
+
+const SEEDED_BACKFILL_PRODUCTS: CatalogProduct[] = [
+  MACBOOK_AIR_M4_PRODUCT,
+  DELL_INSPIRON_15_PRODUCT,
+  HP_15S_PRODUCT,
+  LENOVO_IDEAPAD_SLIM3_PRODUCT,
+  ASUS_VIVOBOOK_15_PRODUCT,
+  MSI_KATANA_15_PRODUCT,
+  ACER_PREDATOR_HELIOS_NEO_16_PRODUCT,
+  LENOVO_LEGION_5_PRODUCT,
+  ALIENWARE_M16_PRODUCT,
+  DELL_OPTIPLEX_7010_PRODUCT,
+  HP_PRODESK_400_PRODUCT,
+  LENOVO_THINKCENTRE_M70_PRODUCT,
+  ASUS_EXPERTCENTER_D5_PRODUCT,
+  ACER_ASPIRE_TC_PRODUCT,
+  CORSAIR_VENGEANCE_I7400_PRODUCT,
+  ASUS_ROG_G22CH_PRODUCT,
+  MSI_INFINITE_RS_PRODUCT,
+  ALIENWARE_AURORA_R16_PRODUCT,
+  NZXT_PLAYER_ONE_PRODUCT,
+  LG_ULTRAGEAR_24GN650_PRODUCT,
+  SAMSUNG_ODYSSEY_G5_PRODUCT,
+  ASUS_TUF_VG249Q1A_PRODUCT,
+  MSI_G274QPF_PRODUCT,
+  ACER_NITRO_VG240Y_PRODUCT,
+  INTEL_I3_12100F_PRODUCT,
+  INTEL_I5_12400F_PRODUCT,
+  INTEL_I5_14400F_PRODUCT,
+  INTEL_I7_14700K_PRODUCT,
+  AMD_RYZEN5_5600_PRODUCT,
+  AMD_RYZEN5_7600_PRODUCT,
+  AMD_RYZEN7_7800X3D_PRODUCT,
+  AMD_RYZEN9_9950X_PRODUCT,
+  RTX_3050_PRODUCT,
+  RTX_4060_PRODUCT,
+  RTX_4060TI_PRODUCT,
+  RTX_4070SUPER_PRODUCT,
+  RTX_5070_PRODUCT,
+  RX_6600_PRODUCT,
+  RX_7600_PRODUCT,
+  RX_7700XT_PRODUCT,
+  RX_7800XT_PRODUCT,
+  RX_9070XT_PRODUCT,
+  ARC_A580_PRODUCT,
+  ARC_A750_PRODUCT,
+  ARC_B580_PRODUCT,
+  CORSAIR_VENGEANCE_LPX_16_PRODUCT,
+  KINGSTON_FURY_BEAST_16_PRODUCT,
+  GSKILL_RIPJAWS_V_16_PRODUCT,
+  CRUCIAL_PRO_DDR5_16_PRODUCT,
+  TEAMGROUP_TFORCE_VULCAN_PRODUCT,
+  SAMSUNG_990PRO_PRODUCT,
+  WD_SN850X_PRODUCT,
+  CRUCIAL_T500_PRODUCT,
+  KINGSTON_KC3000_PRODUCT,
+  SEAGATE_FIRECUDA_530_PRODUCT,
+  ASUS_TUF_B650PLUS_PRODUCT,
+  MSI_MAG_B650_TOMAHAWK_PRODUCT,
+  GIGABYTE_B650_AORUS_ELITE_PRODUCT,
+  ASROCK_B650M_PRO_RS_PRODUCT,
+  BIOSTAR_B760MX_PRODUCT,
+  CORSAIR_RM750E_PRODUCT,
+  CM_MWE_650_BRONZE_PRODUCT,
+  DEEPCOOL_PK650D_PRODUCT,
+  MSI_MAG_A650BN_PRODUCT,
+  TT_TOUGHPOWER_GF_A3_PRODUCT,
+  NZXT_H5_FLOW_PRODUCT,
+  CORSAIR_4000D_AIRFLOW_PRODUCT,
+  LIAN_LI_LANCOOL_216_PRODUCT,
+  CM_TD500_MESH_PRODUCT,
+  DEEPCOOL_CH560_PRODUCT,
+  LOGITECH_G213_PRODUCT,
+  RAZER_BLACKWIDOW_V4_PRODUCT,
+  CORSAIR_K55_RGB_PRODUCT,
+  REDRAGON_K552_PRODUCT,
+  HYPERX_ALLOY_ORIGINS_PRODUCT,
+  LOGITECH_G102_PRODUCT,
+  RAZER_DEATHADDER_V3_PRODUCT,
+  STEELSERIES_RIVAL_3_PRODUCT,
+  CORSAIR_HARPOON_RGB_PRODUCT,
+  HYPERX_PULSEFIRE_HASTE2_PRODUCT,
+  HYPERX_CLOUD_II_PRODUCT,
+  LOGITECH_G435_PRODUCT,
+  STEELSERIES_ARCTIS_NOVA5_PRODUCT,
+  RAZER_BLACKSHARK_V2_PRODUCT,
+  CORSAIR_HS55_PRODUCT,
+  TPLINK_ARCHER_C6_PRODUCT,
+  ASUS_RT_AX58U_PRODUCT,
+  DLINK_DIRX1560_PRODUCT,
+  NETGEAR_NIGHTHAWK_AX4_PRODUCT,
+  TENDA_AC10_PRODUCT,
+  APC_BX600C_PRODUCT,
+  MICROTEK_LEGEND1000_PRODUCT,
+  CYBERPOWER_UT1500E_PRODUCT,
+  EATON_5E_1100VA_PRODUCT,
+  ZEBRONICS_ZEBU725_PRODUCT,
+  HP_SMARTTANK_580_PRODUCT,
+  CANON_PIXMA_G3770_PRODUCT,
+  EPSON_ECOTANK_L3250_PRODUCT,
+  BROTHER_DCPB7500D_PRODUCT,
+  PANTUM_P2509W_PRODUCT,
+  CANON_CANOSCAN_LIDE400_PRODUCT,
+  EPSON_PERFECTION_V39II_PRODUCT,
+  HP_SCANJET_PRO2600_PRODUCT,
+  BROTHER_ADS1300_PRODUCT,
+  SEAGATE_BARRACUDA_1TB_PRODUCT,
+  WD_BLUE_1TB_PRODUCT,
+  TOSHIBA_P300_1TB_PRODUCT,
+  SAMSUNG_870EVO_PRODUCT,
+  CRUCIAL_MX500_PRODUCT,
+  KINGSTON_A400_PRODUCT,
+  WD_BLUE_SA510_PRODUCT,
+  SANDISK_SSD_PLUS_PRODUCT,
+  LOGITECH_C270_WEBCAM_PRODUCT,
+  UGREEN_USB_HUB_PRODUCT,
+  ANKER_735_CHARGER_PRODUCT,
+  BELKIN_SURGE_PROTECTOR_PRODUCT,
+  ZEBRONICS_WEBCAM_PRODUCT,
+];
+
 function seedStore(): DashboardStore {
   const store = emptyStore();
   store.gamingHub = defaultGamingHubItems();
 
   // Products — pulled from the static catalogue (truncated for brevity)
-  store.products = [
-    { id: 1, name: "DESKTO Phantom X", price: 285000, stock: 8, category: "gaming-pc", brand: "DESKTO" },
-    { id: 2, name: "DESKTO Titan Pro", price: 195000, stock: 12, category: "gaming-pc", brand: "DESKTO" },
-    { id: 3, name: "DESKTO Reaper XT", price: 135000, stock: 5, category: "gaming-pc", brand: "DESKTO" },
-    { id: 7, name: "ASUS ROG Strix G16", price: 185000, stock: 6, category: "gaming-laptop", brand: "ASUS" },
-    { id: 8, name: "Dell XPS 15", price: 142000, stock: 4, category: "laptop", brand: "Dell" },
-    { id: 11, name: "Intel Core i9-14900K", price: 54000, stock: 18, category: "cpu", brand: "Intel" },
-    { id: 12, name: "NVIDIA RTX 4080 Super", price: 98000, stock: 9, category: "gpu", brand: "NVIDIA" },
-    { id: 15, name: "Samsung 990 PRO 2TB", price: 18900, stock: 22, category: "nvme", brand: "Samsung" },
-    { id: 20, name: "Razer DeathAdder V3", price: 6500, stock: 2, category: "mouse", brand: "Razer" },
-    { id: 19, name: "Logitech G Pro X Keyboard", price: 9800, stock: 15, category: "keyboard", brand: "Logitech" },
-    { id: 21, name: "HyperX Cloud III", price: 8900, stock: 11, category: "headset", brand: "HyperX" },
-  ];
+  store.products = [...SEEDED_BACKFILL_PRODUCTS];
 
   // Addresses for the demo customer
   store.addresses = [
@@ -1500,16 +4178,14 @@ function seedStore(): DashboardStore {
     { id: rid("adr"), label: "Workshop", line1: "Plot 4, MIDC", city: "Pune", state: "MH", pincode: "411019" },
   ];
 
-  // Orders
-  const sampleItem = (id: number, qty = 1): OrderItem => {
-    const p = store.products.find(x => x.id === id)!;
-    return { productId: id, name: p.name, qty, price: p.price, img: "" };
-  };
+  // Orders — item name/price are denormalized snapshots at time of purchase, independent of
+  // whether the referenced catalog product still exists (matches real e-commerce order history).
+  const sampleItem = (id: number, name: string, price: number, qty = 1): OrderItem => ({ productId: id, name, price, qty, img: "" });
   store.orders = [
     {
       id: rid("ord"),
       customerId: uid,
-      items: [sampleItem(1), sampleItem(20, 2)],
+      items: [sampleItem(1, "DESKTO Phantom X", 285000), sampleItem(20, "Razer DeathAdder V3", 6500, 2)],
       total: 285000 + 6500 * 2,
       status: "delivered",
       createdAt: daysAgo(28),
@@ -1526,7 +4202,7 @@ function seedStore(): DashboardStore {
     {
       id: rid("ord"),
       customerId: uid,
-      items: [sampleItem(11), sampleItem(15)],
+      items: [sampleItem(11, "Intel Core i9-14900K", 54000), sampleItem(15, "Samsung 990 PRO 2TB", 18900)],
       total: 54000 + 18900,
       status: "shipped",
       createdAt: daysAgo(3),
@@ -1543,7 +4219,7 @@ function seedStore(): DashboardStore {
     {
       id: rid("ord"),
       customerId: uid,
-      items: [sampleItem(7)],
+      items: [sampleItem(7, "ASUS ROG Strix G16", 185000)],
       total: 185000,
       status: "packing",
       createdAt: daysAgo(1),
@@ -2008,6 +4684,14 @@ function migrateStore(store: DashboardStore): DashboardStore {
   const gamingHub = (store.gamingHub || []).length ? store.gamingHub : defaultGamingHubItems();
   if (!(store.gamingHub || []).length) changed = true;
 
+  // Backfill catalog products that were added to the seed after this browser's store was first created
+  const rawProducts = store.products || [];
+  const afterRemoval = rawProducts.filter(p => !REMOVED_SEED_PRODUCT_IDS.has(p.id));
+  const missingSeedProducts = SEEDED_BACKFILL_PRODUCTS.filter(seedProduct =>
+    !afterRemoval.some(p => p.sku === seedProduct.sku || p.id === seedProduct.id));
+  const products = missingSeedProducts.length ? [...afterRemoval, ...missingSeedProducts] : afterRemoval;
+  if (missingSeedProducts.length || afterRemoval.length !== rawProducts.length) changed = true;
+
   // Migrate customBuilderConfig — inject seeded components if all categories are empty
   const defaultConfig = createDefaultBuilderConfig();
   const storedConfig = store.customBuilderConfig || defaultConfig;
@@ -2024,8 +4708,8 @@ function migrateStore(store: DashboardStore): DashboardStore {
   if (!hasSeededComponents) changed = true;
 
   return changed
-    ? { ...store, orders, staff, repairs, pcBuilds, serviceRequests, gamingHub, customBuilderConfig: migratedConfig }
-    : { ...store, orders, serviceRequests, gamingHub, customBuilderConfig: migratedConfig };
+    ? { ...store, orders, staff, repairs, pcBuilds, serviceRequests, gamingHub, customBuilderConfig: migratedConfig, products }
+    : { ...store, orders, serviceRequests, gamingHub, customBuilderConfig: migratedConfig, products };
 }
 
 const ORDER_TIMELINE_LABELS = ["Order Placed", "Admin Verified", "Packing", "Shipped", "Delivered"];
@@ -2165,9 +4849,44 @@ export function useDashboardData() {
     saveStore(next);
     setStore(next);
   }, []);
+  
+  const autoNotifyStatusChange = useCallback((
+    type: "order" | "repair" | "rental" | "support" | "system",
+    id: string,
+    customerId: string,
+    oldStatus: string | undefined,
+    newStatus: string
+  ) => {
+    if (oldStatus === newStatus || !newStatus) return;
+    
+    setStore(prev => {
+      const notification: NotificationItem = {
+        id: rid("ntf"),
+        customerId,
+        title: `Status Update: ${type.toUpperCase()}`,
+        detail: `Your ${type === "system" ? "service" : type} #${id.slice(-6).toUpperCase()} is now ${newStatus.replace(/-/g, ' ').toUpperCase()}`,
+        type,
+        read: false,
+        archived: false,
+        createdAt: Date.now()
+      };
+      const next = { ...prev, notifications: [notification, ...prev.notifications] };
+      saveStore(next);
+      return next;
+    });
+  }, []);
 
   const updateOrderStatus = useCallback((orderId: string, status: OrderStatus) => {
+    let customerId = "";
+    let oldStatus = "";
+    
     setStore(prev => {
+      const order = prev.orders.find(o => o.id === orderId);
+      if (order) {
+        customerId = order.customerId;
+        oldStatus = order.status;
+      }
+      
       const next = {
         ...prev,
         orders: prev.orders.map(o => o.id === orderId ? {
@@ -2182,8 +4901,12 @@ export function useDashboardData() {
       saveStore(next);
       return next;
     });
+    
+    if (customerId && oldStatus !== status) {
+      autoNotifyStatusChange("order", orderId, customerId, oldStatus, status);
+    }
     addLog("order_status", `Order ${orderId} → ${status}`);
-  }, [addLog]);
+  }, [addLog, autoNotifyStatusChange]);
 
   const addOrder = useCallback((input: AddOrderInput) => {
     const createdAt = input.createdAt || Date.now();
@@ -2244,7 +4967,16 @@ export function useDashboardData() {
   }, [addLog]);
 
   const updateRepairStatus = useCallback((repairId: string, status: RepairStatus) => {
+    let customerId = "";
+    let oldStatus = "";
+    
     setStore(prev => {
+      const repair = prev.repairs.find(r => r.id === repairId);
+      if (repair) {
+        customerId = repair.customerId;
+        oldStatus = repair.status;
+      }
+      
       const next = {
         ...prev,
         repairs: prev.repairs.map(r => r.id === repairId ? { ...r, status, timeline: mergeRepairTimeline(r, status), updatedAt: Date.now() } : r),
@@ -2252,8 +4984,12 @@ export function useDashboardData() {
       saveStore(next);
       return next;
     });
+    
+    if (customerId && oldStatus !== status) {
+      autoNotifyStatusChange("repair", repairId, customerId, oldStatus, status);
+    }
     addLog("repair_status", `Repair ${repairId} → ${status}`);
-  }, [addLog]);
+  }, [addLog, autoNotifyStatusChange]);
 
   const addRepairRequest = useCallback((input: Omit<Repair, "id" | "status" | "timeline" | "createdAt" | "updatedAt"> & { status?: RepairStatus }) => {
     const status = input.status || "submitted";
@@ -2291,8 +5027,17 @@ export function useDashboardData() {
   }, [addLog]);
 
   const patchRepair = useCallback((repairId: string, patch: Partial<Repair>) => {
+    let customerId = "";
+    let oldStatus = "";
+    let newStatus = patch.status;
+    
     setStore(prev => {
       const before = prev.repairs.find(r => r.id === repairId);
+      if (before) {
+        customerId = before.customerId;
+        oldStatus = before.status;
+      }
+      
       const assignedStaff = patch.technicianId && patch.technicianId !== before?.technicianId
         ? prev.staff.find(s => s.id === patch.technicianId)
         : undefined;
@@ -2327,8 +5072,12 @@ export function useDashboardData() {
       saveStore(next);
       return next;
     });
+    
+    if (newStatus && customerId && oldStatus !== newStatus) {
+      autoNotifyStatusChange("repair", repairId, customerId, oldStatus, newStatus);
+    }
     addLog("repair_updated", `Repair ${repairId} updated`);
-  }, [addLog]);
+  }, [addLog, autoNotifyStatusChange]);
 
   const addPCBuildRequest = useCallback((input: Omit<PCBuild, "id" | "status" | "timeline" | "createdAt" | "updatedAt"> & { status?: PCBuildStatus }) => {
     const status = input.status || "submitted";
@@ -2357,8 +5106,17 @@ export function useDashboardData() {
   }, [addLog]);
 
   const patchPCBuild = useCallback((buildId: string, patch: Partial<PCBuild>) => {
+    let customerId = "";
+    let oldStatus = "";
+    let newStatus = patch.status;
+    
     setStore(prev => {
       const before = prev.pcBuilds.find(build => build.id === buildId);
+      if (before) {
+        customerId = before.customerId;
+        oldStatus = before.status;
+      }
+      
       const assignedStaff = patch.technicianId && patch.technicianId !== before?.technicianId
         ? prev.staff.find(staff => staff.id === patch.technicianId)
         : undefined;
@@ -2393,8 +5151,12 @@ export function useDashboardData() {
       saveStore(next);
       return next;
     });
+    
+    if (newStatus && customerId && oldStatus !== newStatus) {
+      autoNotifyStatusChange("system", buildId, customerId, oldStatus, newStatus);
+    }
     addLog("pc_build_updated", `PC build ${buildId} updated`);
-  }, [addLog]);
+  }, [addLog, autoNotifyStatusChange]);
 
   const addServiceRequest = useCallback((input: Omit<ServiceRequest, "id" | "status" | "timeline" | "createdAt" | "updatedAt" | "checklist" | "qaChecks"> & { status?: ServiceRequestStatus; checklist?: ServiceRequest["checklist"]; qaChecks?: ServiceRequest["qaChecks"] }) => {
     const status = input.status || "submitted";
@@ -2434,8 +5196,19 @@ export function useDashboardData() {
   }, [addLog]);
 
   const patchServiceRequest = useCallback((requestId: string, patch: Partial<ServiceRequest>) => {
+    let customerId = "";
+    let oldStatus = "";
+    let newStatus = patch.status;
+    let kind = "";
+    
     setStore(prev => {
       const before = (prev.serviceRequests || []).find(request => request.id === requestId);
+      if (before) {
+        customerId = before.customerId;
+        oldStatus = before.status;
+        kind = before.kind;
+      }
+      
       const assignedStaff = patch.technicianId && patch.technicianId !== before?.technicianId
         ? prev.staff.find(staff => staff.id === patch.technicianId)
         : undefined;
@@ -2469,8 +5242,13 @@ export function useDashboardData() {
       saveStore(next);
       return next;
     });
+    
+    if (newStatus && customerId && oldStatus !== newStatus) {
+      const notifyType = kind === "rental" ? "rental" : kind === "support" ? "support" : "system";
+      autoNotifyStatusChange(notifyType, requestId, customerId, oldStatus, newStatus);
+    }
     addLog("service_request_updated", `Service request ${requestId} updated`);
-  }, [addLog]);
+  }, [addLog, autoNotifyStatusChange]);
 
   const updateRental = useCallback((rentalId: string, patch: Partial<Rental>) => {
     setStore(prev => {

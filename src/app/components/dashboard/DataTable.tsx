@@ -52,7 +52,14 @@ export function DataTable<T>({ columns, data, onRowClick, emptyMessage = "No rec
           {data.map((row, i) => (
             <tr
               key={rowKey(row)}
-              onClick={onRowClick ? () => onRowClick(row) : undefined}
+              onClick={onRowClick ? (e) => {
+                // Don't trigger row click if clicking on a button or link
+                const target = e.target as HTMLElement;
+                if (target.tagName === "BUTTON" || target.tagName === "A" || target.closest("button") || target.closest("a")) {
+                  return;
+                }
+                onRowClick(row);
+              } : undefined}
               style={{
                 borderBottom: "1px solid rgba(255,255,255,0.04)",
                 cursor: onRowClick ? "pointer" : "default",

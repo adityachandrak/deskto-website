@@ -130,7 +130,7 @@ function ProductGallery({ product, details }: { product: Product; details: Produ
           style={{
             width: "100%",
             height: "100%",
-            objectFit: "cover",
+            objectFit: "contain",
             transform: zoom.on ? "scale(1.8)" : "scale(1)",
             transformOrigin: `${zoom.x}% ${zoom.y}%`,
             transition: zoom.on ? "none" : "transform .25s ease",
@@ -243,7 +243,7 @@ function ProductGallery({ product, details }: { product: Product; details: Produ
             <img
               src={src}
               alt={`thumb-${i}`}
-              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              style={{ width: "100%", height: "100%", objectFit: "contain" }}
             />
           </button>
         ))}

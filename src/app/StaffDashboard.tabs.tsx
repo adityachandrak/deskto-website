@@ -186,7 +186,12 @@ export function StaffOverview({ user, data, staff, onTab }: { user: AuthUser; da
               <Target size={24} color={pendingTasks > 0 ? "#ff6b00" : "#00cc66"} />
             </div>
             <div>
-              <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 24, color: "white" }}>{pendingTasks}</div>
+              <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 24, color: "white", display: "flex", alignItems: "center", gap: 8 }}>
+                {pendingTasks}
+                {tasks.filter(t => t.status !== "done" && t.dueAt < Date.now()).length > 0 && (
+                  <span style={{ fontSize: 10, background: "#ff4444", color: "white", padding: "2px 6px", borderRadius: 4, fontFamily: "'Space Grotesk', sans-serif" }}>URGENT</span>
+                )}
+              </div>
               <div style={{ color: "#888", fontSize: 12 }}>tasks remaining</div>
             </div>
           </div>
@@ -1130,19 +1135,41 @@ export function StaffRepairs({ staff, store, patchRepair }: { staff: StaffMember
               </div>
             )}
 
-            {pendingChecks.length > 0 && (
+            {r.qualityChecks && r.qualityChecks.length > 0 && (
               <div style={{ marginBottom: 16 }}>
-                <div style={{ color: "#ff6b00", fontSize: 10, marginBottom: 8, fontWeight: 600 }}>PENDING QUALITY CHECKS ({pendingChecks.length})</div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                  <div style={{ color: pendingChecks.length > 0 ? "#ff6b00" : "#00cc66", fontSize: 10, fontWeight: 600 }}>QUALITY CHECKS ({r.qualityChecks.length - pendingChecks.length}/{r.qualityChecks.length} COMPLETED)</div>
+                  <div style={{ fontSize: 11, color: "#888" }}>{Math.round(((r.qualityChecks.length - pendingChecks.length) / Math.max(1, r.qualityChecks.length)) * 100)}%</div>
+                </div>
                 <div style={{ display: "grid", gap: 6 }}>
-                  {pendingChecks.map((check, i) => (
-                    <div key={i} className="glass-card" style={{ padding: 10, display: "flex", alignItems: "center", gap: 10, border: "1px solid rgba(255,107,0,0.2)" }}>
-                      <Circle size={14} color="#ff6b00" />
-                      <span style={{ color: "#ccc", fontSize: 12 }}>{check.label}</span>
-                    </div>
+                  {r.qualityChecks.map((check, i) => (
+                    <label key={i} className="glass-card" style={{ padding: 10, display: "flex", alignItems: "center", gap: 10, border: check.done ? "1px solid rgba(0,204,102,0.2)" : "1px solid rgba(255,255,255,0.1)", cursor: "pointer" }}>
+                      <input 
+                        type="checkbox" 
+                        checked={check.done} 
+                        onChange={e => {
+                          const updatedChecks = [...r.qualityChecks!];
+                          updatedChecks[i].done = e.target.checked;
+                          patchRepair(r.id, { qualityChecks: updatedChecks });
+                          toast.success("Checklist synced");
+                        }} 
+                      />
+                      <span style={{ color: check.done ? "#00cc66" : "#ccc", fontSize: 12, textDecoration: check.done ? "line-through" : "none" }}>{check.label}</span>
+                    </label>
                   ))}
                 </div>
               </div>
             )}
+
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ color: "#888", fontSize: 10, marginBottom: 4 }}>TECHNICIAN NOTES (SYNCED TO ADMIN)</div>
+              <textarea 
+                value={r.technicianNotes || ""} 
+                onChange={e => patchRepair(r.id, { technicianNotes: e.target.value })}
+                placeholder="Add internal notes about this repair..."
+                style={{ width: "100%", height: 80, background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "10px", color: "white", fontSize: 12, resize: "vertical", fontFamily: "'Space Grotesk', sans-serif" }}
+              />
+            </div>
 
             <div>
               <div style={{ color: "#888", fontSize: 10, marginBottom: 4 }}>TIMELINE PROGRESS</div>
@@ -1223,6 +1250,7 @@ function StaffServiceQueue({ title, kind, staff, store, patchServiceRequest }: {
         if (!r) return null;
         const doneChecks = (r.checklist || []).filter(c => c.done).length;
         const totalChecks = (r.checklist || []).length;
+        const pendingChecks = totalChecks - doneChecks;
         return (
           <div className="glass-card" style={{ marginTop: 16, padding: 20, border: "1px solid rgba(168,85,247,0.3)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: 16 }}>
@@ -1236,7 +1264,43 @@ function StaffServiceQueue({ title, kind, staff, store, patchServiceRequest }: {
             </div>
             {r.requirements && <div style={{ marginBottom: 16 }}><div style={{ color: "#888", fontSize: 10, marginBottom: 4 }}>REQUIREMENTS</div><div style={{ color: "#ccc", fontSize: 13, lineHeight: 1.4, background: "rgba(255,255,255,0.03)", padding: "10px 12px", borderRadius: 6 }}>{r.requirements}</div></div>}
             {r.diagnosisReport && <div style={{ marginBottom: 16 }}><div style={{ color: "#888", fontSize: 10, marginBottom: 4 }}>DIAGNOSIS REPORT</div><div style={{ color: "#ccc", fontSize: 13, lineHeight: 1.4, background: "rgba(0,180,255,0.08)", padding: "10px 12px", borderRadius: 6, border: "1px solid rgba(0,180,255,0.2)" }}>{r.diagnosisReport}</div></div>}
-            {totalChecks > 0 && <div style={{ marginBottom: 16 }}><div style={{ color: "#888", fontSize: 10, marginBottom: 4 }}>CHECKLIST ({doneChecks}/{totalChecks})</div><div style={{ height: 5, borderRadius: 999, background: "rgba(255,255,255,.08)", overflow: "hidden" }}><div style={{ width: `${Math.round(doneChecks / totalChecks * 100)}%`, height: "100%", background: "linear-gradient(90deg,#00cc66,#00b4ff)" }} /></div></div>}
+            
+            {totalChecks > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                  <div style={{ color: pendingChecks > 0 ? "#ff6b00" : "#00cc66", fontSize: 10, fontWeight: 600 }}>CHECKLIST ({doneChecks}/{totalChecks} COMPLETED)</div>
+                  <div style={{ fontSize: 11, color: "#888" }}>{Math.round((doneChecks / Math.max(1, totalChecks)) * 100)}%</div>
+                </div>
+                <div style={{ display: "grid", gap: 6 }}>
+                  {r.checklist?.map((check, i) => (
+                    <label key={i} className="glass-card" style={{ padding: 10, display: "flex", alignItems: "center", gap: 10, border: check.done ? "1px solid rgba(0,204,102,0.2)" : "1px solid rgba(255,255,255,0.1)", cursor: "pointer" }}>
+                      <input 
+                        type="checkbox" 
+                        checked={check.done} 
+                        onChange={e => {
+                          const updatedChecks = [...r.checklist!];
+                          updatedChecks[i].done = e.target.checked;
+                          patchServiceRequest(r.id, { checklist: updatedChecks });
+                          toast.success("Checklist synced");
+                        }} 
+                      />
+                      <span style={{ color: check.done ? "#00cc66" : "#ccc", fontSize: 12, textDecoration: check.done ? "line-through" : "none" }}>{check.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ color: "#888", fontSize: 10, marginBottom: 4 }}>TECHNICIAN NOTES (SYNCED TO ADMIN)</div>
+              <textarea 
+                value={r.technicianNotes || ""} 
+                onChange={e => patchServiceRequest(r.id, { technicianNotes: e.target.value })}
+                placeholder="Add internal notes about this request..."
+                style={{ width: "100%", height: 80, background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "10px", color: "white", fontSize: 12, resize: "vertical", fontFamily: "'Space Grotesk', sans-serif" }}
+              />
+            </div>
+            
           </div>
         );
       })()}
@@ -1331,8 +1395,68 @@ export function StaffPCBuilds({ staff, store, patchPCBuild }: { staff: StaffMemb
             </div>
             {b.components && b.components.length > 0 && <div style={{ marginBottom: 16 }}><div style={{ color: "#888", fontSize: 10, marginBottom: 4 }}>COMPONENTS ({b.components.length})</div><div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 8 }}>{b.components.map((comp, i) => <div key={i} className="glass-card" style={{ padding: 8, fontSize: 11 }}><div style={{ color: "#a855f7", fontWeight: 500 }}>{comp.type}</div><div style={{ color: "#ccc", fontSize: 10 }}>{comp.name}</div><div style={{ fontFamily: "'Orbitron', sans-serif", color: "white", fontSize: 11 }}>₹{comp.price.toLocaleString()}</div></div>)}</div></div>}
             {b.quotation && <div style={{ marginBottom: 16 }}><div style={{ color: "#888", fontSize: 10, marginBottom: 4 }}>QUOTATION</div><div style={{ fontFamily: "'Orbitron', sans-serif", color: "white", fontSize: 20 }}>₹{b.quotation.toLocaleString()}</div>{b.quotationNote && <div style={{ color: "#888", fontSize: 12, marginTop: 4 }}>{b.quotationNote}</div>}</div>}
-            {doneAssemblies > 0 && <div style={{ marginBottom: 16 }}><div style={{ color: "#888", fontSize: 10, marginBottom: 4 }}>ASSEMBLY ({doneAssemblies}/{b.assemblyChecklist?.length || 0})</div><div style={{ height: 5, borderRadius: 999, background: "rgba(255,255,255,.08)", overflow: "hidden" }}><div style={{ width: `${Math.round(doneAssemblies / (b.assemblyChecklist?.length || 1) * 100)}%`, height: "100%", background: "linear-gradient(90deg,#00cc66,#00b4ff)" }} /></div></div>}
-            {doneTests > 0 && <div style={{ marginBottom: 16 }}><div style={{ color: "#888", fontSize: 10, marginBottom: 4 }}>TEST RESULTS ({doneTests}/{b.testResults?.length || 0})</div><div style={{ height: 5, borderRadius: 999, background: "rgba(255,255,255,.08)", overflow: "hidden" }}><div style={{ width: `${Math.round(doneTests / (b.testResults?.length || 1) * 100)}%`, height: "100%", background: "linear-gradient(90deg,#a855f7,#00b4ff)" }} /></div></div>}
+            
+            {b.assemblyChecklist && b.assemblyChecklist.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                  <div style={{ color: (b.assemblyChecklist.length - doneAssemblies) > 0 ? "#ff6b00" : "#00cc66", fontSize: 10, fontWeight: 600 }}>ASSEMBLY ({doneAssemblies}/{b.assemblyChecklist.length} COMPLETED)</div>
+                  <div style={{ fontSize: 11, color: "#888" }}>{Math.round((doneAssemblies / Math.max(1, b.assemblyChecklist.length)) * 100)}%</div>
+                </div>
+                <div style={{ display: "grid", gap: 6 }}>
+                  {b.assemblyChecklist.map((check, i) => (
+                    <label key={i} className="glass-card" style={{ padding: 10, display: "flex", alignItems: "center", gap: 10, border: check.done ? "1px solid rgba(0,204,102,0.2)" : "1px solid rgba(255,255,255,0.1)", cursor: "pointer" }}>
+                      <input 
+                        type="checkbox" 
+                        checked={check.done} 
+                        onChange={e => {
+                          const updatedChecks = [...b.assemblyChecklist!];
+                          updatedChecks[i].done = e.target.checked;
+                          patchPCBuild(b.id, { assemblyChecklist: updatedChecks });
+                          toast.success("Assembly checklist synced");
+                        }} 
+                      />
+                      <span style={{ color: check.done ? "#00cc66" : "#ccc", fontSize: 12, textDecoration: check.done ? "line-through" : "none" }}>{check.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {b.testResults && b.testResults.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                  <div style={{ color: (b.testResults.length - doneTests) > 0 ? "#ff6b00" : "#a855f7", fontSize: 10, fontWeight: 600 }}>TEST RESULTS ({doneTests}/{b.testResults.length} COMPLETED)</div>
+                  <div style={{ fontSize: 11, color: "#888" }}>{Math.round((doneTests / Math.max(1, b.testResults.length)) * 100)}%</div>
+                </div>
+                <div style={{ display: "grid", gap: 6 }}>
+                  {b.testResults.map((check, i) => (
+                    <label key={i} className="glass-card" style={{ padding: 10, display: "flex", alignItems: "center", gap: 10, border: check.done ? "1px solid rgba(168,85,247,0.2)" : "1px solid rgba(255,255,255,0.1)", cursor: "pointer" }}>
+                      <input 
+                        type="checkbox" 
+                        checked={check.done} 
+                        onChange={e => {
+                          const updatedChecks = [...b.testResults!];
+                          updatedChecks[i].done = e.target.checked;
+                          patchPCBuild(b.id, { testResults: updatedChecks });
+                          toast.success("Test results synced");
+                        }} 
+                      />
+                      <span style={{ color: check.done ? "#a855f7" : "#ccc", fontSize: 12, textDecoration: check.done ? "line-through" : "none" }}>{check.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ color: "#888", fontSize: 10, marginBottom: 4 }}>TECHNICIAN NOTES (SYNCED TO ADMIN)</div>
+              <textarea 
+                value={b.technicianNotes || ""} 
+                onChange={e => patchPCBuild(b.id, { technicianNotes: e.target.value })}
+                placeholder="Add internal notes about this build..."
+                style={{ width: "100%", height: 80, background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "10px", color: "white", fontSize: 12, resize: "vertical", fontFamily: "'Space Grotesk', sans-serif" }}
+              />
+            </div>
           </div>
         );
       })()}

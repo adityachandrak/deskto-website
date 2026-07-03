@@ -708,10 +708,13 @@ export function AdminProducts({ store, addCatalogProduct, patchCatalogProduct, d
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<Partial<CatalogProduct> | null>(null);
   const filtered = store.products.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
+
   const save = (status: "draft" | "published") => {
     if (!editing) return;
+
     const error = validateCatalogProduct(editing, status === "published");
     if (error) return toast.error(error);
+
     const product = {
       ...emptyCatalogDraft(),
       ...editing,
@@ -720,44 +723,132 @@ export function AdminProducts({ store, addCatalogProduct, patchCatalogProduct, d
       stock: Number(editing.stock || 0),
       price: Number(editing.price || 0),
       rating: Number(editing.rating || 4.8),
-      reviews: Number(editing.reviews || 0),
-      popularity: Number(editing.popularity || 0),
-      sales: Number(editing.sales || 0),
       img: editing.img || editing.gallery?.[0] || "",
     } as CatalogProduct;
+
     if (product.id) patchCatalogProduct(product.id, product);
     else addCatalogProduct(product as Omit<CatalogProduct, "id" | "createdAt" | "updatedAt">);
+
     toast.success(status === "published" ? "Product published to shop catalog" : "Catalog draft saved");
     setEditing(null);
   };
+
   return (
     <div style={{ display: "grid", gap: 16 }}>
-    <SectionCard title="Catalog Management" subtitle={`${store.products.length} SKUs`}
-      action={
-        <div style={{ display: "flex", gap: 8 }}>
-          <input type="text" placeholder="Search products..." value={search} onChange={e => setSearch(e.target.value)}
-            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 999, padding: "8px 14px", color: "white", fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, outline: "none", width: 200 }} />
-          <button className="glass-pill glass-pill-primary glass-pill-sm" onClick={() => setEditing(emptyCatalogDraft())}><Plus size={12} /> Add New Product</button>
-        </div>
-      }
-    >
-      <DataTable
-        rowKey={p => p.id.toString()}
-        data={filtered}
-        columns={[
-          { key: "id", label: "ID", width: "60px", render: p => <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 10 }}>#{p.id}</span> },
-          { key: "name", label: "Name", render: p => <div style={{ display: "flex", alignItems: "center", gap: 9 }}>{p.img && <img src={p.img} alt={p.name} style={{ width: 38, height: 30, objectFit: "cover", borderRadius: 6 }} />}<span>{p.name}</span></div> },
-          { key: "brand", label: "Brand" },
-          { key: "category", label: "Category" },
-          { key: "status", label: "Catalog", render: p => <StatusBadge status={p.catalogStatus || "published"} /> },
-          { key: "media", label: "JPGs", render: p => `${p.gallery?.length || (p.img ? 1 : 0)}/5` },
-          { key: "price", label: "Price", align: "right", render: p => inr(p.price) },
-          { key: "stock", label: "Stock", align: "right", render: p => <span style={{ color: p.stock < 5 ? "#FF1F45" : "#ddd" }}>{p.stock}</span> },
-          { key: "actions", label: "", render: p => <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}><button className="glass-pill glass-pill-sm glass-pill-outline" onClick={(e) => { e.stopPropagation(); setEditing(p); }}>Edit</button><button className="glass-pill glass-pill-sm glass-pill-info" onClick={(e) => { e.stopPropagation(); patchCatalogProduct(p.id, { catalogStatus: p.catalogStatus === "archived" ? "published" : "archived", inStock: false }); }}>{p.catalogStatus === "archived" ? "Restore" : "Archive"}</button><button className="glass-pill glass-pill-sm glass-pill-red" onClick={(e) => { e.stopPropagation(); deleteCatalogProduct(p.id); }}>Delete</button></div> },
-        ]}
-      />
-    </SectionCard>
-    {editing && <AdminCatalogEditor draft={editing} setDraft={setEditing} onSave={save} onClose={() => setEditing(null)} />}
+      <SectionCard
+        title="Catalog Management"
+        subtitle={`${store.products.length} SKUs`}
+        action={
+          <div style={{ display: "flex", gap: 8 }}>
+            <input
+              type="text"
+              placeholder="Search products..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              style={{
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.1)",
+                borderRadius: 999,
+                padding: "8px 14px",
+                color: "white",
+                fontFamily: "'Space Grotesk', sans-serif",
+                fontSize: 12,
+                outline: "none",
+                width: 200
+              }}
+            />
+            <button
+              className="glass-pill glass-pill-primary glass-pill-sm"
+              onClick={() => setEditing(emptyCatalogDraft())}
+            >
+              <Plus size={12} /> Add New Product
+            </button>
+          </div>
+        }
+      >
+        <DataTable
+          rowKey={p => p.id.toString()}
+          data={filtered}
+          columns={[
+            {
+              key: "id",
+              label: "ID",
+              width: "60px",
+              render: p => <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 10 }}>#{p.id}</span>
+            },
+            {
+              key: "name",
+              label: "Name",
+              render: p => (
+                <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                  {p.img && <img src={p.img} alt={p.name} style={{ width: 38, height: 30, objectFit: "cover", borderRadius: 6 }} />}
+                  <span style={{ fontSize: 13, color: "white" }}>{p.name}</span>
+                </div>
+              )
+            },
+            { key: "brand", label: "Brand", render: p => <span style={{ fontSize: 12 }}>{p.brand || "-"}</span> },
+            { key: "category", label: "Category", render: p => <span style={{ fontSize: 12 }}>{p.category || "-"}</span> },
+            { key: "status", label: "Status", render: p => <StatusBadge status={p.catalogStatus || "published"} /> },
+            {
+              key: "media",
+              label: "Images",
+              render: p => {
+                const count = p.gallery?.length || (p.img ? 1 : 0);
+                return <span style={{ fontSize: 12 }}>{count}/5</span>;
+              }
+            },
+            {
+              key: "price",
+              label: "Price",
+              align: "right",
+              render: p => <span style={{ fontFamily: "'Orbitron', sans-serif", color: "#00cc66" }}>{inr(p.price)}</span>
+            },
+            {
+              key: "stock",
+              label: "Stock",
+              align: "right",
+              render: p => {
+                const stock = p.stock || 0;
+                const color = stock === 0 ? "#FF1F45" : stock < 5 ? "#ff6b00" : "#00cc66";
+                return <span style={{ color, fontWeight: 600 }}>{stock}</span>;
+              }
+            },
+            {
+              key: "actions",
+              label: "",
+              render: p => (
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button
+                    className="glass-pill glass-pill-sm glass-pill-outline"
+                    onClick={(e) => { e.stopPropagation(); setEditing(p); }}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    className="glass-pill glass-pill-sm glass-pill-primary"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      patchCatalogProduct(p.id, {
+                        catalogStatus: p.catalogStatus === "archived" ? "published" : "archived",
+                        inStock: false
+                      });
+                    }}
+                  >
+                    {p.catalogStatus === "archived" ? "Restore" : "Archive"}
+                  </button>
+                  <button
+                    className="glass-pill glass-pill-sm glass-pill-red"
+                    onClick={(e) => { e.stopPropagation(); deleteCatalogProduct(p.id); }}
+                  >
+                    Delete
+                  </button>
+                </div>
+              )
+            },
+          ]}
+        />
+      </SectionCard>
+      {editing && <AdminCatalogEditor draft={editing} setDraft={setEditing} onSave={save} onClose={() => setEditing(null)} />}
     </div>
   );
 }
@@ -1323,75 +1414,248 @@ export function AdminBrands() {
 // ─── Inventory ────────────────────────────────────────────────────────────
 
 export function AdminInventory({ store }: { store: DashboardStore }) {
-  const [restockProduct, setRestockProduct] = useState<typeof store.products[0] | null>(null);
-  const [restockQty, setRestockQty] = useState("10");
+  const [showRestock, setShowRestock] = useState<{ product: typeof store.products[0]; qty: string } | null>(null);
+  const [showCreatePO, setShowCreatePO] = useState(false);
+  const [poDraft, setPoDraft] = useState({
+    supplierId: store.suppliers[0]?.id || "",
+    component: "",
+    qty: "10",
+    cost: "",
+    gst: "18",
+  });
+
   const lowStock = store.products.filter(p => p.stock < 5);
-  const [showForm, setShowForm] = useState(false);
-  const [draft, setDraft] = useState({ supplierId: store.suppliers[0]?.id || "", component: "", qty: "10", cost: "", gst: "18" });
+  const inStockCount = store.products.filter(p => p.inStock).length;
+  const totalUnits = store.products.reduce((s, p) => s + (p.stock || 0), 0);
+
+  const stockColor = (stock: number) => {
+    if (stock === 0) return "#FF1F45";
+    if (stock < 5) return "#ff6b00";
+    return "#00cc66";
+  };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+      {/* Stats row */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
+        <div className="glass-card" style={{ padding: 16, border: "1px solid rgba(255,255,255,.06)" }}>
+          <div style={{ fontSize: 11, color: "#888", textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>Total SKUs</div>
+          <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 24, color: "white" }}>{store.products.length}</div>
+        </div>
+        <div className="glass-card" style={{ padding: 16, border: "1px solid rgba(255,255,255,.06)" }}>
+          <div style={{ fontSize: 11, color: "#888", textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>In Stock</div>
+          <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 24, color: "#00cc66" }}>{inStockCount}</div>
+        </div>
+        <div className="glass-card" style={{ padding: 16, border: "1px solid rgba(255,255,255,.06)" }}>
+          <div style={{ fontSize: 11, color: "#888", textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>Total Units</div>
+          <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 24, color: "#00b4ff" }}>{totalUnits}</div>
+        </div>
+        <div className="glass-card" style={{ padding: 16, border: "1px solid rgba(255,31,69,0.3)" }}>
+          <div style={{ fontSize: 11, color: "#888", textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>Low Stock</div>
+          <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 24, color: "#FF1F45" }}>{lowStock.length}</div>
+        </div>
+      </div>
+
+      {/* Low stock alert */}
       {lowStock.length > 0 && (
-        <div className="glass-card" style={{ padding: 16, borderColor: "rgba(255,31,69,0.4)" }}>
+        <div className="glass-card" style={{ padding: 16, border: "1px solid rgba(255,31,69,0.3)", background: "rgba(255,31,69,0.03)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-            <AlertCircle size={20} color="#FF1F45" />
+            <AlertCircle size={18} color="#FF1F45" />
             <div>
-              <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 13, color: "white" }}>{lowStock.length} Low-Stock Alerts</div>
-              <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, color: "#888", marginTop: 2 }}>Restock soon to avoid lost sales</div>
+              <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 12, color: "white" }}>{lowStock.length} Low-Stock Alert{lowStock.length > 1 ? "s" : ""}</div>
+              <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>Restock soon to avoid lost sales</div>
             </div>
-            <button className="glass-pill glass-pill-primary glass-pill-sm" style={{ marginLeft: "auto" }} onClick={() => setShowForm(true)}>Create PO</button>
+            <button
+              className="glass-pill glass-pill-primary glass-pill-sm"
+              style={{ marginLeft: "auto" }}
+              onClick={() => { setShowCreatePO(true); }}
+            >
+              Create Purchase Order
+            </button>
           </div>
         </div>
       )}
 
-      {showForm && (
-        <SectionCard title="Create Purchase Order" subtitle="Fill in component details to create a PO">
-          <div className="glass-card" style={{ padding: 14, marginBottom: 14, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
-            <SelectField label="Supplier" value={draft.supplierId} onChange={v => setDraft({ ...draft, supplierId: v })} options={store.suppliers.map(s => s.id)} />
-            <Field label="Component / Product" value={draft.component} onChange={v => setDraft({ ...draft, component: v })} />
-            <Field label="Quantity" value={draft.qty} onChange={v => setDraft({ ...draft, qty: v })} type="number" />
-            <Field label="Unit Cost (₹)" value={draft.cost} onChange={v => setDraft({ ...draft, cost: v })} type="number" />
-            <Field label="GST %" value={draft.gst} onChange={v => setDraft({ ...draft, gst: v })} type="number" />
+      {/* Create PO form */}
+      {showCreatePO && (
+        <div className="glass-card" style={{ padding: 20, border: "1px solid rgba(0,180,255,0.2)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <h3 style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 13, color: "white", margin: 0 }}>Create Purchase Order</h3>
+            <button className="glass-pill glass-pill-sm glass-pill-outline" onClick={() => setShowCreatePO(false)}>Close</button>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, marginBottom: 16 }}>
+            <SelectField
+              label="Supplier"
+              value={poDraft.supplierId}
+              onChange={v => setPoDraft({ ...poDraft, supplierId: v })}
+              options={store.suppliers.map(s => s.id)}
+            />
+            <Field
+              label="Component / Product"
+              value={poDraft.component}
+              onChange={v => setPoDraft({ ...poDraft, component: v })}
+            />
+            <Field
+              label="Quantity"
+              value={poDraft.qty}
+              onChange={v => setPoDraft({ ...poDraft, qty: v })}
+              type="number"
+            />
+            <Field
+              label="Unit Cost (₹)"
+              value={poDraft.cost}
+              onChange={v => setPoDraft({ ...poDraft, cost: v })}
+              type="number"
+            />
+            <Field
+              label="GST %"
+              value={poDraft.gst}
+              onChange={v => setPoDraft({ ...poDraft, gst: v })}
+              type="number"
+            />
           </div>
           <div style={{ display: "flex", gap: 10 }}>
-            <button className="glass-pill glass-pill-primary" onClick={() => { toast.success("PO created - go to Purchase Orders tab to send"); setShowForm(false); }}>Create PO</button>
-            <button className="glass-pill glass-pill-outline" onClick={() => setShowForm(false)}>Cancel</button>
+            <button
+              className="glass-pill glass-pill-primary"
+              onClick={() => {
+                toast.success("Purchase Order created — check Purchase Orders tab to send");
+                setShowCreatePO(false);
+              }}
+            >
+              Create PO
+            </button>
+            <button className="glass-pill glass-pill-outline" onClick={() => setShowCreatePO(false)}>
+              Cancel
+            </button>
           </div>
-        </SectionCard>
+        </div>
       )}
 
-      <SectionCard title="Stock Levels" subtitle={`${lowStock.length} items need restocking`}>
+      {/* Stock table */}
+      <SectionCard title="Stock Levels" subtitle={`${store.products.length} SKUs`}>
         <DataTable
           rowKey={p => p.id.toString()}
           data={store.products}
           columns={[
-            { key: "id", label: "ID", width: "60px", render: p => <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 10 }}>#{p.id}</span> },
-            { key: "name", label: "Product", render: p => <div style={{ display: "flex", alignItems: "center", gap: 8 }}><span>{p.name}</span></div> },
-            { key: "category", label: "Category", render: p => <span style={{ color: "#888", fontSize: 11 }}>{p.category}</span> },
-            { key: "stock", label: "Stock", align: "right", render: p => <span style={{ color: p.stock < 5 ? "#FF1F45" : p.stock < 10 ? "#ff6b00" : "#00cc66", fontWeight: 700, fontFamily: "'Orbitron', sans-serif" }}>{p.stock}</span> },
-            { key: "price", label: "Price", align: "right", render: p => <span style={{ color: "#aaa" }}>{inr(p.price)}</span> },
-            { key: "actions", label: "", render: p => (
-              <button
-                className="glass-pill glass-pill-sm glass-pill-outline"
-                onClick={(e) => { e.stopPropagation(); setRestockProduct(p); setRestockQty("10"); setDraft({ ...draft, component: p.name }); }}
-                style={{ whiteSpace: "nowrap" }}
-              >
-                Restock
-              </button>
-            )},
+            {
+              key: "id",
+              label: "ID",
+              width: "60px",
+              render: p => <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 10 }}>#{p.id}</span>,
+            },
+            {
+              key: "name",
+              label: "Product",
+              render: p => <span style={{ color: "white", fontSize: 13 }}>{p.name}</span>,
+            },
+            {
+              key: "category",
+              label: "Category",
+              render: p => <span style={{ fontSize: 12, color: "#888" }}>{p.category || "-"}</span>,
+            },
+            {
+              key: "stock",
+              label: "Stock",
+              align: "right",
+              render: p => {
+                const s = p.stock || 0;
+                const color = stockColor(s);
+                return (
+                  <span style={{ color, fontWeight: 700, fontFamily: "'Orbitron', sans-serif", fontSize: 13 }}>
+                    {s}
+                  </span>
+                );
+              },
+            },
+            {
+              key: "price",
+              label: "Price",
+              align: "right",
+              render: p => <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 12 }}>{inr(p.price)}</span>,
+            },
+            {
+              key: "inStock",
+              label: "Status",
+              render: p => (
+                <span className="glass-pill glass-pill-sm" style={{
+                  background: p.inStock ? "rgba(0,204,102,0.12)" : "rgba(255,31,69,0.12)",
+                  color: p.inStock ? "#00cc66" : "#FF1F45",
+                }}>
+                  {p.inStock ? "Available" : "Out of Stock"}
+                </span>
+              ),
+            },
+            {
+              key: "actions",
+              label: "",
+              render: p => (
+                <button
+                  className="glass-pill glass-pill-sm glass-pill-outline"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowRestock({ product: p, qty: "10" });
+                  }}
+                >
+                  Restock
+                </button>
+              ),
+            },
           ]}
         />
       </SectionCard>
 
-      {restockProduct && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.7)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => setRestockProduct(null)}>
-          <div className="glass-card" style={{ padding: 24, maxWidth: 420, width: "90%", borderColor: "rgba(255,31,69,.3)" }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 14, color: "white", marginTop: 0 }}>Restock: {restockProduct.name}</h3>
-            <p style={{ color: "#888", fontSize: 12, marginBottom: 16 }}>Current stock: <span style={{ color: "#FF1F45", fontWeight: 700 }}>{restockProduct.stock}</span> units</p>
-            <Field label="Add Quantity" value={restockQty} onChange={setRestockQty} type="number" />
-            <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
-              <button className="glass-pill glass-pill-primary" onClick={() => { toast.success(`Added ${restockQty} units to ${restockProduct.name}`); setRestockProduct(null); }}>Confirm Restock</button>
-              <button className="glass-pill glass-pill-outline" onClick={() => setRestockProduct(null)}>Cancel</button>
+      {/* Restock modal */}
+      {showRestock && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,.75)",
+            zIndex: 200,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+          onClick={() => setShowRestock(null)}
+        >
+          <div
+            className="glass-card"
+            style={{
+              padding: 24,
+              maxWidth: 420,
+              width: "90%",
+              border: "1px solid rgba(255,31,69,.3)",
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <h3 style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 14, color: "white", margin: "0 0 8px" }}>
+              Restock Product
+            </h3>
+            <p style={{ color: "#888", fontSize: 12, marginBottom: 20 }}>
+              <strong style={{ color: "white" }}>{showRestock.product.name}</strong>
+              <br />
+              Current stock: <span style={{ color: stockColor(showRestock.product.stock), fontWeight: 700 }}>{showRestock.product.stock}</span> units
+            </p>
+            <Field
+              label="Add Quantity"
+              value={showRestock.qty}
+              onChange={v => setShowRestock({ ...showRestock, qty: v })}
+              type="number"
+            />
+            <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+              <button
+                className="glass-pill glass-pill-primary"
+                onClick={() => {
+                  const added = Number(showRestock.qty || 0);
+                  toast.success(`Added ${added} units to ${showRestock.product.name}`);
+                  setShowRestock(null);
+                }}
+              >
+                Confirm Restock
+              </button>
+              <button className="glass-pill glass-pill-outline" onClick={() => setShowRestock(null)}>
+                Cancel
+              </button>
             </div>
           </div>
         </div>
