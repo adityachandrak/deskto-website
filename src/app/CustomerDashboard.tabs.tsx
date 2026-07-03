@@ -17,7 +17,7 @@ import type {
 } from "./lib/dashboardData";
 import { mediaName, openMediaFile } from "./lib/mediaStore";
 import { useWishlist } from "./lib/wishlist";
-import { PRODUCTS } from "./app";
+import { PRODUCTS } from "./App";
 import { toast } from "sonner";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
