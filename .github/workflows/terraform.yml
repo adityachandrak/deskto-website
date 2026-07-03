@@ -1,0 +1,127 @@
+name: Terraform - Infrastructure Changes
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Terraform action'
+        required: true
+        type: choice
+        options:
+          - plan
+          - apply
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      terraform_target:
+        description: 'Target specific resource (optional)'
+        required: false
+        type: string
+        default: ''
+
+  # Also run on PRs touching terraform files for plan comments
+  pull_request:
+    paths:
+      - 'terraform/**'
+      - '.github/workflows/terraform.yml'
+    branches:
+      - main
+
+concurrency:
+  group: terraform-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  terraform:
+    name: Terraform ${{ github.event.inputs.action || 'plan' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: terraform/live
+
+    env:
+      TF_INPUT: false
+      TF_IN_AUTOMATION: true
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '~> 1.5'
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Terraform Init
+        id: init
+        run: terraform init
+
+      - name: Terraform Format Check
+        id: fmt
+        run: terraform fmt -check -recursive || echo "Format issues found"
+
+      - name: Terraform Validate
+        id: validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        id: plan
+        run: |
+          TARGET=""
+          if [ -n "${{ github.event.inputs.terraform_target || '' }}" ]; then
+            TARGET="-target=${{ github.event.inputs.terraform_target }}"
+          fi
+          terraform plan -no-color ${TARGET} -out=tfplan || true
+        env:
+          TF_VAR_region: ${{ secrets.AWS_REGION }}
+          TF_VAR_project_name: deskto-website
+
+      - name: Comment PR with Plan
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const planOutput = fs.readFileSync('terraform/live/tfplan', { encoding: 'utf8' });
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## Terraform Plan\n\n\`\`\`\n${planOutput.substring(0, 65000)}\n\`\`\``
+            });
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Terraform Apply (manual trigger only)
+        if: ${{ github.event.inputs.action == 'apply' && github.event_name == 'workflow_dispatch' }}
+        run: terraform apply -auto-approve tfplan
+        env:
+          TF_VAR_region: ${{ secrets.AWS_REGION }}
+          TF_VAR_project_name: deskto-website
+
+      - name: Output Terraform State
+        if: ${{ github.event.inputs.action == 'apply' && success() }}
+        run: |
+          echo "EC2 Public IP: $(terraform output -raw ec2_public_ip 2>/dev/null || echo 'N/A')"
+          echo "ECR Repository: $(terraform output -raw ecr_repository_url 2>/dev/null || echo 'N/A')"
+
+      - name: Clean up plan file
+        if: always()
+        run: rm -f tfplan
