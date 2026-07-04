@@ -7,7 +7,7 @@ set -e
 INSTANCE_ID="${1:-i-0b652e38103c7635a}"
 REGION="ap-south-1"
 ECR_REPO="898322960338.dkr.ecr.ap-south-1.amazonaws.com/deskto-web"
-IMAGE_TAG="${2:-sha-f62d0677}"
+IMAGE_TAG="${2:-sha-81f8a4c}"
 PUBLIC_IP="13.234.99.45"
 
 echo "=========================================="
