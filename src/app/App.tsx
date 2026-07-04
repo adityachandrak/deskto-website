@@ -311,11 +311,13 @@ function GlobalStyles() {
         .services-grid{grid-template-columns:1fr 1fr!important;gap:14px!important;}
         .workflow-grid{grid-template-columns:repeat(3,1fr)!important;gap:16px!important;}
         .workflow-line-abs{display:none!important;}
-        .builds-grid{grid-template-columns:1fr 1fr!important;gap:16px!important;}
         .pcbuilder-grid{grid-template-columns:1fr!important;}
         .pcbuilder-summary{position:static!important;}
+        .service-hero-grid{grid-template-columns:1fr!important;gap:28px!important;}
+        .two-col-workflow{grid-template-columns:1fr!important;}
         .offers-grid{grid-template-columns:1fr!important;}
         .offers-hero{height:auto!important;min-height:240px!important;}
+        .offers-hero:has(.offer-hero-pad){min-height:380px!important;}
         .location-grid{grid-template-columns:1fr!important;gap:32px!important;}
         .footer-grid{grid-template-columns:1fr 1fr!important;gap:24px!important;}
         .footer-brand{grid-column:1/-1!important;}
@@ -337,6 +339,7 @@ function GlobalStyles() {
         .faq-btn{padding:14px 16px!important;}
         .faq-q{font-size:12px!important;}
         .offer-h3{font-size:clamp(16px,4vw,22px)!important;}
+        .offer-hero-pad{padding-right:28px!important;padding-top:84px!important;}
         .footer-grid{grid-template-columns:1fr!important;}
       }
 
@@ -361,9 +364,20 @@ function GlobalStyles() {
       .dash-timeline-step::before{content:"";position:absolute;left:-18px;top:6px;width:11px;height:11px;border-radius:50%;background:#0a0a0a;border:2px solid #555;}
       .dash-timeline-step.done::before{background:#00cc66;border-color:#00cc66;box-shadow:0 0 8px rgba(0,204,102,0.5);}
       .dash-timeline-step.current::before{background:#FF1F45;border-color:#FF1F45;box-shadow:0 0 8px rgba(255,31,69,0.6);}
+      .dash-sidebar-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:590;display:none;}
+      .dash-menu-btn,.dash-sidebar-close{display:none;}
       @media (max-width:768px){
         .dash-shell{grid-template-columns:1fr;}
-        .dash-sidebar{position:relative;height:auto;max-height:none;}
+        .dash-sidebar{position:fixed;top:0;left:0;width:270px;max-width:82vw;height:100vh;z-index:600;transform:translateX(-100%);transition:transform .28s ease;box-shadow:12px 0 32px rgba(0,0,0,.55);}
+        .dash-sidebar.open{transform:translateX(0);}
+        .dash-sidebar-backdrop{display:block;}
+        .dash-menu-btn{display:flex!important;}
+        .dash-sidebar-close{display:flex!important;}
+        .dash-main{padding:16px!important;}
+        .dash-topbar{padding:10px 14px!important;gap:8px!important;flex-wrap:wrap!important;}
+        .dash-search-box{min-width:0!important;flex:1 1 100%!important;order:3;margin-right:0!important;}
+        .dash-search-box input{font-size:16px!important;}
+        .dash-kpi-grid{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))!important;gap:10px!important;}
       }
     `}</style>
   );
@@ -1414,14 +1428,14 @@ function ProductCatalogPage({ category }: { category: ProductType | "all" }) {
 
         {/* Search + Sort */}
         <Reveal>
-          <div className="glass-card" style={{ borderRadius:14,padding:16,display:"grid",gridTemplateColumns:"minmax(220px,1fr) 220px",gap:12,marginBottom:18 }}>
+          <div className="glass-card" style={{ borderRadius:14,padding:16,display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(220px, 1fr))",gap:12,marginBottom:18 }}>
             <label style={{ display:"flex",alignItems:"center",gap:10 }}>
               <Search size={15} color="#FF1F45" />
               <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search by name, brand or spec"
-                style={{ width:"100%",background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.09)",borderRadius:8,padding:"11px 12px",fontFamily:"'Space Grotesk',sans-serif",fontSize:13,color:"white",outline:"none" }} />
+                style={{ width:"100%",background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.09)",borderRadius:8,padding:"11px 12px",fontFamily:"'Space Grotesk',sans-serif",fontSize:16,color:"white",outline:"none" }} />
             </label>
             <select value={sort} onChange={e=>setSort(e.target.value as SortKey)}
-              style={{ width:"100%",background:"#151515",border:"1px solid rgba(255,255,255,.12)",borderRadius:8,padding:"11px 12px",fontFamily:"'Space Grotesk',sans-serif",fontSize:13,color:"white",outline:"none" }}>
+              style={{ width:"100%",background:"#151515",border:"1px solid rgba(255,255,255,.12)",borderRadius:8,padding:"11px 12px",fontFamily:"'Space Grotesk',sans-serif",fontSize:16,color:"white",outline:"none" }}>
               <option value="featured">Featured</option>
               <option value="second-hand">Second-hand</option>
               <option value="latest">Latest</option>
@@ -1473,16 +1487,16 @@ function ProductCatalogPage({ category }: { category: ProductType | "all" }) {
                   </div>
                 </div>
                 {/* Price + toggles */}
-                <div style={{ display:"grid",gridTemplateColumns:"repeat(2,1fr) 1fr 1fr",gap:12,alignItems:"end" }}>
+                <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(150px, 1fr))",gap:12,alignItems:"end" }}>
                   <label>
                     <span style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:10,color:"#777",letterSpacing:"1.4px",textTransform:"uppercase",fontWeight:700,display:"block",marginBottom:8 }}>Min Price</span>
                     <input type="number" value={priceMin} onChange={e=>setPriceMin(e.target.value)} placeholder="₹ 0"
-                      style={{ width:"100%",background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.09)",borderRadius:8,padding:"11px 12px",fontFamily:"'Space Grotesk',sans-serif",fontSize:13,color:"white",outline:"none" }} />
+                      style={{ width:"100%",background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.09)",borderRadius:8,padding:"11px 12px",fontFamily:"'Space Grotesk',sans-serif",fontSize:16,color:"white",outline:"none" }} />
                   </label>
                   <label>
                     <span style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:10,color:"#777",letterSpacing:"1.4px",textTransform:"uppercase",fontWeight:700,display:"block",marginBottom:8 }}>Max Price</span>
                     <input type="number" value={priceMax} onChange={e=>setPriceMax(e.target.value)} placeholder="₹ 5,00,000"
-                      style={{ width:"100%",background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.09)",borderRadius:8,padding:"11px 12px",fontFamily:"'Space Grotesk',sans-serif",fontSize:13,color:"white",outline:"none" }} />
+                      style={{ width:"100%",background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.09)",borderRadius:8,padding:"11px 12px",fontFamily:"'Space Grotesk',sans-serif",fontSize:16,color:"white",outline:"none" }} />
                   </label>
                   <label style={{ display:"flex",alignItems:"center",gap:8,cursor:"pointer",padding:"11px 0" }}>
                     <input type="checkbox" checked={inStockOnly} onChange={e=>setInStockOnly(e.target.checked)} />
@@ -1863,7 +1877,7 @@ function OffersSection() {
               <div className="offers-hero glass-card card-hover" style={{ borderRadius:18,overflow:"hidden",position:"relative",height:280,background:"linear-gradient(135deg,#0a0005,#2A0008)",border:"1px solid rgba(255,31,69,.15)" }}>
                 <img src={offer.img} alt={offer.title} style={{ position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:.22 }} />
                 <div style={{ position:"absolute",inset:0,background:"linear-gradient(90deg,rgba(5,5,5,.92) 0%,rgba(5,5,5,.35) 100%)" }} />
-                <div style={{ position:"absolute",inset:0,padding:28,display:"flex",flexDirection:"column",justifyContent:"center",paddingRight:i === 0 ? 150 : 28 }}>
+                <div className={i === 0 ? "offer-hero-pad" : ""} style={{ position:"absolute",inset:0,padding:28,display:"flex",flexDirection:"column",justifyContent:"center",paddingRight:i === 0 ? 150 : 28 }}>
                   <span style={{ fontFamily:"'Orbitron',sans-serif",fontSize:9,color:"#FF1F45",letterSpacing:"3px",marginBottom:10,fontWeight:700 }}>LIMITED TIME OFFER</span>
                   <h3 className="offer-h3" style={{ fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(18px,2.7vw,30px)",fontWeight:900,color:"white",marginBottom:8,lineHeight:1.1 }}>{offer.title}</h3>
                   <p style={{ fontFamily:"'Space Grotesk',sans-serif",color:"#CFCFCF",fontSize:13,marginBottom:18,maxWidth:620 }}>{offer.desc}</p>

@@ -47,6 +47,8 @@ export function DashboardLayout({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
   const handleSelect = (key: string) => {
     setHash(key);
     onTabChange(key);
@@ -70,6 +72,8 @@ export function DashboardLayout({
         brandLabel="DESKTO"
         brandColor="#FF1F45"
         roleLabel={title}
+        mobileOpen={mobileNavOpen}
+        onCloseMobile={() => setMobileNavOpen(false)}
       />
       <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
         <DashboardTopbar
@@ -79,6 +83,7 @@ export function DashboardLayout({
           pageTitle={pageTitle}
           onSearch={onSearch}
           searchPlaceholder={searchPlaceholder}
+          onMenuClick={() => setMobileNavOpen(true)}
         />
         <div className="dash-main">
           <div style={{ marginBottom: 18, display: "flex", alignItems: "center", justifyContent: "space-between" }}>

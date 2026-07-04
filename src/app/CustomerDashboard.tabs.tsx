@@ -1033,10 +1033,10 @@ export function CustomerReviews({ user, store, fileReview }: { user: AuthUser; s
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
       <SectionCard title="Write a Review">
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14 }}>
           <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, color: "#888", letterSpacing: 1.4, textTransform: "uppercase" }}>Product</span>
-            <select value={target} onChange={e => setTarget(Number(e.target.value))} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "10px 14px", color: "white", fontFamily: "'Space Grotesk', sans-serif", fontSize: 13 }}>
+            <select value={target} onChange={e => setTarget(Number(e.target.value))} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "10px 14px", color: "white", fontFamily: "'Space Grotesk', sans-serif", fontSize: 16 }}>
               {PRODUCTS.map(p => <option key={p.id} value={p.id} style={{ background: "#0a0a0a" }}>{p.name}</option>)}
             </select>
           </label>

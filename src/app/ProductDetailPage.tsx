@@ -806,7 +806,7 @@ function DescriptionSection({ details }: { details: ProductDetails }) {
             </GlassCard>
           </Reveal>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 22 }}>
+          <div className="two-col-workflow" style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 22 }}>
             <Reveal delay={.15}>
               <GlassCard>
                 <h3 style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 18, color: "#FF1F45", marginBottom: 12 }}>Technical Details</h3>
@@ -997,7 +997,7 @@ function WarrantySection({ details }: { details: ProductDetails }) {
             <div style={{ marginBottom: 16, color: "#CFCFCF", fontSize: 13, lineHeight: 1.7, fontFamily: "'Space Grotesk', sans-serif" }}>
               <strong style={{ color: "white" }}>Claim Process:</strong> {details.warranty.claimProcess}
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10 }}>
               {[
                 { n: 1, t: "Contact Us", d: "WhatsApp / Call" },
                 { n: 2, t: "Diagnose", d: "Free pickup & check" },
@@ -1027,7 +1027,7 @@ function ReviewsSection({ product, details }: { product: Product; details: Produ
       <div style={{ maxWidth: 1280, margin: "0 auto", padding: "0 24px" }}>
         <SectionHeader eyebrow="OPINIONS" title="CUSTOMER" accent="REVIEWS" sub={`${product.reviews.toLocaleString("en-IN")} verified ratings`} />
 
-        <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 22, alignItems: "flex-start" }}>
+        <div className="two-col-workflow" style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 22, alignItems: "flex-start" }}>
           <Reveal>
             <GlassCard>
               <div style={{ textAlign: "center", marginBottom: 18 }}>
@@ -1328,6 +1328,7 @@ export default function ProductDetailPage({ productId }: { productId: number }) 
 
       <section className="section-pad" style={{ padding: "40px 0" }}>
         <div
+          className="two-col-workflow"
           style={{
             maxWidth: 1280,
             margin: "0 auto",
@@ -1360,15 +1361,6 @@ export default function ProductDetailPage({ productId }: { productId: number }) 
       <FooterSection />
       <ScrollToTop />
       <StickyActionBar product={product} />
-
-      {/* Mobile-only responsive grid override */}
-      <style>{`
-        @media (max-width: 900px) {
-          .section-inner > div[style*="grid-template-columns: minmax"] {
-            grid-template-columns: 1fr !important;
-          }
-        }
-      `}</style>
     </div>
   );
 }

@@ -332,7 +332,7 @@ export function AdminOverview({ data, onTab }: { data: ReturnType<typeof import(
         <KPICard label="Staff Online" value={staffOnline} icon={<Users size={14} />} color="#00b4ff" onClick={() => go("staff")} />
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 14 }}>
+      <div className="two-col-workflow" style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 14 }}>
         <SectionCard title="Weekly Revenue" subtitle="Last 7 days">
           <div style={{ height: 260 }}>
             <ResponsiveContainer>
@@ -382,7 +382,7 @@ export function AdminOverview({ data, onTab }: { data: ReturnType<typeof import(
         </SectionCard>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+      <div className="two-col-workflow" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
         <SectionCard title="Pending Actions" subtitle="Items that require admin attention">
           <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 300, overflowY: "auto" }}>
             {store.repairs.filter(r => r.status === "submitted").map(r => (
@@ -739,7 +739,7 @@ export function AdminProducts({ store, addCatalogProduct, patchCatalogProduct, d
         title="Catalog Management"
         subtitle={`${store.products.length} SKUs`}
         action={
-          <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <input
               type="text"
               placeholder="Search products..."
@@ -1317,7 +1317,7 @@ export function AdminCategories() {
                 <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, color: "#888", marginTop: 4 }}>{c.count} products</div>
               </div>
             </div>
-            <div style={{ display: "flex", gap: 8 }}>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <button className="glass-pill glass-pill-sm glass-pill-outline" onClick={(e) => { e.stopPropagation(); setEditing(c); }}>Edit</button>
               <button className="glass-pill glass-pill-sm glass-pill-red" onClick={(e) => { e.stopPropagation(); remove(c); }}>Delete</button>
             </div>
@@ -1768,7 +1768,7 @@ export function AdminOrders({ store, updateOrderStatus }: { store: DashboardStor
               </div>
               <button className="glass-pill glass-pill-icon" onClick={() => setOpen(null)}><X size={13} /></button>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10, marginBottom: 14 }}>
               <div className="glass" style={{ borderRadius: 10, padding: 12 }}><div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 9, color: "#777", marginBottom: 6 }}>STATUS</div><StatusBadge status={active.status} /></div>
               <div className="glass" style={{ borderRadius: 10, padding: 12 }}><div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 9, color: "#777", marginBottom: 6 }}>TOTAL</div><div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 20, color: "#FF1F45", fontWeight: 700 }}>{inr(active.total)}</div></div>
             </div>
@@ -2063,7 +2063,7 @@ export function AdminDeliveries({
               </div>
             </SectionCard>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, margin: "10px 0" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10, margin: "10px 0" }}>
               <div className="glass" style={{ borderRadius: 10, padding: 12 }}>
                 <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 9, color: "#777", marginBottom: 6 }}>STATUS</div>
                 <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 999, background: `${STATUS_COLORS[active.status]}22`, border: `1px solid ${STATUS_COLORS[active.status]}55`, fontSize: 12, color: STATUS_COLORS[active.status], fontWeight: 600, textTransform: "capitalize" }}>{active.status}</div>
@@ -2141,7 +2141,7 @@ export function AdminDeliveries({
             {/* Admin Actions */}
             <SectionCard title="Admin Controls" padded={false}>
               <div style={{ padding: 14, display: "grid", gap: 10 }}>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 8 }}>
                   <select value={active.status} onChange={e => { updateDeliveryStatus(active.id, e.target.value as Delivery["status"], "admin"); }} style={{ background: "#0d0d0d", color: "white", border: "1px solid rgba(255,255,255,.15)", borderRadius: 8, padding: "10px 12px", fontFamily: "'Space Grotesk', sans-serif", fontSize: 13 }}>
                     {DELIVERY_STATUS_OPTIONS.map(s => <option key={s} value={s}>{s.toUpperCase()}</option>)}
                   </select>
@@ -2976,12 +2976,12 @@ function AddComponentDialog({ categoryId, onClose, onAdd }: { categoryId: Compon
         <Field label="Brand" value={form.brand} onChange={v => set("brand", v)} placeholder="e.g., NVIDIA" />
         <Field label="Model" value={form.model} onChange={v => set("model", v)} placeholder="e.g., RTX 5070" />
         <Field label="Price (₹)" type="number" value={form.price} onChange={v => set("price", v)} placeholder="66000" required />
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12 }}>
           <Field label="Market Tag" value={form.marketTag} onChange={v => set("marketTag", v as MarketTag)} placeholder="e.g., Trending" />
           <Field label="Tier" value={form.tier} onChange={v => set("tier", v as PerformanceTier)} placeholder="e.g., High" />
         </div>
         <Field label="Compatibility Notes" value={form.compatibilityNotes} onChange={v => set("compatibilityNotes", v)} placeholder="e.g., Requires DDR5 motherboard" />
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12 }}>
           <div>
             <label style={{ fontSize: 11, color: "#777", fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase" }}>Stock Status</label>
             <select value={form.stockStatus} onChange={e => set("stockStatus", e.target.value)} style={{ width: "100%", background: "#111", border: "1px solid rgba(255,255,255,.12)", borderRadius: 6, padding: "8px 12px", color: "white", fontSize: 12, marginTop: 6 }}>
@@ -3496,7 +3496,7 @@ export function AdminCRM({ store, addCRMNote }: { store: DashboardStore; addCRMN
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
       <SectionCard title="Customer CRM Profile" subtitle="Orders, services, preferences, notes, and retention context">
-        <div style={{ display: "grid", gridTemplateColumns: "minmax(260px, 360px) 1fr", gap: 16 }}>
+        <div className="two-col-workflow" style={{ display: "grid", gridTemplateColumns: "minmax(260px, 360px) 1fr", gap: 16 }}>
           <div style={{ display: "grid", gap: 12 }}>
             <SelectField label="Customer" value={selected?.id || ""} onChange={setCustomerId} options={users.map(u => u.id)} />
             {selected && (
@@ -3507,7 +3507,7 @@ export function AdminCRM({ store, addCRMNote }: { store: DashboardStore; addCRMN
               </div>
             )}
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(120px, 1fr))", gap: 10 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 10 }}>
             <KPICard label="Orders" value={metrics?.orders.length || 0} icon={<ShoppingBag size={14} />} color="#FF1F45" />
             <KPICard label="Service Requests" value={(metrics?.repairs.length || 0) + (metrics?.services.length || 0) + (metrics?.builds.length || 0)} icon={<Wrench size={14} />} color="#00b4ff" />
             <KPICard label="Payments" value={inr(metrics?.spent || 0)} icon={<Receipt size={14} />} color="#00cc66" />
@@ -3578,7 +3578,7 @@ export function AdminCustomers({ store, addLog }: { store: DashboardStore; addLo
 
       {selected && metrics && (
         <SectionCard title={`${selected.name} History`} subtitle="Orders, services, payments, reviews, and support context">
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(120px, 1fr))", gap: 10, marginBottom: 14 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 10, marginBottom: 14 }}>
             <KPICard label="Orders" value={metrics.orders.length} icon={<ShoppingBag size={14} />} color="#FF1F45" />
             <KPICard label="Repairs" value={metrics.repairs.length} icon={<Wrench size={14} />} color="#ff6b00" />
             <KPICard label="Services" value={metrics.services.length + metrics.builds.length} icon={<Database size={14} />} color="#00b4ff" />
@@ -3895,7 +3895,7 @@ export function AdminReports({ store }: { store: DashboardStore }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+      <div className="two-col-workflow" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
         <SectionCard title="Monthly Revenue" subtitle="Last 6 months">
           <div style={{ height: 240 }}>
             <ResponsiveContainer>
@@ -3950,7 +3950,7 @@ export function AdminNotifications({ store, addNotification, markNotificationRea
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
       <SectionCard title="Compose Notification">
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
           <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="Title" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "10px 14px", color: "white", fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, outline: "none" }} />
           <input type="text" value={detail} onChange={e => setDetail(e.target.value)} placeholder="Detail" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "10px 14px", color: "white", fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, outline: "none" }} />
           <select value={audience} onChange={e => setAudience(e.target.value as any)} style={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "10px 14px", color: "white", fontSize: 12 }}>
@@ -4078,7 +4078,7 @@ export function AdminSettings({ store, updateSettings }: { store: DashboardStore
         {resetConfirm ? (
           <div style={{ marginTop: 14, padding: 12, background: "rgba(255,31,69,0.1)", border: "1px solid rgba(255,31,69,0.3)", borderRadius: 8 }}>
             <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 13, color: "white", marginBottom: 12 }}>Reset all settings to default values?</div>
-            <div style={{ display: "flex", gap: 8 }}>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <button className="glass-pill glass-pill-red" onClick={resetAllSettings}>
                 <RefreshCcw size={11} /> Yes, Reset
               </button>
@@ -4121,7 +4121,7 @@ export function AdminAuditLogs({ store }: { store: DashboardStore }) {
   return (
     <SectionCard title="Audit Logs" subtitle={`${filtered.length} events`}
       action={
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <select value={filter} onChange={e => setFilter(e.target.value)} style={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 999, padding: "6px 12px", color: "white", fontSize: 11 }}>
             <option value="">All events</option>
             {events.map(e => <option key={e} value={e}>{e}</option>)}
