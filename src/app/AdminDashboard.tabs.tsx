@@ -583,6 +583,127 @@ function validateCatalogProduct(product: Partial<CatalogProduct>, publish = fals
   return null;
 }
 
+const catalogImageFiles = new Map<string, File>();
+
+function catalogAuthHeaders(): HeadersInit | null {
+  const token = window.localStorage.getItem(ACCESS_TOKEN_KEY);
+  return token ? { Authorization: `Bearer ${token}` } : null;
+}
+
+function imageExtensionFromType(contentType: string): string {
+  if (contentType === "image/png") return "png";
+  if (contentType === "image/webp") return "webp";
+  return "jpg";
+}
+
+async function publishCatalogProductToBackend(product: CatalogProduct) {
+  const authHeaders = catalogAuthHeaders();
+  if (!authHeaders) throw new Error("Admin login is required before publishing to the live catalog.");
+
+  const productResponse = await fetch(`${API_BASE}/products/admin/upsert`, {
+    method: "POST",
+    headers: { ...authHeaders, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      sku: product.sku || `DESKTO-${product.id || Date.now()}`,
+      name: product.name,
+      description: product.description,
+      price: product.price,
+      comparePrice: product.orig || null,
+      category: product.category,
+      brand: product.brand,
+      stockQuantity: product.stock || 0,
+      imageUrl: product.img && product.img.startsWith("http") ? product.img : undefined,
+      specifications: {
+        model: product.model,
+        condition: product.condition,
+        type: product.type,
+        specs: product.specs || [],
+        features: product.features || [],
+        boxContents: product.boxContents || [],
+        compatibility: product.compatibility || [],
+        upgradeOptions: product.upgradeOptions || [],
+        recommendedAccessories: product.recommendedAccessories || [],
+        operatingSystem: product.operatingSystem,
+        weight: product.weight,
+        dimensions: product.dimensions,
+        processor: product.processor,
+        gpu: product.gpu,
+        ram: product.ram,
+        storage: product.storage,
+        display: product.display,
+        refreshRate: product.refreshRate,
+        powerRequirement: product.powerRequirement,
+        ports: product.ports,
+        technicalDetails: product.technicalDetails,
+        useCase: product.useCase,
+        performanceNotes: product.performanceNotes,
+        qualityNotes: product.qualityNotes
+      },
+      tags: product.seo?.tags || product.seo?.keywords || [],
+      marketTag: product.badge || null,
+      isFeatured: product.badge === "BESTSELLER" || product.badge === "HOT"
+    }),
+  });
+
+  if (!productResponse.ok) throw new Error(await productResponse.text());
+  const saved = await productResponse.json();
+  const productId = saved.id;
+  const uploadedUrls: string[] = [];
+
+  for (const [index, previewUrl] of (product.gallery || []).entries()) {
+    const file = catalogImageFiles.get(previewUrl);
+    if (!file) {
+      if (previewUrl.startsWith("http")) uploadedUrls.push(previewUrl);
+      if (!previewUrl.startsWith("data:image/")) continue;
+    }
+
+    const uploadBody = file || await (await fetch(previewUrl)).blob();
+    const contentType = file?.type || uploadBody.type || "image/jpeg";
+    const fileName = file?.name || `${product.sku || product.id || "product"}-${index + 1}.${imageExtensionFromType(contentType)}`;
+
+    const uploadResponse = await fetch(`${API_BASE}/products/${productId}/images/upload-url`, {
+      method: "POST",
+      headers: { ...authHeaders, "Content-Type": "application/json" },
+      body: JSON.stringify({ fileName, contentType }),
+    });
+    if (!uploadResponse.ok) throw new Error(await uploadResponse.text());
+    const upload = await uploadResponse.json();
+
+    const s3Response = await fetch(upload.uploadUrl, {
+      method: "PUT",
+      headers: { "Content-Type": contentType },
+      body: uploadBody,
+    });
+    if (!s3Response.ok) throw new Error("Image upload to S3 failed.");
+
+    const completeResponse = await fetch(`${API_BASE}/products/${productId}/images/complete`, {
+      method: "POST",
+      headers: { ...authHeaders, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        objectKey: upload.objectKey,
+        altText: `${product.name} image ${index + 1}`,
+        isPrimary: index === 0,
+      }),
+    });
+    if (!completeResponse.ok) throw new Error(await completeResponse.text());
+    const image = await completeResponse.json();
+    uploadedUrls.push(image.url);
+    catalogImageFiles.delete(previewUrl);
+  }
+
+  const publishResponse = await fetch(`${API_BASE}/products/${productId}/publish`, {
+    method: "POST",
+    headers: authHeaders,
+  });
+  if (!publishResponse.ok) throw new Error(await publishResponse.text());
+  const published = await publishResponse.json();
+
+  return {
+    imageUrl: published.imageUrl || uploadedUrls[0] || product.img,
+    gallery: (published.images || []).map((image: any) => image.url) || uploadedUrls
+  };
+}
+
 function AdminCatalogEditor({ draft, setDraft, onSave, onClose }: { draft: Partial<CatalogProduct>; setDraft: (value: Partial<CatalogProduct> | ((prev: Partial<CatalogProduct>) => Partial<CatalogProduct>)) => void; onSave: (status: "draft" | "published") => void; onClose: () => void }) {
   const set = (patch: Partial<CatalogProduct>) => setDraft(prev => ({ ...prev, ...patch }));
   const setDelivery = (patch: Partial<NonNullable<CatalogProduct["deliveryInfo"]>>) => setDraft(prev => ({ ...prev, deliveryInfo: { ...(prev.deliveryInfo || emptyCatalogDraft().deliveryInfo!), ...patch } }));
@@ -591,24 +712,21 @@ function AdminCatalogEditor({ draft, setDraft, onSave, onClose }: { draft: Parti
   const onImages = async (files: FileList | null, inputRef: HTMLInputElement | null) => {
     const selected = Array.from(files || []);
     if (selected.length === 0) return;
-    // Validate JPG/JPEG only
-    const invalid = selected.find(file => !/jpe?g$/i.test(file.name) && !["image/jpeg", "image/jpg"].includes(file.type));
-    if (invalid) return toast.error(`"${invalid.name}" is not a JPG/JPEG image`);
+    const invalid = selected.find(file => !["image/jpeg", "image/jpg", "image/png", "image/webp"].includes(file.type) && !/\.(jpe?g|png|webp)$/i.test(file.name));
+    if (invalid) return toast.error(`"${invalid.name}" is not a JPG, PNG, or WEBP image`);
     const existingCount = draft.gallery?.length || 0;
     const available = 5 - existingCount;
     if (available <= 0) return toast.error("Maximum 5 images already reached");
     const toUpload = selected.slice(0, available);
     if (selected.length > available) toast.warning(`Only ${available} more image${available !== 1 ? "s" : ""} can be added (max 5 total)`);
-    const reads = toUpload.map(file => new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result || ""));
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    }));
-    const newImages = await Promise.all(reads);
+    const newImages = toUpload.map(file => {
+      const previewUrl = URL.createObjectURL(file);
+      catalogImageFiles.set(previewUrl, file);
+      return previewUrl;
+    });
     const updatedGallery = [...(draft.gallery || []), ...newImages].slice(0, 5);
     setDraft(prev => ({ ...prev, gallery: updatedGallery, img: prev.img || updatedGallery[0] }));
-    toast.success(`${newImages.length} JPG image${newImages.length > 1 ? "s" : ""} added`);
+    toast.success(`${newImages.length} image${newImages.length > 1 ? "s" : ""} ready for S3 upload`);
     // Clear the file input so the same file can be selected again
     if (inputRef) inputRef.value = "";
   };
@@ -635,9 +753,9 @@ function AdminCatalogEditor({ draft, setDraft, onSave, onClose }: { draft: Parti
         <SelectField label="RGB Support" value={draft.rgb ? "Yes" : "No"} onChange={v => set({ rgb: v === "Yes" })} options={["Yes", "No"]} />
       </div>
       <label style={{ display: "grid", gap: 8, fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, color: "#888", letterSpacing: 1.2, textTransform: "uppercase" }}>
-        Product Images ({draft.gallery?.length || 0}/5 JPG)
+        Product Images ({draft.gallery?.length || 0}/5 JPG/PNG/WEBP)
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <input type="file" accept=".jpg,.jpeg,image/jpeg" multiple onChange={e => onImages(e.target.files, e.target)} style={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,.12)", borderRadius: 8, padding: 10, color: "white", flex: 1 }} />
+          <input type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" multiple onChange={e => onImages(e.target.files, e.target)} style={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,.12)", borderRadius: 8, padding: 10, color: "white", flex: 1 }} />
         </div>
       </label>
       {!!draft.gallery?.length && (
@@ -645,7 +763,7 @@ function AdminCatalogEditor({ draft, setDraft, onSave, onClose }: { draft: Parti
           {draft.gallery.slice(0, 5).map((src, index) => (
             <div key={index} style={{ position: "relative" }}>
               <img src={src} alt={`catalog-${index + 1}`} style={{ width: 70, height: 70, objectFit: "cover", borderRadius: 8, border: index === 0 ? "2px solid #FF1F45" : "1px solid rgba(255,255,255,.12)" }} />
-              <button onClick={() => setDraft(prev => { const gal = [...(prev.gallery || [])]; gal.splice(index, 1); return { ...prev, gallery: gal, img: gal[0] || "" }; })} style={{ position: "absolute", top: -6, right: -6, width: 18, height: 18, borderRadius: "50%", background: "#FF1F45", border: "none", color: "white", cursor: "pointer", fontSize: 10, display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+              <button onClick={() => setDraft(prev => { const gal = [...(prev.gallery || [])]; const [removed] = gal.splice(index, 1); if (removed) catalogImageFiles.delete(removed); return { ...prev, gallery: gal, img: gal[0] || "" }; })} style={{ position: "absolute", top: -6, right: -6, width: 18, height: 18, borderRadius: "50%", background: "#FF1F45", border: "none", color: "white", cursor: "pointer", fontSize: 10, display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
               {index === 0 && <span style={{ position: "absolute", bottom: 2, left: 2, fontSize: 8, background: "#FF1F45", color: "white", borderRadius: 3, padding: "1px 3px" }}>MAIN</span>}
             </div>
           ))}
@@ -653,7 +771,7 @@ function AdminCatalogEditor({ draft, setDraft, onSave, onClose }: { draft: Parti
             <label style={{ width: 70, height: 70, border: "2px dashed rgba(255,255,255,.2)", borderRadius: 8, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#666", fontSize: 10, gap: 2 }}>
               <span style={{ fontSize: 16 }}>+</span>
               <span>Add</span>
-              <input type="file" accept=".jpg,.jpeg,image/jpeg" multiple onChange={e => onImages(e.target.files, e.target)} style={{ display: "none" }} />
+              <input type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" multiple onChange={e => onImages(e.target.files, e.target)} style={{ display: "none" }} />
             </label>
           )}
         </div>
@@ -709,7 +827,7 @@ export function AdminProducts({ store, addCatalogProduct, patchCatalogProduct, d
   const [editing, setEditing] = useState<Partial<CatalogProduct> | null>(null);
   const filtered = store.products.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
 
-  const save = (status: "draft" | "published") => {
+  const save = async (status: "draft" | "published") => {
     if (!editing) return;
 
     const error = validateCatalogProduct(editing, status === "published");
@@ -726,11 +844,23 @@ export function AdminProducts({ store, addCatalogProduct, patchCatalogProduct, d
       img: editing.img || editing.gallery?.[0] || "",
     } as CatalogProduct;
 
-    if (product.id) patchCatalogProduct(product.id, product);
-    else addCatalogProduct(product as Omit<CatalogProduct, "id" | "createdAt" | "updatedAt">);
+    try {
+      if (status === "published") {
+        toast.message("Uploading images to S3 and publishing catalog...");
+        const live = await publishCatalogProductToBackend(product);
+        product.img = live.imageUrl || product.img;
+        product.gallery = live.gallery?.length ? live.gallery : product.gallery;
+      }
 
-    toast.success(status === "published" ? "Product published to shop catalog" : "Catalog draft saved");
-    setEditing(null);
+      if (product.id) patchCatalogProduct(product.id, product);
+      else addCatalogProduct(product as Omit<CatalogProduct, "id" | "createdAt" | "updatedAt">);
+
+      toast.success(status === "published" ? "Product published to live catalog" : "Catalog draft saved");
+      setEditing(null);
+    } catch (error: any) {
+      console.error("Live catalog publish failed:", error);
+      toast.error(error?.message || "Live catalog publish failed");
+    }
   };
 
   return (
@@ -4146,19 +4276,50 @@ export function AdminAuditLogs({ store }: { store: DashboardStore }) {
 
 // ─── Backup & Restore ─────────────────────────────────────────────────────
 
+const API_BASE = import.meta.env.VITE_API_URL || "/api";
+const ACCESS_TOKEN_KEY = "deskto_access_token";
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function backendHeaders(): HeadersInit | null {
+  const token = window.localStorage.getItem(ACCESS_TOKEN_KEY);
+  return token ? { Authorization: `Bearer ${token}` } : null;
+}
+
 export function AdminBackup({ store, resetStore }: { store: DashboardStore; resetStore: any }) {
-  const exportAll = () => {
+  const exportLocal = () => {
     // Wrap the store with a version marker so importFile can validate the file
     // is actually a DESKTO backup (previously this exported the raw store, which
     // importFile then always rejected as "Invalid backup file format").
     const payload = { version: 1, exportedAt: Date.now(), store };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `deskto-backup-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadBlob(blob, `deskto-backup-${Date.now()}.json`);
+  };
+
+  const exportAll = async () => {
+    const headers = backendHeaders();
+    if (headers) {
+      try {
+        const response = await fetch(`${API_BASE}/backup/export`, { headers });
+        if (!response.ok) throw new Error("Backend export failed");
+        const blob = await response.blob();
+        downloadBlob(blob, `deskto-db-backup-${Date.now()}.json`);
+        toast.success("Database backup downloaded");
+        return;
+      } catch (error) {
+        console.error("Backend export error:", error);
+        toast.error("Backend export unavailable; downloading local demo backup");
+      }
+    }
+
+    exportLocal();
     toast.success("Backup downloaded");
   };
 
@@ -4179,17 +4340,56 @@ export function AdminBackup({ store, resetStore }: { store: DashboardStore; rese
         // exportAll and a raw store object (orders/products present) for
         // backups created before this fix.
         const restoredStore = data && typeof data === "object" && data.store ? data.store : data;
-        if (!restoredStore || typeof restoredStore !== "object" || !Array.isArray(restoredStore.orders)) {
+        const isBackendBackup = data && typeof data === "object" && data.version === 1 && data.tables;
+        if (!isBackendBackup && (!restoredStore || typeof restoredStore !== "object" || !Array.isArray(restoredStore.orders))) {
           throw new Error("Invalid backup file format");
         }
+
+        const headers = backendHeaders();
+        if (isBackendBackup && headers) {
+          fetch(`${API_BASE}/backup/restore`, {
+            method: "POST",
+            headers: { ...headers, "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+          })
+            .then(response => {
+              if (!response.ok) throw new Error("Backend restore failed");
+              toast.success("Database backup restored");
+            })
+            .catch(error => {
+              console.error("Backend restore error:", error);
+              toast.error(error?.message || "Backend restore failed");
+            });
+          return;
+        }
+
         window.localStorage.setItem("deskto-dashboard-v1", JSON.stringify(restoredStore));
-        toast.success("Backup restored — reload to see changes");
+        toast.success("Local backup restored — reload to see changes");
       } catch (error: any) {
         console.error("Restore error:", error);
         toast.error(error?.message || "Invalid file format");
       }
     };
     reader.readAsText(file);
+  };
+
+  const resetDemo = async () => {
+    if (!confirm("Reset all demo data?")) return;
+
+    const headers = backendHeaders();
+    if (headers) {
+      try {
+        const response = await fetch(`${API_BASE}/backup/reset-demo`, { method: "POST", headers });
+        if (!response.ok) throw new Error("Backend demo reset failed");
+        toast.success("Database demo data reset");
+      } catch (error) {
+        console.error("Backend reset error:", error);
+        toast.error("Backend reset unavailable; resetting local demo data");
+      }
+    }
+
+    resetStore();
+    toast.success("Demo data reset");
   };
 
   return (
@@ -4207,7 +4407,7 @@ export function AdminBackup({ store, resetStore }: { store: DashboardStore; rese
 
       <SectionCard title="Reset Demo Data">
         <p style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, color: "#aaa" }}>Reseed the demo dataset from scratch. This will overwrite any changes.</p>
-        <button className="glass-pill glass-pill-red" onClick={() => { if (confirm("Reset all demo data?")) { resetStore(); toast.success("Demo data reset"); } }}><RefreshCcw size={12} /> Reset Demo</button>
+        <button className="glass-pill glass-pill-red" onClick={resetDemo}><RefreshCcw size={12} /> Reset Demo</button>
       </SectionCard>
     </div>
   );

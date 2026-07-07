@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Star, Heart, ShoppingCart, Zap, Truck, ShieldCheck, ShieldCheck as ShieldIcon,
   RefreshCw, Plus, Minus, ChevronRight, CheckCircle, Phone, MessageCircle,
@@ -10,6 +10,7 @@ import {
   PRODUCTS, ProductCard, BADGE_CLR, CATEGORY_LABELS, Product,
   Navbar, FooterSection, SectionHeader, Reveal, ScrollToTop,
   loadCart, saveCart, CART_STORAGE_KEY, mergedCatalogProducts,
+  PUBLIC_PRODUCTS_API_BASE, publicProductToProduct,
 } from "@/app/App";
 import { useWishlist } from "@/app/lib/wishlist";
 import { getProductDetails, ProductDetails } from "@/app/lib/productDetails";
@@ -1309,14 +1310,79 @@ function NotFoundView() {
 }
 
 // ─────────────── MAIN PAGE ───────────────
-export default function ProductDetailPage({ productId }: { productId: number }) {
-  const { store } = useDashboardData();
-  const products = mergedCatalogProducts(store.products);
+export default function ProductDetailPage({ productId }: { productId: string }) {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+
+  const loadProductCatalog = useCallback(async () => {
+    setLoading(true);
+    setLoadError("");
+    try {
+      const response = await fetch(`${PUBLIC_PRODUCTS_API_BASE}/products?limit=100`, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+      });
+      if (!response.ok) throw new Error(`Product API returned ${response.status}`);
+      const data = await response.json();
+      const liveProducts = (data.products || [])
+        .map(publicProductToProduct)
+        .filter((product: Product | null): product is Product => Boolean(product));
+      setProducts(liveProducts);
+    } catch (error: any) {
+      console.error("Product detail load failed:", error);
+      setLoadError(error?.message || "Unable to load product.");
+      setProducts([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [productId]);
 
-  const product = products.find((p) => p.id === productId);
+  useEffect(() => { loadProductCatalog(); }, [loadProductCatalog]);
+
+  const productKey = String(productId);
+  const product = products.find((p) =>
+    String(p.id) === productKey ||
+    String((p as any).liveId || "") === productKey ||
+    String((p as any).slug || "") === productKey
+  );
+
+  if (loading) {
+    return (
+      <div style={{ background: "#050505", color: "white", minHeight: "100vh" }}>
+        <Navbar />
+        <section className="section-pad" style={{ minHeight: "70vh", display: "grid", placeItems: "center", padding: "120px 24px" }}>
+          <div className="glass-card" style={{ borderRadius: 14, padding: 28, fontFamily: "'Space Grotesk', sans-serif", color: "#CFCFCF" }}>
+            Loading product details...
+          </div>
+        </section>
+        <FooterSection />
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div style={{ background: "#050505", color: "white", minHeight: "100vh" }}>
+        <Navbar />
+        <section className="section-pad" style={{ minHeight: "70vh", display: "grid", placeItems: "center", padding: "120px 24px" }}>
+          <div className="glass-card" style={{ borderRadius: 14, padding: 28, fontFamily: "'Space Grotesk', sans-serif", color: "#CFCFCF", textAlign: "center" }}>
+            Product details are temporarily unavailable.
+            <button onClick={loadProductCatalog} className="glass-pill glass-pill-outline" style={{ margin: "18px auto 0", padding: "10px 16px", fontSize: 10 }}>
+              <RefreshCw size={12} /> Retry
+            </button>
+          </div>
+        </section>
+        <FooterSection />
+      </div>
+    );
+  }
+
   if (!product) return <NotFoundView />;
 
   const details = getProductDetails(product, products);

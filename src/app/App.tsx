@@ -8,7 +8,7 @@ import { useDashboardData, type CatalogProduct } from "@/app/lib/dashboardData";
 import { Toaster } from "@/app/components/ui/sonner";
 import { BrandMark } from "@/app/components/BrandMark";
 import { toast } from "sonner";
-import { AUTH_STATE_CHANGED_EVENT, logout, useCurrentUser } from "@/app/lib/currentUser";
+import { AUTH_STATE_CHANGED_EVENT, logout, useCurrentUser, login as apiLogin } from "@/app/lib/currentUser";
 import CustomerDashboard from "@/app/CustomerDashboard";
 import StaffDashboard from "@/app/StaffDashboard";
 import AdminDashboard from "@/app/AdminDashboard";
@@ -1083,6 +1083,8 @@ type ProductCondition = Product["condition"];
 type ProductCategory = Product["category"];
 type ProductBrand = string;
 
+export const PUBLIC_PRODUCTS_API_BASE = import.meta.env.VITE_API_URL || "/api";
+
 function catalogProductToProduct(p: CatalogProduct): Product {
   return {
     id: p.id,
@@ -1144,6 +1146,100 @@ export function mergedCatalogProducts(products: CatalogProduct[] = []): Product[
     .map(catalogProductToProduct);
 }
 
+type PublicProductImage = {
+  url?: string;
+  thumbnailUrl?: string;
+  isPrimary?: boolean;
+};
+
+type PublicProductApiRow = {
+  id: string;
+  sku?: string;
+  slug?: string;
+  name: string;
+  description?: string;
+  price: number;
+  comparePrice?: number | null;
+  category?: string;
+  brand?: string;
+  stockQuantity?: number;
+  imageUrl?: string;
+  images?: PublicProductImage[];
+  marketTag?: string | null;
+  isFeatured?: boolean;
+  specifications?: Record<string, any>;
+  createdAt?: string;
+  publishedAt?: string;
+};
+
+export function stableNumericId(value: string): number {
+  let hash = 0;
+  for (let i = 0; i < value.length; i += 1) {
+    hash = ((hash << 5) - hash + value.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash) + 100000;
+}
+
+export function publicProductToProduct(row: PublicProductApiRow): Product | null {
+  const specs = row.specifications || {};
+  const gallery = (row.images || [])
+    .map(image => image.url || image.thumbnailUrl || "")
+    .filter(Boolean);
+  const primaryImage = row.imageUrl || gallery[0] || "";
+  if (!primaryImage) return null;
+
+  const category = (row.category || "others") as ProductCategory;
+  const inferredType = (specs.type || (category === "gaming-pc" || category === "gaming-laptop" ? "gaming" : "general")) as ProductType;
+  const createdDate = row.publishedAt || row.createdAt || new Date().toISOString();
+
+  return {
+    id: stableNumericId(row.id),
+    liveId: row.id,
+    slug: row.slug,
+    name: row.name,
+    type: inferredType,
+    category,
+    condition: (specs.condition || "first-hand") as ProductCondition,
+    brand: row.brand || "DESKTO",
+    price: Number(row.price) || 0,
+    orig: row.comparePrice ?? null,
+    rating: 4.8,
+    reviews: 0,
+    badge: row.marketTag || null,
+    inStock: Number(row.stockQuantity || 0) > 0,
+    warrantyMonths: Number(specs.warrantyMonths || 0),
+    rgb: Boolean(specs.rgb),
+    specs: Array.isArray(specs.specs) && specs.specs.length ? specs.specs : [row.brand || "DESKTO", category, row.sku || "Live catalog"],
+    img: primaryImage,
+    gallery: gallery.length ? gallery : [primaryImage],
+    createdAt: Number(createdDate.slice(0, 10).replace(/-/g, "")) || Number(new Date().toISOString().slice(0, 10).replace(/-/g, "")),
+    popularity: row.isFeatured ? 1000 : 0,
+    sales: 0,
+    model: specs.model,
+    operatingSystem: specs.operatingSystem,
+    weight: specs.weight,
+    dimensions: specs.dimensions,
+    processor: specs.processor,
+    gpu: specs.gpu,
+    ram: specs.ram,
+    storage: specs.storage,
+    display: specs.display,
+    refreshRate: specs.refreshRate,
+    powerRequirement: specs.powerRequirement,
+    ports: specs.ports,
+    description: row.description,
+    technicalDetails: specs.technicalDetails,
+    useCase: specs.useCase,
+    performanceNotes: specs.performanceNotes,
+    qualityNotes: specs.qualityNotes,
+    features: specs.features,
+    boxContents: specs.boxContents,
+    compatibility: specs.compatibility,
+    upgradeOptions: specs.upgradeOptions,
+    recommendedAccessories: specs.recommendedAccessories,
+  } as Product;
+}
+
 export const CATEGORY_LABELS: Record<ProductCategory,string> = {
   "laptop":"Laptop", "desktop-pc":"Desktop PC", "gaming-pc":"Gaming PC", "gaming-laptop":"Gaming Laptop",
   "monitor":"Monitor", "cpu":"CPU", "gpu":"GPU", "ram":"RAM", "ssd":"SSD", "hdd":"HDD", "nvme":"NVMe",
@@ -1187,9 +1283,10 @@ export const CART_STORAGE_KEY = "deskto_cart_v1";
 export function ProductCard({ p, onAdd }: { p: Product; onAdd?: (product: Product) => void }) {
   const { has, toggle } = useWishlist();
   const wished = has(p.id);
+  const productPathKey = encodeURIComponent(String((p as any).slug || (p as any).liveId || p.id));
   return (
     <TiltCard>
-      <a href={`/product/${p.id}`} style={{ textDecoration:"none",color:"inherit",display:"block" }}>
+      <a href={`/product/${productPathKey}`} style={{ textDecoration:"none",color:"inherit",display:"block" }}>
       <div className="card-hover glass-card" style={{ borderRadius:14,overflow:"hidden",position:"relative",border:"1px solid rgba(255,255,255,.07)" }}>
         {p.badge && (
           <div style={{ position:"absolute",top:12,left:12,zIndex:2,background:BADGE_CLR[p.badge]??BADGE_CLR.PRO,padding:"4px 9px",borderRadius:3,fontFamily:"'Orbitron',sans-serif",fontSize:8,fontWeight:700,color:"white",letterSpacing:"1.5px",backdropFilter:"blur(8px)" }}>
@@ -1322,9 +1419,10 @@ export function saveCart(cart: Record<number, number>) {
 }
 
 function ProductCatalogPage({ category }: { category: ProductType | "all" }) {
-  const { store } = useDashboardData();
-  const catalogProducts = mergedCatalogProducts(store.products);
   const initialType: "all" | ProductType = category === "gaming" || category === "general" ? category : "all";
+  const [catalogProducts,setCatalogProducts] = useState<Product[]>([]);
+  const [catalogLoading,setCatalogLoading] = useState(true);
+  const [catalogError,setCatalogError] = useState("");
   const [typeFilter,setTypeFilter] = useState<"all" | ProductType>(initialType);
   const [conditionFilter,setConditionFilter] = useState<"all" | ProductCondition>("all");
   const [selectedCategories,setSelectedCategories] = useState<Set<ProductCategory>>(new Set());
@@ -1341,8 +1439,35 @@ function ProductCatalogPage({ category }: { category: ProductType | "all" }) {
   const dynamicCategories = Array.from(new Set(catalogProducts.map(p => p.category))) as ProductCategory[];
   const allCategoryBrands = Array.from(new Set(Object.values(CATEGORY_BRANDS).flat() as string[])).sort();
 
+  const loadLiveProducts = useCallback(async () => {
+    setCatalogLoading(true);
+    setCatalogError("");
+    try {
+      const response = await fetch(`${PUBLIC_PRODUCTS_API_BASE}/products?limit=100`, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+      });
+      if (!response.ok) throw new Error(`Product API returned ${response.status}`);
+      const data = await response.json();
+      const products = (data.products || [])
+        .map(publicProductToProduct)
+        .filter((product: Product | null): product is Product => Boolean(product));
+      setCatalogProducts(products);
+      setStatus(products.length ? "Live catalog loaded from DESKTO backend." : "No published products are available yet.");
+    } catch (error: any) {
+      console.error("Live product catalog load failed:", error);
+      setCatalogError(error?.message || "Unable to load live catalog.");
+      setCatalogProducts([]);
+      setStatus("Unable to load live catalog. Please refresh products.");
+    } finally {
+      setCatalogLoading(false);
+    }
+  }, []);
+
   useEffect(() => { setCart(loadCart()); }, []);
   useEffect(() => { saveCart(cart); }, [cart]);
+  useEffect(() => { loadLiveProducts(); }, [loadLiveProducts]);
 
   const visibleProducts = sortCatalog(applyCatalogFilters(catalogProducts, {
     type:typeFilter, condition:conditionFilter, categories:selectedCategories, brands:selectedBrands,
@@ -1446,6 +1571,9 @@ function ProductCatalogPage({ category }: { category: ProductType | "all" }) {
               <option value="rating">Highest Rated</option>
               <option value="new-arrivals">New Arrivals</option>
             </select>
+            <button onClick={loadLiveProducts} className="glass-pill glass-pill-outline" style={{ justifyContent:"center",padding:"11px 14px",fontSize:10 }}>
+              <RefreshCw size={12} /> Refresh Products
+            </button>
           </div>
         </Reveal>
 
@@ -1519,9 +1647,14 @@ function ProductCatalogPage({ category }: { category: ProductType | "all" }) {
         <div style={{ marginBottom:cartCount>0?120:0 }}>
           <div className="products-grid" style={{ display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:20 }}>
             {visibleProducts.map((p,i)=>(<Reveal key={p.id} delay={i*.04}><ProductCard p={p} onAdd={addToCart} /></Reveal>))}
-            {visibleProducts.length === 0 && (
+            {catalogLoading && (
               <div className="glass-card" style={{ borderRadius:14,padding:24,fontFamily:"'Space Grotesk',sans-serif",fontSize:13,color:"#CFCFCF" }}>
-                No products match these filters.
+                Loading live products...
+              </div>
+            )}
+            {!catalogLoading && visibleProducts.length === 0 && (
+              <div className="glass-card" style={{ borderRadius:14,padding:24,fontFamily:"'Space Grotesk',sans-serif",fontSize:13,color:"#CFCFCF" }}>
+                {catalogError ? "Live product API is currently unavailable." : "No products match these filters."}
               </div>
             )}
           </div>
@@ -2369,39 +2502,20 @@ function AuthSection({ initialMode="sign-in", initialRole="customer", standalone
     addLog("signup_completed", `${user.role} ${user.email} verified by OTP`);
   };
 
-  const runLogin = () => {
-    const identifier = login.identifier.trim().toLowerCase();
-    const user = state.users.find(u => u.email === identifier || u.phone === normalizePhone(identifier));
+  const runLogin = async () => {
+    const identifier = login.identifier.trim();
     if (!identifier) return setMessage("Email or mobile is required.");
     if (!login.password) return setMessage("Password is required.");
-    if (!user) return setMessage("Wrong email/mobile or password.");
-    if (user.status === "locked" && user.lockedUntil && Date.now() < user.lockedUntil) return setMessage("Account is temporarily locked.");
-    if (!user.emailVerified || !user.phoneVerified) return setMessage("Account verification is required.");
-    if (user.passwordHash !== demoHashPassword(login.password)) {
-      const attempts = user.loginAttempts + 1;
-      setState(prev => ({
-        ...prev,
-        users: prev.users.map(u => u.id === user.id ? { ...u, loginAttempts: attempts, status: attempts >= MAX_LOGIN_ATTEMPTS ? "locked" : u.status, lockedUntil: attempts >= MAX_LOGIN_ATTEMPTS ? Date.now() + LOCK_MS : u.lockedUntil } : u),
-      }));
-      return setMessage(attempts >= MAX_LOGIN_ATTEMPTS ? "Too many failures. Account locked for 10 minutes." : "Wrong email/mobile or password.");
+
+    try {
+      await apiLogin(identifier, login.password);
+      setMessage("Login successful. Dashboard session is active.");
+      addLog("login_success", `${identifier} logged in`);
+    } catch (error: any) {
+      const message = error?.message || "Wrong email/mobile or password.";
+      setMessage(message.includes("Invalid credentials") ? "Wrong email/mobile or password." : message);
+      addLog("login_failure", `${identifier} failed to log in: ${message}`);
     }
-    const session: SessionRecord = {
-      id: makeId("sess"),
-      userId: user.id,
-      refreshToken: makeId("refresh"),
-      device: login.remember ? "Remembered browser" : "Current browser",
-      ip: "127.0.0.1",
-      expiresAt: new Date(Date.now() + (login.remember ? 30 : 1) * 24 * 60 * 60 * 1000).toISOString(),
-    };
-    setState(prev => ({
-      ...prev,
-      users: prev.users.map(u => u.id === user.id ? { ...u, loginAttempts:0, status:"active", lockedUntil:undefined } : u),
-      sessions: [...prev.sessions, session],
-      currentUserId: user.id,
-      accessToken: makeId("jwt"),
-    }));
-    setMessage("Login successful. Dashboard session is active.");
-    addLog("login_success", `${user.email} logged in`);
   };
 
   const requestPasswordReset = () => {
@@ -2694,9 +2808,9 @@ function getProductCategoryFromPath(pathname: string): ProductType | "all" | nul
   return null;
 }
 
-function getProductDetailFromPath(pathname: string): number | null {
-  const m = pathname.match(/^\/product\/(\d+)\/?$/);
-  return m ? Number(m[1]) : null;
+function getProductDetailFromPath(pathname: string): string | null {
+  const m = pathname.match(/^\/product\/([^/]+)\/?$/);
+  return m ? decodeURIComponent(m[1]) : null;
 }
 
 function getServicesRouteFromPath(pathname: string): { slug: string | null; child?: string | null } | null {
@@ -3397,8 +3511,8 @@ function DashboardRouter({ kind, tab }: { kind: "customer" | "staff" | "admin"; 
     );
   }
 
-  return kind === "customer" ? <CustomerDashboard user={resolved} /> :
-         kind === "staff"     ? <StaffDashboard user={resolved} /> :
+  return kind === "customer" ? <CustomerDashboard user={resolved} initialTab={tab} /> :
+         kind === "staff"     ? <StaffDashboard user={resolved} initialTab={tab} /> :
                                 <AdminDashboard user={resolved} initialTab={tab} />;
 }
 

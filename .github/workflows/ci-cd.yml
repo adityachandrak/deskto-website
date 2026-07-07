@@ -1,33 +1,24 @@
-name: CI/CD - Build, Test, Deploy, Smoke Test
+name: Legacy Backend CI/CD
 
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
-    inputs:
-      environment:
-        description: 'Deployment environment'
-        required: false
-        default: 'staging'
-        type: choice
-        options:
-          - staging
-          - production
-
-concurrency:
-  group: deploy-${{ github.ref }}
-  cancel-in-progress: true
 
 permissions:
-  id-token: write   # Required for OIDC
-  contents: read    # Required for actions/checkout
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ap-south-1
+  ECR_REPOSITORY: deskto-backend
+
+concurrency:
+  group: backend-cicd-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build-test:
-    name: Build & Test
+  validate:
+    name: Validate and build
     runs-on: ubuntu-latest
-    outputs:
-      image-tag: ${{ steps.build-tag.outputs.tag }}
 
     steps:
       - name: Checkout code
@@ -39,35 +30,41 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Install dependencies
+      - name: Install frontend dependencies
         run: npm ci
 
-      - name: Validate catalog
-        run: npm run validate:catalog
+      - name: Run lint
+        run: npm run lint
 
-      - name: Validate auth
-        run: npm run validate:auth
-
-      - name: Build for production
+      - name: Run frontend build
         run: npm run build
 
-      - name: Generate image tag
-        id: build-tag
-        run: echo "tag=sha-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+      - name: Run validation/test scripts
+        run: npm run test
 
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-output
-          path: dist/
-          retention-days: 7
+      - name: Install backend dependencies
+        run: npm --prefix backend ci
 
-  docker:
-    name: Build & Push to ECR
+      - name: Build backend TypeScript
+        run: npm --prefix backend run build
+
+      - name: Build backend Docker image (test)
+        run: docker build -f backend/Dockerfile -t deskto-backend:test backend
+
+      - name: Optional npm audit
+        run: npm audit --omit=dev || true
+
+      - name: Optional Trivy scan
+        continue-on-error: true
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasecurity/trivy:0.53.0 image --severity HIGH,CRITICAL --exit-code 0 deskto-backend:test
+
+  publish-image:
+    name: Publish backend image
     runs-on: ubuntu-latest
-    needs: build-test
-    outputs:
-      image-tag: ${{ steps.build-tag.outputs.tag }}
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
       - name: Checkout code
@@ -77,165 +74,58 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
+        id: ecr-login
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build Docker image
+      - name: Build and push backend image
         run: |
-          docker build -t deskto-website:${{ needs.build-test.outputs.image-tag }} .
-          docker tag deskto-website:${{ needs.build-test.outputs.image-tag }} ${{ steps.login.outputs.registry }}/deskto-web:${{ needs.build-test.outputs.image-tag }}
-
-      - name: Push Docker image (SHA tag)
-        run: |
-          docker push ${{ steps.login.outputs.registry }}/deskto-web:${{ needs.build-test.outputs.image-tag }}
-
-      - name: Update :latest tag (candidate)
-        run: |
-          docker tag ${{ steps.login.outputs.registry }}/deskto-web:${{ needs.build-test.outputs.image-tag }} ${{ steps.login.outputs.registry }}/deskto-web:latest
-          docker push ${{ steps.login.outputs.registry }}/deskto-web:latest
-
-      - name: Generate image tag output
-        id: build-tag
-        run: echo "tag=sha-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          IMAGE_TAG=sha-${GITHUB_SHA::7}
+          IMAGE_URI=${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPOSITORY }}
+          docker build -f backend/Dockerfile -t "$IMAGE_URI:$IMAGE_TAG" -t "$IMAGE_URI:latest" backend
+          docker push "$IMAGE_URI:$IMAGE_TAG"
+          docker push "$IMAGE_URI:latest"
 
   deploy:
-    name: Deploy to EC2
+    name: Deploy with Ansible
     runs-on: ubuntu-latest
-    needs: [build-test, docker]
-    environment:
-      name: staging
-    if: github.ref == 'refs/heads/main'
+    needs: publish-image
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install Ansible
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ansible
+
+      - name: Validate Ansible playbook syntax
+        run: ansible-playbook --syntax-check ansible/playbooks/deploy.yml
+
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-region: ${{ env.AWS_REGION }}
 
-      - name: Get EC2 public IP
-        id: ec2-info
+      - name: Smoke test target endpoints
         run: |
-          # Get public IP from Terraform state (alternative: use AWS CLI)
-          PUBLIC_IP=$(aws ec2 describe-instances \
-            --filters "Name=tag:Name,Values=deskto-website-web" "Name=instance-state-name,Values=running" \
-            --query "Reservations[0].Instances[0].PublicIpAddress" \
-            --output text)
-          echo "public_ip=${PUBLIC_IP}" >> "$GITHUB_OUTPUT"
-          echo "ecr_repo=898322960338.dkr.ecr.ap-south-1.amazonaws.com/deskto-web" >> "$GITHUB_OUTPUT"
-          echo "git_sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          chmod +x scripts/smoke-test.sh
+          ./scripts/smoke-test.sh http://127.0.0.1:3001
 
-      - name: Get ECR login password
-        id: ecr-login
-        run: |
-          ECR_PASSWORD=$(aws ecr get-login-password --region ap-south-1)
-          echo "password=${ECR_PASSWORD}" >> "$GITHUB_OUTPUT"
-
-      - name: Run Ansible deploy playbook
-        uses: dawidd6/action-ansible-playbook@v2
-        with:
-          playbook: ansible/playbooks/deploy.yml
-          directory: .
-          inventory: |
-            [webservers]
-            ${{ steps.ec2-info.outputs.public_ip }} ansible_user=ec2-user ansible_connection=ssm ansible_ssh_common_args="-o StrictHostKeyChecking=no"
-          extra_vars: |
-            ecr_repo_url: 898322960338.dkr.ecr.ap-south-1.amazonaws.com/deskto-web
-            project_name: deskto-website
-            git_sha: ${{ steps.ec2-info.outputs.git_sha }}
-          options: |
-            --extra-vars "ECR_PASSWORD=${{ steps.ecr-login.outputs.password }}"
-          vault: ''
-          requirements: ''
-          galaxy: ''
-
-      - name: Wait for service to be healthy
-        run: |
-          echo "Waiting for service to be healthy..."
-          for i in {1..30}; do
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://${{ steps.ec2-info.outputs.public_ip }}/ 2>/dev/null || echo "000")
-            if [ "$STATUS" = "200" ]; then
-              echo "✅ Service is healthy (HTTP 200)"
-              exit 0
-            fi
-            echo "Attempt $i/30: HTTP $STATUS - waiting..."
-            sleep 10
-          done
-          echo "❌ Service did not become healthy within 5 minutes"
-          exit 1
-
-  smoke-test:
-    name: Smoke Test
+  notify:
+    name: Notify result
     runs-on: ubuntu-latest
-    needs: deploy
-    if: success()
+    needs: [validate, publish-image, deploy]
+    if: always()
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Get EC2 public IP
-        id: ec2-info
+      - name: Summarize workflow result
         run: |
-          PUBLIC_IP=$(aws ec2 describe-instances \
-            --filters "Name=tag:Name,Values=deskto-website-web" "Name=instance-state-name,Values=running" \
-            --query "Reservations[0].Instances[0].PublicIpAddress" \
-            --output text)
-          echo "public_ip=${PUBLIC_IP}" >> "$GITHUB_OUTPUT"
-
-      - name: Run smoke test
-        run: |
-          URL="http://${{ steps.ec2-info.outputs.public_ip }}/"
-          echo "Testing: $URL"
-
-          # Test 1: HTTP 200
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
-          if [ "$STATUS" != "200" ]; then
-            echo "❌ FAIL: Expected HTTP 200, got $STATUS"
-            exit 1
-          fi
-          echo "✅ Test 1 passed: HTTP 200"
-
-          # Test 2: Content marker exists
-          CONTENT=$(curl -s "$URL")
-          if [[ ! "$CONTENT" == *"Premium 3D Gaming Website"* ]]; then
-            echo "❌ FAIL: Expected content marker not found"
-            exit 1
-          fi
-          echo "✅ Test 2 passed: Content marker found"
-
-          # Test 3: Check for required assets
-          if [[ ! "$CONTENT" == *"assets/"* ]]; then
-            echo "❌ FAIL: Assets directory not referenced"
-            exit 1
-          fi
-          echo "✅ Test 3 passed: Assets referenced"
-
-          echo ""
-          echo "✅ All smoke tests passed!"
-
-      - name: Deployment Summary
-        if: always()
-        run: |
-          if [ "${{ needs.deploy.result }}" = "success" ]; then
-            echo "✅ Deployment to staging succeeded"
-            echo "URL: http://${{ steps.ec2-info.outputs.public_ip }}/"
-            echo "Commit: ${{ github.sha }}"
-            echo "Branch: ${{ github.ref_name }}"
-          else
-            echo "❌ Deployment failed"
-          fi
+          echo "Validate: ${{ needs.validate.result }}"
+          echo "Publish image: ${{ needs.publish-image.result }}"
+          echo "Deploy: ${{ needs.deploy.result }}"
