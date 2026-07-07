@@ -98,11 +98,14 @@ router.post('/login',
   async (req: Request, res: Response) => {
     try {
       const { identifier, password } = req.body;
+      const normalizedIdentifier = String(identifier).trim();
 
       // Find user by email or phone
       const result = await query(
-        'SELECT id, email, password_hash, first_name, last_name, role, status FROM users WHERE email = $1 OR phone = $1',
-        [identifier]
+        `SELECT id, email, password_hash, first_name, last_name, role, status
+         FROM users
+         WHERE LOWER(email) = LOWER($1) OR phone = $1`,
+        [normalizedIdentifier]
       );
 
       if (result.rows.length === 0) {
