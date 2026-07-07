@@ -461,12 +461,24 @@ export function TiltCard({ children }: { children: React.ReactNode }) {
 }
 
 // ─────────────── NAVBAR ───────────────
+function getNavbarUserLabel(user: ReturnType<typeof useCurrentUser>) {
+  if (!user) return "Sign Up";
+  const name = user.name?.trim();
+  if (name) return name;
+  const fullName = [user.firstName, user.lastName].filter(Boolean).join(" ").trim();
+  if (fullName) return fullName;
+  const emailName = user.email?.split("@")[0]?.trim();
+  if (emailName) return emailName;
+  return user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : "Account";
+}
+
 function NavbarDashboardCTA({ mobile=false, onNavigate }: { mobile?: boolean; onNavigate?: () => void }) {
   const user = useCurrentUser();
   if (user) {
+    const label = getNavbarUserLabel(user);
     return (
-      <a href={`/dashboard/${user.role}`} onClick={onNavigate} className={`glass-pill glass-pill-primary ${mobile ? "glass-pill-block glass-pill-lg" : "glass-pill-sm desktop-only"}`} style={{ marginLeft: mobile ? 0 : 4, marginTop: mobile ? 16 : undefined }}>
-        {user.name}
+      <a href={`/dashboard/${user.role}`} onClick={onNavigate} className={`glass-pill glass-pill-primary ${mobile ? "glass-pill-block glass-pill-lg" : "glass-pill-sm desktop-only"}`} style={{ marginLeft: mobile ? 0 : 4, marginTop: mobile ? 16 : undefined, minWidth: mobile ? undefined : 78, justifyContent: "center" }}>
+        {label}
       </a>
     );
   }
