@@ -2508,7 +2508,11 @@ function AuthSection({ initialMode="sign-in", initialRole="customer", standalone
     if (!login.password) return setMessage("Password is required.");
 
     try {
-      await apiLogin(identifier, login.password);
+      const authUser = await apiLogin(identifier, login.password);
+      // Sync this component's own copy of auth state so the persist effect
+      // (and addLog below) don't overwrite the session apiLogin just wrote —
+      // otherwise the stale local `state.currentUserId` clobbers it back to null.
+      setState(prev => ({ ...prev, currentUserId: authUser.id }));
       setMessage("Login successful. Dashboard session is active.");
       addLog("login_success", `${identifier} logged in`);
     } catch (error: any) {

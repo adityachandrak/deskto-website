@@ -14,6 +14,13 @@ export interface AuthUser extends User {
 const STORAGE_KEY = "deskto-auth-demo-state";
 export const AUTH_STATE_CHANGED_EVENT = "deskto-auth-state-changed";
 
+// Mirrors demoHashPassword() in App.tsx — the demo sign-up flow hashes
+// passwords this way before storing them, so login must hash the same way
+// before comparing, or every demo login will fail with a false mismatch.
+function demoHashPassword(password: string) {
+  return `demo_bcrypt_${btoa(unescape(encodeURIComponent(password))).slice(0, 28)}`;
+}
+
 // Feature flag: Use API if available
 const USE_API = import.meta.env.VITE_API_URL && import.meta.env.VITE_API_URL !== '/api';
 
@@ -150,17 +157,19 @@ export async function login(identifier: string, password: string): Promise<AuthU
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
       const state = raw ? JSON.parse(raw) : { users: [] };
+      const normalizedIdentifier = identifier.trim().toLowerCase();
 
       const user = (state.users || []).find(
-        (u: any) => (u.email === identifier || u.phone === identifier) && u.status !== "locked"
+        (u: any) => (u.email?.toLowerCase() === normalizedIdentifier || u.phone === identifier.trim()) && u.status !== "locked"
       );
 
       if (!user) {
         throw new Error("User not found");
       }
 
-      // Simple password check for demo
-      if (user.passwordHash !== password && !password.includes('demo123')) {
+      // Demo password check — compare against the same hash format used at sign-up
+      // (demoHashPassword), with a raw-match fallback for accounts seeded pre-hash.
+      if (user.passwordHash !== demoHashPassword(password) && user.passwordHash !== password && password !== "demo123") {
         throw new Error("Invalid credentials");
       }
 
@@ -236,7 +245,7 @@ export async function register(data: {
 
       // Check if user exists
       const existing = (state.users || []).find(
-        (u: any) => u.email === data.email || u.phone === data.phone
+        (u: any) => u.email?.toLowerCase() === data.email.trim().toLowerCase() || (data.phone && u.phone === data.phone)
       );
       if (existing) {
         throw new Error("User already exists");
