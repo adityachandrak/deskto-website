@@ -14,6 +14,24 @@ export interface AuthUser extends User {
 const STORAGE_KEY = "deskto-auth-demo-state";
 export const AUTH_STATE_CHANGED_EVENT = "deskto-auth-state-changed";
 
+function formatAuthUserName(user: Partial<User> & { name?: string; first_name?: string; last_name?: string }): string {
+  const firstName = (user.firstName || user.first_name || "").trim();
+  const lastName = (user.lastName || user.last_name || "").trim();
+  const fullName = [firstName, lastName].filter(Boolean).join(" ").trim();
+  if (fullName) return fullName;
+  if (user.name?.trim()) return user.name.trim();
+  const emailName = user.email?.split("@")[0]?.trim();
+  if (emailName) return emailName;
+  return user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : "Account";
+}
+
+function toAuthUser(user: User): AuthUser {
+  return {
+    ...user,
+    name: formatAuthUserName(user),
+  };
+}
+
 // Feature flag: Use API if available
 const USE_API = import.meta.env.VITE_API_URL && import.meta.env.VITE_API_URL !== '/api';
 
@@ -31,7 +49,7 @@ function readUserFromStorage(): AuthUser | null {
     const user = (parsed?.users || []).find((u: any) => u.id === id);
     if (!user) return null;
     // Normalize to new structure
-    return {
+    const normalizedUser = {
       id: user.id,
       email: user.email,
       firstName: user.firstName || user.first_name || user.name?.split(' ')[0] || '',
@@ -40,7 +58,10 @@ function readUserFromStorage(): AuthUser | null {
       role: user.role,
       status: user.status,
       createdAt: user.createdAt || user.created_at,
-      name: `${user.firstName || user.first_name || ''} ${user.lastName || user.last_name || ''}`.trim(),
+    };
+    return {
+      ...normalizedUser,
+      name: formatAuthUserName({ ...normalizedUser, name: user.name }),
     };
   } catch {
     return null;
@@ -61,37 +82,37 @@ export function useCurrentUser(): AuthUser | null {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    const fetchUser = async () => {
+      if (!isAuthenticated()) {
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const apiUser = await authApi.getMe();
+        setUser(toAuthUser(apiUser));
+      } catch (error) {
+        console.error('Failed to fetch user:', error);
+        // If API fails, clear tokens
+        if ((error as any)?.status === 401) {
+          clearSession();
+          setUser(null);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
     if (USE_API) {
       // Fetch from API if token exists
-      const fetchUser = async () => {
-        if (isAuthenticated()) {
-          setLoading(true);
-          try {
-            const apiUser = await authApi.getMe();
-            setUser({
-              ...apiUser,
-              name: `${apiUser.firstName} ${apiUser.lastName || ''}`.trim(),
-            });
-          } catch (error) {
-            console.error('Failed to fetch user:', error);
-            // If API fails, clear tokens
-            if ((error as any)?.status === 401) {
-              clearSession();
-            }
-          } finally {
-            setLoading(false);
-          }
-        } else {
-          setUser(null);
-          setLoading(false);
-        }
-      };
       fetchUser();
     }
 
     const sync = () => {
       if (USE_API) {
-        setUser(isAuthenticated() ? user : null);
+        fetchUser();
       } else {
         setUser(readUserFromStorage());
       }
@@ -138,10 +159,7 @@ export function useAuthLoading(): boolean {
 export async function login(identifier: string, password: string): Promise<AuthUser> {
   if (USE_API) {
     const response = await authApi.login(identifier, password);
-    const authUser: AuthUser = {
-      ...response.user,
-      name: `${response.user.firstName} ${response.user.lastName || ''}`.trim(),
-    };
+    const authUser = toAuthUser(response.user);
     window.dispatchEvent(new Event(AUTH_STATE_CHANGED_EVENT));
     return authUser;
   } else {
@@ -169,7 +187,7 @@ export async function login(identifier: string, password: string): Promise<AuthU
 
       const authUser: AuthUser = {
         ...user,
-        name: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+        name: formatAuthUserName(user),
       };
       window.dispatchEvent(new Event(AUTH_STATE_CHANGED_EVENT));
       return authUser;
@@ -221,10 +239,7 @@ export async function register(data: {
 }): Promise<AuthUser> {
   if (USE_API) {
     const response = await authApi.register(data);
-    const authUser: AuthUser = {
-      ...response.user,
-      name: `${response.user.firstName} ${response.user.lastName || ''}`.trim(),
-    };
+    const authUser = toAuthUser(response.user);
     window.dispatchEvent(new Event(AUTH_STATE_CHANGED_EVENT));
     return authUser;
   } else {
@@ -265,7 +280,7 @@ export async function register(data: {
 
       const authUser: AuthUser = {
         ...newUser,
-        name: `${newUser.firstName} ${newUser.lastName || ''}`.trim(),
+        name: formatAuthUserName(newUser),
       };
       window.dispatchEvent(new Event(AUTH_STATE_CHANGED_EVENT));
       return authUser;
