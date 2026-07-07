@@ -32,8 +32,9 @@ function toAuthUser(user: User): AuthUser {
   };
 }
 
-// Feature flag: Use API if available
-const USE_API = import.meta.env.VITE_API_URL && import.meta.env.VITE_API_URL !== '/api';
+// Use the backend API by default, including the production same-origin /api path.
+// Set VITE_USE_API=false only for local demo-mode auth.
+const USE_API = import.meta.env.VITE_USE_API !== 'false';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Demo/Legacy localStorage functions (fallback)
