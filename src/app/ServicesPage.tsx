@@ -21,7 +21,7 @@ function RepairField({ label, value, onChange, placeholder, type = "text" }: { l
     <label style={{ display: "flex", flexDirection: "column", gap: 7 }}>
       <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, color: "#777", letterSpacing: "1.4px", textTransform: "uppercase", fontWeight: 700 }}>{label}</span>
       <input type={type} value={value} placeholder={placeholder} onChange={e => onChange(e.target.value)}
-        style={{ width: "100%", background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.09)", borderRadius: 8, padding: "11px 12px", fontFamily: "'Space Grotesk', sans-serif", fontSize: 13, color: "white", outline: "none" }} />
+        style={{ width: "100%", background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.09)", borderRadius: 8, padding: "11px 12px", fontFamily: "'Space Grotesk', sans-serif", fontSize: 16, color: "white", outline: "none" }} />
     </label>
   );
 }
@@ -150,6 +150,7 @@ function ServiceHero({ service }: { service: Service }) {
   return (
     <section className="section-pad" style={{ padding: "48px 0", background: "#050505" }}>
       <div
+        className="service-hero-grid"
         style={{
           maxWidth: 1280,
           margin: "0 auto",
@@ -902,7 +903,7 @@ function RepairBookingPage({ kind }: { kind: "pc-repair" | "laptop-repair" }) {
       <section className="section-pad" style={{ padding: "64px 0 88px", background: "#050505" }}>
         <div style={{ maxWidth: 1180, margin: "0 auto", padding: "0 24px" }}>
           <SectionHeader eyebrow="Repair Booking" title={title} accent="Workflow" sub="Submit a repair request with validation, scheduling, estimate, notifications, quotation approval, QA, invoice, and warranty tracking." />
-          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.35fr) minmax(280px, .65fr)", gap: 18 }}>
+          <div className="two-col-workflow" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.35fr) minmax(280px, .65fr)", gap: 18 }}>
             <div className="glass-card" style={{ borderRadius: 14, padding: 22 }}>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
                 <RepairField label="Customer Name" value={form.name} onChange={v => set("name", v)} />
@@ -910,7 +911,7 @@ function RepairBookingPage({ kind }: { kind: "pc-repair" | "laptop-repair" }) {
                 <RepairField label="Email" value={form.email} onChange={v => set("email", v)} />
                 <label style={{ display: "flex", flexDirection: "column", gap: 7 }}>
                   <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, color: "#777", letterSpacing: "1.4px", textTransform: "uppercase", fontWeight: 700 }}>Device Type</span>
-                  <select value={form.deviceType} onChange={e => set("deviceType", e.target.value)} style={{ background: "#111", border: "1px solid rgba(255,255,255,.09)", borderRadius: 8, padding: "11px 12px", color: "white" }}>
+                  <select value={form.deviceType} onChange={e => set("deviceType", e.target.value)} style={{ background: "#111", border: "1px solid rgba(255,255,255,.09)", borderRadius: 8, padding: "11px 12px", color: "white", fontSize: 16, fontFamily: "'Space Grotesk', sans-serif" }}>
                     {(isLaptop ? ["Laptop", "MacBook", "Other"] : ["Desktop", "Gaming PC", "Printer", "Other"]).map(v => <option key={v}>{v}</option>)}
                   </select>
                 </label>
@@ -922,7 +923,7 @@ function RepairBookingPage({ kind }: { kind: "pc-repair" | "laptop-repair" }) {
               <label style={{ display: "flex", flexDirection: "column", gap: 7, marginTop: 12 }}>
                 <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, color: "#777", letterSpacing: "1.4px", textTransform: "uppercase", fontWeight: 700 }}>Describe Issue</span>
                 <textarea value={form.issue} onChange={e => set("issue", e.target.value)} placeholder="Symptoms, when it started, error codes, sounds, display behavior, prior repairs..."
-                  style={{ minHeight: 120, resize: "vertical", width: "100%", background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.09)", borderRadius: 8, padding: "11px 12px", fontFamily: "'Space Grotesk', sans-serif", fontSize: 13, color: "white", outline: "none" }} />
+                  style={{ minHeight: 120, resize: "vertical", width: "100%", background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.09)", borderRadius: 8, padding: "11px 12px", fontFamily: "'Space Grotesk', sans-serif", fontSize: 16, color: "white", outline: "none" }} />
               </label>
               <div style={{ display: "flex", flexDirection: "column", gap: 9, marginTop: 12 }}>
                 <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, color: "#777", letterSpacing: "1.4px", textTransform: "uppercase", fontWeight: 700 }}>Upload Repair Images Optional (5 Slots)</span>
@@ -1319,7 +1320,7 @@ function CustomPCBuildPage({ service }: { service: Service }) {
       <section className="section-pad" style={{ padding: "64px 0 88px", background: "#050505" }}>
         <div style={{ maxWidth: 1260, margin: "0 auto", padding: "0 24px" }}>
           <SectionHeader eyebrow="Custom PC Builder" title="Configure" accent="Your Build" sub="Consultation, compatibility validation, quotation, assembly, testing, delivery, and warranty in one tracked workflow." />
-          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.35fr) minmax(310px, .65fr)", gap: 18 }}>
+          <div className="two-col-workflow" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.35fr) minmax(310px, .65fr)", gap: 18 }}>
             <div className="glass-card" style={{ borderRadius: 14, padding: 22 }}>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 12, marginBottom: 18 }}>
                 <RepairField label="Customer Name" value={form.name} onChange={v => set("name", v)} />
@@ -1332,7 +1333,7 @@ function CustomPCBuildPage({ service }: { service: Service }) {
               </div>
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 18 }}>
                 {["Entry", "Mid", "High", "Extreme"].map(v => <button key={v} className={form.performanceLevel === v ? "glass-pill glass-pill-primary" : "glass-pill glass-pill-outline"} onClick={() => set("performanceLevel", v)} style={{ padding: "9px 13px", fontSize: 9 }}>{v}</button>)}
-                <select value={form.budgetRange} onChange={e => set("budgetRange", e.target.value)} style={{ background: "#111", border: "1px solid rgba(255,255,255,.12)", borderRadius: 999, padding: "9px 13px", color: "white" }}>
+                <select value={form.budgetRange} onChange={e => set("budgetRange", e.target.value)} style={{ background: "#111", border: "1px solid rgba(255,255,255,.12)", borderRadius: 999, padding: "9px 13px", color: "white", fontSize: 16, fontFamily: "'Space Grotesk', sans-serif" }}>
                   {["Under ₹75,000", "₹75,000 - ₹1,00,000", "₹1,00,000 - ₹2,00,000", "₹2,00,000 - ₹3,00,000", "₹3,00,000+"].map(v => <option key={v}>{v}</option>)}
                 </select>
               </div>
@@ -1340,7 +1341,7 @@ function CustomPCBuildPage({ service }: { service: Service }) {
                 {activeCategories.map(type => (
                   <div key={type} className="glass" style={{ borderRadius: 10, padding: 12 }}>
                     <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 10, color: "#FF1F45", marginBottom: 8 }}>{type}</div>
-                    <select value={selected[type] || 0} onChange={e => setSelected(prev => ({ ...prev, [type]: Number(e.target.value) }))} style={{ width: "100%", background: "#111", border: "1px solid rgba(255,255,255,.12)", borderRadius: 8, padding: "10px", color: "white" }}>
+                    <select value={selected[type] || 0} onChange={e => setSelected(prev => ({ ...prev, [type]: Number(e.target.value) }))} style={{ width: "100%", background: "#111", border: "1px solid rgba(255,255,255,.12)", borderRadius: 8, padding: "10px", color: "white", fontSize: 16, fontFamily: "'Space Grotesk', sans-serif" }}>
                       {builderComponents[type].map((o, i) => <option key={o.id} value={i}>{o.brand} {o.model} · ₹{o.price.toLocaleString("en-IN")}</option>)}
                     </select>
                   </div>
@@ -1398,7 +1399,7 @@ function WorkflowTextarea({ label, value, onChange, placeholder }: { label: stri
     <label style={{ display: "flex", flexDirection: "column", gap: 7 }}>
       <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, color: "#777", letterSpacing: "1.4px", textTransform: "uppercase", fontWeight: 700 }}>{label}</span>
       <textarea value={value} placeholder={placeholder} onChange={e => onChange(e.target.value)}
-        style={{ width: "100%", minHeight: 110, resize: "vertical", background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.09)", borderRadius: 8, padding: "11px 12px", fontFamily: "'Space Grotesk', sans-serif", fontSize: 13, color: "white", outline: "none" }} />
+        style={{ width: "100%", minHeight: 110, resize: "vertical", background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.09)", borderRadius: 8, padding: "11px 12px", fontFamily: "'Space Grotesk', sans-serif", fontSize: 16, color: "white", outline: "none" }} />
     </label>
   );
 }
@@ -1559,7 +1560,7 @@ function UpgradeOptimizationPage({ service }: { service: Service }) {
       <section className="section-pad" style={{ padding: "64px 0 88px", background: "#050505" }}>
         <div style={{ maxWidth: 1260, margin: "0 auto", padding: "0 24px" }}>
           <SectionHeader eyebrow="Upgrade Workflow" title="Upgrade &" accent="Optimization" sub="Compatibility checks, parts quotation, installation, performance tuning, benchmark comparison, invoice, and warranty in one request." />
-          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.35fr) minmax(310px, .65fr)", gap: 18 }}>
+          <div className="two-col-workflow" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.35fr) minmax(310px, .65fr)", gap: 18 }}>
             <div className="glass-card" style={{ borderRadius: 14, padding: 22 }}>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 12, marginBottom: 18 }}>
                 <RepairField label="Customer Name" value={form.name} onChange={v => set("name", v)} />
@@ -1570,13 +1571,13 @@ function UpgradeOptimizationPage({ service }: { service: Service }) {
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 12, marginBottom: 18 }}>
                 <label style={{ display: "flex", flexDirection: "column", gap: 7 }}>
                   <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, color: "#777", letterSpacing: "1.4px", textTransform: "uppercase", fontWeight: 700 }}>Device Type</span>
-                  <select value={form.deviceType} onChange={e => set("deviceType", e.target.value)} style={{ background: "#111", border: "1px solid rgba(255,255,255,.12)", borderRadius: 8, padding: "11px 12px", color: "white" }}>
+                  <select value={form.deviceType} onChange={e => set("deviceType", e.target.value)} style={{ background: "#111", border: "1px solid rgba(255,255,255,.12)", borderRadius: 8, padding: "11px 12px", color: "white", fontSize: 16, fontFamily: "'Space Grotesk', sans-serif" }}>
                     {["Desktop PC", "Gaming PC", "Laptop", "Workstation", "MacBook"].map(v => <option key={v}>{v}</option>)}
                   </select>
                 </label>
                 <label style={{ display: "flex", flexDirection: "column", gap: 7 }}>
                   <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, color: "#777", letterSpacing: "1.4px", textTransform: "uppercase", fontWeight: 700 }}>Upgrade Category</span>
-                  <select value={form.category} onChange={e => set("category", e.target.value)} style={{ background: "#111", border: "1px solid rgba(255,255,255,.12)", borderRadius: 8, padding: "11px 12px", color: "white" }}>
+                  <select value={form.category} onChange={e => set("category", e.target.value)} style={{ background: "#111", border: "1px solid rgba(255,255,255,.12)", borderRadius: 8, padding: "11px 12px", color: "white", fontSize: 16, fontFamily: "'Space Grotesk', sans-serif" }}>
                     {["RAM Upgrade", "SSD Upgrade", "GPU Upgrade", "CPU Upgrade", "Motherboard Upgrade", "PSU Upgrade", "Cooling Upgrade", "RGB Upgrade", "Windows Upgrade", "Performance Optimization"].map(v => <option key={v}>{v}</option>)}
                   </select>
                 </label>
@@ -1683,7 +1684,7 @@ function AssemblyServicePage({ service }: { service: Service }) {
       <section className="section-pad" style={{ padding: "64px 0 88px", background: "#050505" }}>
         <div style={{ maxWidth: 1260, margin: "0 auto", padding: "0 24px" }}>
           <SectionHeader eyebrow="Assembly Workflow" title="Assembly" accent="Service" sub="You supply the equipment — we assemble, install, configure, test, validate, and hand over a working setup with photo evidence and warranty." />
-          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.35fr) minmax(310px, .65fr)", gap: 18 }}>
+          <div className="two-col-workflow" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.35fr) minmax(310px, .65fr)", gap: 18 }}>
             <div className="glass-card" style={{ borderRadius: 14, padding: 22 }}>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 12, marginBottom: 18 }}>
                 <RepairField label="Customer Name" value={form.name} onChange={v => set("name", v)} />
@@ -1694,7 +1695,7 @@ function AssemblyServicePage({ service }: { service: Service }) {
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 12, marginBottom: 18 }}>
                 <label style={{ display: "flex", flexDirection: "column", gap: 7 }}>
                   <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, color: "#777", letterSpacing: "1.4px", textTransform: "uppercase", fontWeight: 700 }}>Assembly Type</span>
-                  <select value={form.assemblyType} onChange={e => changeType(e.target.value)} style={{ background: "#111", border: "1px solid rgba(255,255,255,.12)", borderRadius: 8, padding: "11px 12px", color: "white" }}>
+                  <select value={form.assemblyType} onChange={e => changeType(e.target.value)} style={{ background: "#111", border: "1px solid rgba(255,255,255,.12)", borderRadius: 8, padding: "11px 12px", color: "white", fontSize: 16, fontFamily: "'Space Grotesk', sans-serif" }}>
                     {Object.keys(ASSEMBLY_EQUIPMENT).map(v => <option key={v}>{v}</option>)}
                   </select>
                 </label>
@@ -1803,7 +1804,7 @@ function SoftwareDataServicePage({ service }: { service: Service }) {
       <section className="section-pad" style={{ padding: "64px 0 88px", background: "#050505" }}>
         <div style={{ maxWidth: 1260, margin: "0 auto", padding: "0 24px" }}>
           <SectionHeader eyebrow="Software Workflow" title="Software &" accent="Data Services" sub="OS installs, data backup/recovery, virus removal, driver setup, licensing, quality testing, service report, and invoice." />
-          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.35fr) minmax(310px, .65fr)", gap: 18 }}>
+          <div className="two-col-workflow" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.35fr) minmax(310px, .65fr)", gap: 18 }}>
             <div className="glass-card" style={{ borderRadius: 14, padding: 22 }}>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 12, marginBottom: 18 }}>
                 <RepairField label="Customer Name" value={form.name} onChange={v => set("name", v)} />
@@ -1814,13 +1815,13 @@ function SoftwareDataServicePage({ service }: { service: Service }) {
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 12, marginBottom: 18 }}>
                 <label style={{ display: "flex", flexDirection: "column", gap: 7 }}>
                   <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, color: "#777", letterSpacing: "1.4px", textTransform: "uppercase", fontWeight: 700 }}>Service Category</span>
-                  <select value={form.category} onChange={e => set("category", e.target.value)} style={{ background: "#111", border: "1px solid rgba(255,255,255,.12)", borderRadius: 8, padding: "11px 12px", color: "white" }}>
+                  <select value={form.category} onChange={e => set("category", e.target.value)} style={{ background: "#111", border: "1px solid rgba(255,255,255,.12)", borderRadius: 8, padding: "11px 12px", color: "white", fontSize: 16, fontFamily: "'Space Grotesk', sans-serif" }}>
                     {["Windows Installation", "Linux Installation", "Driver Installation", "Software Installation", "MS Office Installation", "Antivirus Installation", "Virus Removal", "Windows Activation", "BIOS Update", "Data Backup", "Data Recovery", "Email Setup", "Printer Setup", "Performance Optimization", "Password Recovery", "OS Migration"].map(v => <option key={v}>{v}</option>)}
                   </select>
                 </label>
                 <label style={{ display: "flex", flexDirection: "column", gap: 7 }}>
                   <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, color: "#777", letterSpacing: "1.4px", textTransform: "uppercase", fontWeight: 700 }}>Device Type</span>
-                  <select value={form.deviceType} onChange={e => set("deviceType", e.target.value)} style={{ background: "#111", border: "1px solid rgba(255,255,255,.12)", borderRadius: 8, padding: "11px 12px", color: "white" }}>
+                  <select value={form.deviceType} onChange={e => set("deviceType", e.target.value)} style={{ background: "#111", border: "1px solid rgba(255,255,255,.12)", borderRadius: 8, padding: "11px 12px", color: "white", fontSize: 16, fontFamily: "'Space Grotesk', sans-serif" }}>
                     {["Desktop", "Laptop", "Gaming PC", "MacBook", "Workstation", "Server"].map(v => <option key={v}>{v}</option>)}
                   </select>
                 </label>
@@ -1887,7 +1888,7 @@ function RentalSolutionsPage({ service }: { service: Service }) {
       <section className="section-pad" style={{ padding: "64px 0 88px", background: "#050505" }}>
         <div style={{ maxWidth: 1260, margin: "0 auto", padding: "0 24px" }}>
           <SectionHeader eyebrow="Rental Workflow" title="Rental" accent="Solutions" sub="Document verification, rental agreement, deposit, inventory reservation, delivery, return inspection, and refund tracking." />
-          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.35fr) minmax(310px, .65fr)", gap: 18 }}>
+          <div className="two-col-workflow" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.35fr) minmax(310px, .65fr)", gap: 18 }}>
             <div className="glass-card" style={{ borderRadius: 14, padding: 22 }}>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 12, marginBottom: 18 }}>
                 <RepairField label="Customer Name" value={form.name} onChange={v => set("name", v)} />
@@ -1960,7 +1961,7 @@ function SellUsedProductsPage({ service }: { service: Service }) {
       <section className="section-pad" style={{ padding: "64px 0 88px", background: "#050505" }}>
         <div style={{ maxWidth: 1260, margin: "0 auto", padding: "0 24px" }}>
           <SectionHeader eyebrow="Used Product Buyback" title="Sell Used" accent="Products" sub="Submit product details, photos, invoice, expected price, inspection scheduling, offer approval, payment, inventory certification, and resale publishing." />
-          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.35fr) minmax(310px, .65fr)", gap: 18 }}>
+          <div className="two-col-workflow" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.35fr) minmax(310px, .65fr)", gap: 18 }}>
             <div className="glass-card" style={{ borderRadius: 14, padding: 22 }}>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 12, marginBottom: 18 }}>
                 <RepairField label="Customer Name" value={form.name} onChange={v => set("name", v)} /><RepairField label="Mobile Number" value={form.phone} onChange={v => set("phone", v)} /><RepairField label="Email" value={form.email} onChange={v => set("email", v)} /><RepairField label="Expected Price" type="number" value={form.expectedPrice} onChange={v => set("expectedPrice", v)} />
@@ -2023,7 +2024,7 @@ function RemoteBusinessSupportPage({ service }: { service: Service }) {
       <section className="section-pad" style={{ padding: "64px 0 88px", background: "#050505" }}>
         <div style={{ maxWidth: 1260, margin: "0 auto", padding: "0 24px" }}>
           <SectionHeader eyebrow="IT Support Workflow" title="Remote & Business" accent="IT Support" sub="Remote tickets, business enquiries, technician assignment, secure sessions, proposals, AMC, invoices, and service reports." />
-          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.35fr) minmax(310px, .65fr)", gap: 18 }}>
+          <div className="two-col-workflow" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.35fr) minmax(310px, .65fr)", gap: 18 }}>
             <div className="glass-card" style={{ borderRadius: 14, padding: 22 }}>
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 18 }}>{["Remote Support", "Business IT Support"].map(v => <button key={v} className={mode === v ? "glass-pill glass-pill-primary" : "glass-pill glass-pill-outline"} onClick={() => setMode(v as typeof mode)} style={{ padding: "10px 14px", fontSize: 9 }}>{v}</button>)}</div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 12, marginBottom: 18 }}>

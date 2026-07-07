@@ -297,7 +297,7 @@ export function StaffTasks({ staff, store, advanceTask }: { staff: StaffMember; 
       title="My Tasks"
       subtitle={`${tasks.length} total tasks · ${tasks.filter(t => t.status !== "done").length} pending`}
       action={
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {(["all", "todo", "in-progress", "done"] as const).map(f => (
             <button
               key={f}
@@ -401,7 +401,7 @@ export function StaffNotifications({ user, store, markRead, archive }: { user: A
       title="Notifications"
       subtitle={`${unreadCount} unread of ${myNotifications.length} total`}
       action={
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {(["unread", "all"] as const).map(f => (
             <button
               key={f}
@@ -441,7 +441,7 @@ export function StaffNotifications({ user, store, markRead, archive }: { user: A
                 <div style={{ color: "#666", fontSize: 13 }}>{notif.detail}</div>
                 <div style={{ color: "#555", fontSize: 11, marginTop: 8 }}>{formatDateTime(notif.createdAt)}</div>
               </div>
-              <div style={{ display: "flex", gap: 8 }}>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 {!notif.read && (
                   <button
                     className="glass-pill glass-pill-sm glass-pill-outline"
@@ -517,7 +517,7 @@ export function StaffAttendance({ staff, store, clockIn, clockOut }: { staff: St
     <div style={{ display: "grid", gap: 16 }}>
       {/* Clock In/Out Card */}
       <QueueCard title="Time Tracking" subtitle="Track your work hours">
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, alignItems: "center" }}>
+        <div className="two-col-workflow" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, alignItems: "center" }}>
           <div style={{ textAlign: "center" }}>
             <div style={{ fontSize: 48, fontFamily: "'Orbitron', sans-serif", color: "white", marginBottom: 8 }}>
               {todayRecord?.clockIn ? formatTime(todayRecord.clockIn) : "--:--"}
@@ -561,7 +561,8 @@ export function StaffAttendance({ staff, store, clockIn, clockOut }: { staff: St
 
       {/* Weekly Summary */}
       <QueueCard title="This Week" subtitle={`${daysPresent}/7 days present · ${avgHours.toFixed(1)} avg hours`}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 8 }}>
+        <div style={{ overflowX: "auto" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(44px, 1fr))", gap: 8, minWidth: 340 }}>
           {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day, i) => {
             const dayRecord = thisWeek[i];
             const hasData = !!dayRecord?.clockIn;
@@ -592,6 +593,7 @@ export function StaffAttendance({ staff, store, clockIn, clockOut }: { staff: St
               </div>
             );
           })}
+        </div>
         </div>
       </QueueCard>
 
@@ -688,7 +690,7 @@ export function StaffPerformance({ staff }: { staff: StaffMember }) {
 
       {/* Weekly Activity Chart */}
       <QueueCard title="Weekly Activity" subtitle="Jobs completed this week">
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 200px", gap: 24 }}>
+        <div className="two-col-workflow" style={{ display: "grid", gridTemplateColumns: "1fr 200px", gap: 24 }}>
           <div style={{ display: "flex", alignItems: "flex-end", gap: 8, height: 150 }}>
             {weeklyJobs.map(day => (
               <div key={day.day} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
@@ -717,7 +719,7 @@ export function StaffPerformance({ staff }: { staff: StaffMember }) {
 
       {/* Service Breakdown */}
       <QueueCard title="Service Breakdown" subtitle="Work distribution by type">
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+        <div className="two-col-workflow" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
           <div>
             {serviceBreakdown.map(service => (
               <div key={service.type} style={{ marginBottom: 12 }}>
@@ -830,7 +832,7 @@ export function StaffProfile({ user, staff }: { user: AuthUser; staff: StaffMemb
       {/* Profile Header */}
       <QueueCard title="My Profile" subtitle="Manage your personal information" action={
         editing ? (
-          <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <button className="glass-pill glass-pill-sm glass-pill-outline" onClick={handleCancel}>
               <X size={14} style={{ marginRight: 4 }} /> Cancel
             </button>
@@ -1006,7 +1008,7 @@ export function StaffRepairs({ staff, store, patchRepair }: { staff: StaffMember
       title="Assigned Repairs"
       subtitle={`${allMine.length} repair job${allMine.length === 1 ? "" : "s"} · ${active.length} active`}
       action={
-        <div style={{ display: "flex", gap: 6 }}>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
           {FILTERS.map(f => (
             <button
               key={f}
@@ -1220,7 +1222,7 @@ function StaffServiceQueue({ title, kind, staff, store, patchServiceRequest }: {
       title={title}
       subtitle={`${allMine.length} assigned · ${active.length} active`}
       action={
-        <div style={{ display: "flex", gap: 6 }}>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
           {FILTERS.map(f => (
             <button key={f} className={`glass-pill glass-pill-sm ${filter === f ? "glass-pill-primary" : "glass-pill-outline"}`} onClick={() => setFilter(f)} style={{ textTransform: "capitalize", fontSize: 11 }}>
               {f}{filter === f ? ` (${filter === "all" ? allMine.length : filter === "active" ? active.length : completed.length})` : ""}
@@ -1352,7 +1354,7 @@ export function StaffPCBuilds({ staff, store, patchPCBuild }: { staff: StaffMemb
       title="Custom PC Builds"
       subtitle={`${allMine.length} assigned · ${active.length} active`}
       action={
-        <div style={{ display: "flex", gap: 6 }}>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
           {FILTERS.map(f => (
             <button key={f} className={`glass-pill glass-pill-sm ${filter === f ? "glass-pill-primary" : "glass-pill-outline"}`} onClick={() => setFilter(f)} style={{ textTransform: "capitalize", fontSize: 11 }}>
               {f}{filter === f ? ` (${filter === "all" ? allMine.length : filter === "active" ? active.length : completed.length})` : ""}
@@ -1498,7 +1500,7 @@ export function StaffGamingHub({
       title="Gaming Hub"
       subtitle={`${rows.length} items · ${pendingCommentsTotal} pending comments`}
       action={
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           <input
             className="glass-input"
             placeholder="Search content..."
@@ -1506,7 +1508,7 @@ export function StaffGamingHub({
             onChange={e => setSearch(e.target.value)}
             style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 6, padding: "6px 12px", color: "white", fontSize: 12, width: 180 }}
           />
-          <div style={{ display: "flex", gap: 6 }}>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {FILTERS.map(f => (
               <button
                 key={f}
@@ -1572,7 +1574,7 @@ export function StaffGamingHub({
               key: "action",
               label: "",
               render: item => (
-                <div style={{ display: "flex", gap: 6 }}>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                   <button
                     className="glass-pill glass-pill-sm glass-pill-info"
                     onClick={() => { patchGamingHubItem(item.id, { updatedAt: Date.now() }); toast.success("Marked as reviewed"); }}
@@ -1634,7 +1636,7 @@ export function StaffGamingHub({
                           <div style={{ color: "white", fontWeight: 500, fontSize: 13 }}>{comment.customerName}</div>
                           <div style={{ color: "#666", fontSize: 11 }}>{formatDate(comment.createdAt)}</div>
                         </div>
-                        <div style={{ display: "flex", gap: 6 }}>
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                           <button
                             className="glass-pill glass-pill-sm"
                             style={{ background: "rgba(0,204,102,0.15)", border: "1px solid rgba(0,204,102,0.4)", color: "#00cc66", fontSize: 10, padding: "4px 10px" }}
@@ -1793,7 +1795,7 @@ export function StaffDeliveries({
             <div style={{ color: "#888", fontSize: 9, marginBottom: 6, fontFamily: "'Orbitron', sans-serif", letterSpacing: 0.5 }}>ORDER ITEMS ({order.items.length})</div>
             {order.items.map(item => (
               <div key={item.productId} style={{ display: "flex", justifyContent: "space-between", gap: 8, padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                   {item.img && <img src={item.img} alt={item.name} style={{ width: 28, height: 28, objectFit: "cover", borderRadius: 4 }} />}
                   <div>
                     <div style={{ color: "#ddd", fontSize: 12 }}>{item.name}</div>
@@ -1864,8 +1866,8 @@ export function StaffDeliveries({
       title="Deliveries"
       subtitle={`${counts.all} total · ${counts.ready} ready, ${counts.dispatched} in transit, ${counts.pending} awaiting assignment`}
       action={
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <div style={{ display: "flex", gap: 6 }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {FILTERS.map(f => (
               <button
                 key={f}
@@ -2056,7 +2058,7 @@ export function StaffOrders({ staff, store }: { staff: StaffMember; store: Dashb
               <button className="glass-pill glass-pill-icon" onClick={() => setOpen(null)}><X size={13} /></button>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10, marginBottom: 14 }}>
               <div className="glass" style={{ borderRadius: 10, padding: 12 }}>
                 <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 9, color: "#777", marginBottom: 6 }}>STATUS</div>
                 <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 999, background: `${STATUS_COLORS[active.status]}22`, border: `1px solid ${STATUS_COLORS[active.status]}55`, fontSize: 12, color: STATUS_COLORS[active.status], fontWeight: 600, textTransform: "capitalize" }}>
@@ -2071,7 +2073,7 @@ export function StaffOrders({ staff, store }: { staff: StaffMember; store: Dashb
               </div>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10, marginBottom: 14 }}>
               <div className="glass" style={{ borderRadius: 10, padding: 12 }}>
                 <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 9, color: "#777", marginBottom: 6 }}>FULFILLMENT</div>
                 <div style={{ color: "#ddd", fontSize: 12 }}>
@@ -2187,8 +2189,8 @@ export function StaffInventoryRequests({
       title="Inventory Requests"
       subtitle={`${counts.all} total requests`}
       action={
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <div style={{ display: "flex", gap: 6 }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {FILTERS.map(f => (
               <button
                 key={f}
@@ -2278,7 +2280,7 @@ export function StaffInventoryRequests({
               </div>
               <StatusBadge status={req.status} />
               <div style={{ color: "#666", fontSize: 12, whiteSpace: "nowrap" }}>{formatDate(req.createdAt)}</div>
-              <div style={{ display: "flex", gap: 6 }}>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                 {req.status === "approved" && (
                   <button
                     className="glass-pill glass-pill-sm glass-pill-primary"

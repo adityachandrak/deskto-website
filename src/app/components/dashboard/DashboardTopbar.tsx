@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Bell, LogOut, Search, User, ChevronDown } from "lucide-react";
+import { Bell, LogOut, Search, User, ChevronDown, Menu } from "lucide-react";
 import type { AuthUser } from "../../lib/currentUser";
 import { logout } from "../../lib/currentUser";
 
@@ -10,9 +10,10 @@ interface TopbarProps {
   pageTitle: string;
   onSearch?: (q: string) => void;
   searchPlaceholder?: string;
+  onMenuClick?: () => void;
 }
 
-export function DashboardTopbar({ user, unreadCount, accentColor, pageTitle, onSearch, searchPlaceholder }: TopbarProps) {
+export function DashboardTopbar({ user, unreadCount, accentColor, pageTitle, onSearch, searchPlaceholder, onMenuClick }: TopbarProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -28,14 +29,23 @@ export function DashboardTopbar({ user, unreadCount, accentColor, pageTitle, onS
 
   return (
     <div className="dash-topbar">
-      <div style={{ display: "flex", alignItems: "center", gap: 14, flex: 1 }}>
-        <h1 style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 16, color: "white", margin: 0, fontWeight: 700, letterSpacing: 1 }}>
+      <button
+        type="button"
+        onClick={onMenuClick}
+        aria-label="Open menu"
+        className="dash-menu-btn"
+        style={{ display: "none", flexShrink: 0, width: 36, height: 36, borderRadius: 8, background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.1)", color: "white", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+      >
+        <Menu size={17} />
+      </button>
+      <div style={{ display: "flex", alignItems: "center", gap: 14, flex: 1, minWidth: 0 }}>
+        <h1 style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 16, color: "white", margin: 0, fontWeight: 700, letterSpacing: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
           {pageTitle}
         </h1>
       </div>
 
       {onSearch && (
-        <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 999, padding: "8px 14px", minWidth: 260, marginRight: 14 }}>
+        <div className="dash-search-box" style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 999, padding: "8px 14px", minWidth: 260, marginRight: 14 }}>
           <Search size={14} color="#888" />
           <input
             type="text"

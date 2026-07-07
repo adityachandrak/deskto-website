@@ -41,7 +41,21 @@
         {
             "Effect": "Allow",
             "Action": [
-                "ssm:DescribeSession"
+                "ssm:DescribeInstanceInformation",
+                "ssm:DescribeSession",
+                "ssm:SendCommand",
+                "ssm:GetCommandInvocation",
+                "ssm:ListCommandInvocations",
+                "ssm:ListCommands"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "cloudfront:CreateInvalidation",
+                "cloudfront:GetInvalidation",
+                "cloudfront:GetDistribution"
             ],
             "Resource": "*"
         }

@@ -8,7 +8,7 @@ import { useDashboardData, type CatalogProduct } from "@/app/lib/dashboardData";
 import { Toaster } from "@/app/components/ui/sonner";
 import { BrandMark } from "@/app/components/BrandMark";
 import { toast } from "sonner";
-import { AUTH_STATE_CHANGED_EVENT, logout, useCurrentUser } from "@/app/lib/currentUser";
+import { AUTH_STATE_CHANGED_EVENT, logout, useCurrentUser, login as apiLogin } from "@/app/lib/currentUser";
 import CustomerDashboard from "@/app/CustomerDashboard";
 import StaffDashboard from "@/app/StaffDashboard";
 import AdminDashboard from "@/app/AdminDashboard";
@@ -311,11 +311,13 @@ function GlobalStyles() {
         .services-grid{grid-template-columns:1fr 1fr!important;gap:14px!important;}
         .workflow-grid{grid-template-columns:repeat(3,1fr)!important;gap:16px!important;}
         .workflow-line-abs{display:none!important;}
-        .builds-grid{grid-template-columns:1fr 1fr!important;gap:16px!important;}
         .pcbuilder-grid{grid-template-columns:1fr!important;}
         .pcbuilder-summary{position:static!important;}
+        .service-hero-grid{grid-template-columns:1fr!important;gap:28px!important;}
+        .two-col-workflow{grid-template-columns:1fr!important;}
         .offers-grid{grid-template-columns:1fr!important;}
         .offers-hero{height:auto!important;min-height:240px!important;}
+        .offers-hero:has(.offer-hero-pad){min-height:380px!important;}
         .location-grid{grid-template-columns:1fr!important;gap:32px!important;}
         .footer-grid{grid-template-columns:1fr 1fr!important;gap:24px!important;}
         .footer-brand{grid-column:1/-1!important;}
@@ -337,6 +339,7 @@ function GlobalStyles() {
         .faq-btn{padding:14px 16px!important;}
         .faq-q{font-size:12px!important;}
         .offer-h3{font-size:clamp(16px,4vw,22px)!important;}
+        .offer-hero-pad{padding-right:28px!important;padding-top:84px!important;}
         .footer-grid{grid-template-columns:1fr!important;}
       }
 
@@ -361,9 +364,20 @@ function GlobalStyles() {
       .dash-timeline-step::before{content:"";position:absolute;left:-18px;top:6px;width:11px;height:11px;border-radius:50%;background:#0a0a0a;border:2px solid #555;}
       .dash-timeline-step.done::before{background:#00cc66;border-color:#00cc66;box-shadow:0 0 8px rgba(0,204,102,0.5);}
       .dash-timeline-step.current::before{background:#FF1F45;border-color:#FF1F45;box-shadow:0 0 8px rgba(255,31,69,0.6);}
+      .dash-sidebar-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:590;display:none;}
+      .dash-menu-btn,.dash-sidebar-close{display:none;}
       @media (max-width:768px){
         .dash-shell{grid-template-columns:1fr;}
-        .dash-sidebar{position:relative;height:auto;max-height:none;}
+        .dash-sidebar{position:fixed;top:0;left:0;width:270px;max-width:82vw;height:100vh;z-index:600;transform:translateX(-100%);transition:transform .28s ease;box-shadow:12px 0 32px rgba(0,0,0,.55);}
+        .dash-sidebar.open{transform:translateX(0);}
+        .dash-sidebar-backdrop{display:block;}
+        .dash-menu-btn{display:flex!important;}
+        .dash-sidebar-close{display:flex!important;}
+        .dash-main{padding:16px!important;}
+        .dash-topbar{padding:10px 14px!important;gap:8px!important;flex-wrap:wrap!important;}
+        .dash-search-box{min-width:0!important;flex:1 1 100%!important;order:3;margin-right:0!important;}
+        .dash-search-box input{font-size:16px!important;}
+        .dash-kpi-grid{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))!important;gap:10px!important;}
       }
     `}</style>
   );
@@ -1069,6 +1083,8 @@ type ProductCondition = Product["condition"];
 type ProductCategory = Product["category"];
 type ProductBrand = string;
 
+export const PUBLIC_PRODUCTS_API_BASE = import.meta.env.VITE_API_URL || "/api";
+
 function catalogProductToProduct(p: CatalogProduct): Product {
   return {
     id: p.id,
@@ -1130,6 +1146,100 @@ export function mergedCatalogProducts(products: CatalogProduct[] = []): Product[
     .map(catalogProductToProduct);
 }
 
+type PublicProductImage = {
+  url?: string;
+  thumbnailUrl?: string;
+  isPrimary?: boolean;
+};
+
+type PublicProductApiRow = {
+  id: string;
+  sku?: string;
+  slug?: string;
+  name: string;
+  description?: string;
+  price: number;
+  comparePrice?: number | null;
+  category?: string;
+  brand?: string;
+  stockQuantity?: number;
+  imageUrl?: string;
+  images?: PublicProductImage[];
+  marketTag?: string | null;
+  isFeatured?: boolean;
+  specifications?: Record<string, any>;
+  createdAt?: string;
+  publishedAt?: string;
+};
+
+export function stableNumericId(value: string): number {
+  let hash = 0;
+  for (let i = 0; i < value.length; i += 1) {
+    hash = ((hash << 5) - hash + value.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash) + 100000;
+}
+
+export function publicProductToProduct(row: PublicProductApiRow): Product | null {
+  const specs = row.specifications || {};
+  const gallery = (row.images || [])
+    .map(image => image.url || image.thumbnailUrl || "")
+    .filter(Boolean);
+  const primaryImage = row.imageUrl || gallery[0] || "";
+  if (!primaryImage) return null;
+
+  const category = (row.category || "others") as ProductCategory;
+  const inferredType = (specs.type || (category === "gaming-pc" || category === "gaming-laptop" ? "gaming" : "general")) as ProductType;
+  const createdDate = row.publishedAt || row.createdAt || new Date().toISOString();
+
+  return {
+    id: stableNumericId(row.id),
+    liveId: row.id,
+    slug: row.slug,
+    name: row.name,
+    type: inferredType,
+    category,
+    condition: (specs.condition || "first-hand") as ProductCondition,
+    brand: row.brand || "DESKTO",
+    price: Number(row.price) || 0,
+    orig: row.comparePrice ?? null,
+    rating: 4.8,
+    reviews: 0,
+    badge: row.marketTag || null,
+    inStock: Number(row.stockQuantity || 0) > 0,
+    warrantyMonths: Number(specs.warrantyMonths || 0),
+    rgb: Boolean(specs.rgb),
+    specs: Array.isArray(specs.specs) && specs.specs.length ? specs.specs : [row.brand || "DESKTO", category, row.sku || "Live catalog"],
+    img: primaryImage,
+    gallery: gallery.length ? gallery : [primaryImage],
+    createdAt: Number(createdDate.slice(0, 10).replace(/-/g, "")) || Number(new Date().toISOString().slice(0, 10).replace(/-/g, "")),
+    popularity: row.isFeatured ? 1000 : 0,
+    sales: 0,
+    model: specs.model,
+    operatingSystem: specs.operatingSystem,
+    weight: specs.weight,
+    dimensions: specs.dimensions,
+    processor: specs.processor,
+    gpu: specs.gpu,
+    ram: specs.ram,
+    storage: specs.storage,
+    display: specs.display,
+    refreshRate: specs.refreshRate,
+    powerRequirement: specs.powerRequirement,
+    ports: specs.ports,
+    description: row.description,
+    technicalDetails: specs.technicalDetails,
+    useCase: specs.useCase,
+    performanceNotes: specs.performanceNotes,
+    qualityNotes: specs.qualityNotes,
+    features: specs.features,
+    boxContents: specs.boxContents,
+    compatibility: specs.compatibility,
+    upgradeOptions: specs.upgradeOptions,
+    recommendedAccessories: specs.recommendedAccessories,
+  } as Product;
+}
+
 export const CATEGORY_LABELS: Record<ProductCategory,string> = {
   "laptop":"Laptop", "desktop-pc":"Desktop PC", "gaming-pc":"Gaming PC", "gaming-laptop":"Gaming Laptop",
   "monitor":"Monitor", "cpu":"CPU", "gpu":"GPU", "ram":"RAM", "ssd":"SSD", "hdd":"HDD", "nvme":"NVMe",
@@ -1173,9 +1283,10 @@ export const CART_STORAGE_KEY = "deskto_cart_v1";
 export function ProductCard({ p, onAdd }: { p: Product; onAdd?: (product: Product) => void }) {
   const { has, toggle } = useWishlist();
   const wished = has(p.id);
+  const productPathKey = encodeURIComponent(String((p as any).slug || (p as any).liveId || p.id));
   return (
     <TiltCard>
-      <a href={`/product/${p.id}`} style={{ textDecoration:"none",color:"inherit",display:"block" }}>
+      <a href={`/product/${productPathKey}`} style={{ textDecoration:"none",color:"inherit",display:"block" }}>
       <div className="card-hover glass-card" style={{ borderRadius:14,overflow:"hidden",position:"relative",border:"1px solid rgba(255,255,255,.07)" }}>
         {p.badge && (
           <div style={{ position:"absolute",top:12,left:12,zIndex:2,background:BADGE_CLR[p.badge]??BADGE_CLR.PRO,padding:"4px 9px",borderRadius:3,fontFamily:"'Orbitron',sans-serif",fontSize:8,fontWeight:700,color:"white",letterSpacing:"1.5px",backdropFilter:"blur(8px)" }}>
@@ -1308,9 +1419,10 @@ export function saveCart(cart: Record<number, number>) {
 }
 
 function ProductCatalogPage({ category }: { category: ProductType | "all" }) {
-  const { store } = useDashboardData();
-  const catalogProducts = mergedCatalogProducts(store.products);
   const initialType: "all" | ProductType = category === "gaming" || category === "general" ? category : "all";
+  const [catalogProducts,setCatalogProducts] = useState<Product[]>([]);
+  const [catalogLoading,setCatalogLoading] = useState(true);
+  const [catalogError,setCatalogError] = useState("");
   const [typeFilter,setTypeFilter] = useState<"all" | ProductType>(initialType);
   const [conditionFilter,setConditionFilter] = useState<"all" | ProductCondition>("all");
   const [selectedCategories,setSelectedCategories] = useState<Set<ProductCategory>>(new Set());
@@ -1327,8 +1439,35 @@ function ProductCatalogPage({ category }: { category: ProductType | "all" }) {
   const dynamicCategories = Array.from(new Set(catalogProducts.map(p => p.category))) as ProductCategory[];
   const allCategoryBrands = Array.from(new Set(Object.values(CATEGORY_BRANDS).flat() as string[])).sort();
 
+  const loadLiveProducts = useCallback(async () => {
+    setCatalogLoading(true);
+    setCatalogError("");
+    try {
+      const response = await fetch(`${PUBLIC_PRODUCTS_API_BASE}/products?limit=100`, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+      });
+      if (!response.ok) throw new Error(`Product API returned ${response.status}`);
+      const data = await response.json();
+      const products = (data.products || [])
+        .map(publicProductToProduct)
+        .filter((product: Product | null): product is Product => Boolean(product));
+      setCatalogProducts(products);
+      setStatus(products.length ? "Live catalog loaded from DESKTO backend." : "No published products are available yet.");
+    } catch (error: any) {
+      console.error("Live product catalog load failed:", error);
+      setCatalogError(error?.message || "Unable to load live catalog.");
+      setCatalogProducts([]);
+      setStatus("Unable to load live catalog. Please refresh products.");
+    } finally {
+      setCatalogLoading(false);
+    }
+  }, []);
+
   useEffect(() => { setCart(loadCart()); }, []);
   useEffect(() => { saveCart(cart); }, [cart]);
+  useEffect(() => { loadLiveProducts(); }, [loadLiveProducts]);
 
   const visibleProducts = sortCatalog(applyCatalogFilters(catalogProducts, {
     type:typeFilter, condition:conditionFilter, categories:selectedCategories, brands:selectedBrands,
@@ -1414,14 +1553,14 @@ function ProductCatalogPage({ category }: { category: ProductType | "all" }) {
 
         {/* Search + Sort */}
         <Reveal>
-          <div className="glass-card" style={{ borderRadius:14,padding:16,display:"grid",gridTemplateColumns:"minmax(220px,1fr) 220px",gap:12,marginBottom:18 }}>
+          <div className="glass-card" style={{ borderRadius:14,padding:16,display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(220px, 1fr))",gap:12,marginBottom:18 }}>
             <label style={{ display:"flex",alignItems:"center",gap:10 }}>
               <Search size={15} color="#FF1F45" />
               <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search by name, brand or spec"
-                style={{ width:"100%",background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.09)",borderRadius:8,padding:"11px 12px",fontFamily:"'Space Grotesk',sans-serif",fontSize:13,color:"white",outline:"none" }} />
+                style={{ width:"100%",background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.09)",borderRadius:8,padding:"11px 12px",fontFamily:"'Space Grotesk',sans-serif",fontSize:16,color:"white",outline:"none" }} />
             </label>
             <select value={sort} onChange={e=>setSort(e.target.value as SortKey)}
-              style={{ width:"100%",background:"#151515",border:"1px solid rgba(255,255,255,.12)",borderRadius:8,padding:"11px 12px",fontFamily:"'Space Grotesk',sans-serif",fontSize:13,color:"white",outline:"none" }}>
+              style={{ width:"100%",background:"#151515",border:"1px solid rgba(255,255,255,.12)",borderRadius:8,padding:"11px 12px",fontFamily:"'Space Grotesk',sans-serif",fontSize:16,color:"white",outline:"none" }}>
               <option value="featured">Featured</option>
               <option value="second-hand">Second-hand</option>
               <option value="latest">Latest</option>
@@ -1432,6 +1571,9 @@ function ProductCatalogPage({ category }: { category: ProductType | "all" }) {
               <option value="rating">Highest Rated</option>
               <option value="new-arrivals">New Arrivals</option>
             </select>
+            <button onClick={loadLiveProducts} className="glass-pill glass-pill-outline" style={{ justifyContent:"center",padding:"11px 14px",fontSize:10 }}>
+              <RefreshCw size={12} /> Refresh Products
+            </button>
           </div>
         </Reveal>
 
@@ -1473,16 +1615,16 @@ function ProductCatalogPage({ category }: { category: ProductType | "all" }) {
                   </div>
                 </div>
                 {/* Price + toggles */}
-                <div style={{ display:"grid",gridTemplateColumns:"repeat(2,1fr) 1fr 1fr",gap:12,alignItems:"end" }}>
+                <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(150px, 1fr))",gap:12,alignItems:"end" }}>
                   <label>
                     <span style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:10,color:"#777",letterSpacing:"1.4px",textTransform:"uppercase",fontWeight:700,display:"block",marginBottom:8 }}>Min Price</span>
                     <input type="number" value={priceMin} onChange={e=>setPriceMin(e.target.value)} placeholder="₹ 0"
-                      style={{ width:"100%",background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.09)",borderRadius:8,padding:"11px 12px",fontFamily:"'Space Grotesk',sans-serif",fontSize:13,color:"white",outline:"none" }} />
+                      style={{ width:"100%",background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.09)",borderRadius:8,padding:"11px 12px",fontFamily:"'Space Grotesk',sans-serif",fontSize:16,color:"white",outline:"none" }} />
                   </label>
                   <label>
                     <span style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:10,color:"#777",letterSpacing:"1.4px",textTransform:"uppercase",fontWeight:700,display:"block",marginBottom:8 }}>Max Price</span>
                     <input type="number" value={priceMax} onChange={e=>setPriceMax(e.target.value)} placeholder="₹ 5,00,000"
-                      style={{ width:"100%",background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.09)",borderRadius:8,padding:"11px 12px",fontFamily:"'Space Grotesk',sans-serif",fontSize:13,color:"white",outline:"none" }} />
+                      style={{ width:"100%",background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.09)",borderRadius:8,padding:"11px 12px",fontFamily:"'Space Grotesk',sans-serif",fontSize:16,color:"white",outline:"none" }} />
                   </label>
                   <label style={{ display:"flex",alignItems:"center",gap:8,cursor:"pointer",padding:"11px 0" }}>
                     <input type="checkbox" checked={inStockOnly} onChange={e=>setInStockOnly(e.target.checked)} />
@@ -1505,9 +1647,14 @@ function ProductCatalogPage({ category }: { category: ProductType | "all" }) {
         <div style={{ marginBottom:cartCount>0?120:0 }}>
           <div className="products-grid" style={{ display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:20 }}>
             {visibleProducts.map((p,i)=>(<Reveal key={p.id} delay={i*.04}><ProductCard p={p} onAdd={addToCart} /></Reveal>))}
-            {visibleProducts.length === 0 && (
+            {catalogLoading && (
               <div className="glass-card" style={{ borderRadius:14,padding:24,fontFamily:"'Space Grotesk',sans-serif",fontSize:13,color:"#CFCFCF" }}>
-                No products match these filters.
+                Loading live products...
+              </div>
+            )}
+            {!catalogLoading && visibleProducts.length === 0 && (
+              <div className="glass-card" style={{ borderRadius:14,padding:24,fontFamily:"'Space Grotesk',sans-serif",fontSize:13,color:"#CFCFCF" }}>
+                {catalogError ? "Live product API is currently unavailable." : "No products match these filters."}
               </div>
             )}
           </div>
@@ -1863,7 +2010,7 @@ function OffersSection() {
               <div className="offers-hero glass-card card-hover" style={{ borderRadius:18,overflow:"hidden",position:"relative",height:280,background:"linear-gradient(135deg,#0a0005,#2A0008)",border:"1px solid rgba(255,31,69,.15)" }}>
                 <img src={offer.img} alt={offer.title} style={{ position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:.22 }} />
                 <div style={{ position:"absolute",inset:0,background:"linear-gradient(90deg,rgba(5,5,5,.92) 0%,rgba(5,5,5,.35) 100%)" }} />
-                <div style={{ position:"absolute",inset:0,padding:28,display:"flex",flexDirection:"column",justifyContent:"center",paddingRight:i === 0 ? 150 : 28 }}>
+                <div className={i === 0 ? "offer-hero-pad" : ""} style={{ position:"absolute",inset:0,padding:28,display:"flex",flexDirection:"column",justifyContent:"center",paddingRight:i === 0 ? 150 : 28 }}>
                   <span style={{ fontFamily:"'Orbitron',sans-serif",fontSize:9,color:"#FF1F45",letterSpacing:"3px",marginBottom:10,fontWeight:700 }}>LIMITED TIME OFFER</span>
                   <h3 className="offer-h3" style={{ fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(18px,2.7vw,30px)",fontWeight:900,color:"white",marginBottom:8,lineHeight:1.1 }}>{offer.title}</h3>
                   <p style={{ fontFamily:"'Space Grotesk',sans-serif",color:"#CFCFCF",fontSize:13,marginBottom:18,maxWidth:620 }}>{offer.desc}</p>
@@ -2355,39 +2502,20 @@ function AuthSection({ initialMode="sign-in", initialRole="customer", standalone
     addLog("signup_completed", `${user.role} ${user.email} verified by OTP`);
   };
 
-  const runLogin = () => {
-    const identifier = login.identifier.trim().toLowerCase();
-    const user = state.users.find(u => u.email === identifier || u.phone === normalizePhone(identifier));
+  const runLogin = async () => {
+    const identifier = login.identifier.trim();
     if (!identifier) return setMessage("Email or mobile is required.");
     if (!login.password) return setMessage("Password is required.");
-    if (!user) return setMessage("Wrong email/mobile or password.");
-    if (user.status === "locked" && user.lockedUntil && Date.now() < user.lockedUntil) return setMessage("Account is temporarily locked.");
-    if (!user.emailVerified || !user.phoneVerified) return setMessage("Account verification is required.");
-    if (user.passwordHash !== demoHashPassword(login.password)) {
-      const attempts = user.loginAttempts + 1;
-      setState(prev => ({
-        ...prev,
-        users: prev.users.map(u => u.id === user.id ? { ...u, loginAttempts: attempts, status: attempts >= MAX_LOGIN_ATTEMPTS ? "locked" : u.status, lockedUntil: attempts >= MAX_LOGIN_ATTEMPTS ? Date.now() + LOCK_MS : u.lockedUntil } : u),
-      }));
-      return setMessage(attempts >= MAX_LOGIN_ATTEMPTS ? "Too many failures. Account locked for 10 minutes." : "Wrong email/mobile or password.");
+
+    try {
+      await apiLogin(identifier, login.password);
+      setMessage("Login successful. Dashboard session is active.");
+      addLog("login_success", `${identifier} logged in`);
+    } catch (error: any) {
+      const message = error?.message || "Wrong email/mobile or password.";
+      setMessage(message.includes("Invalid credentials") ? "Wrong email/mobile or password." : message);
+      addLog("login_failure", `${identifier} failed to log in: ${message}`);
     }
-    const session: SessionRecord = {
-      id: makeId("sess"),
-      userId: user.id,
-      refreshToken: makeId("refresh"),
-      device: login.remember ? "Remembered browser" : "Current browser",
-      ip: "127.0.0.1",
-      expiresAt: new Date(Date.now() + (login.remember ? 30 : 1) * 24 * 60 * 60 * 1000).toISOString(),
-    };
-    setState(prev => ({
-      ...prev,
-      users: prev.users.map(u => u.id === user.id ? { ...u, loginAttempts:0, status:"active", lockedUntil:undefined } : u),
-      sessions: [...prev.sessions, session],
-      currentUserId: user.id,
-      accessToken: makeId("jwt"),
-    }));
-    setMessage("Login successful. Dashboard session is active.");
-    addLog("login_success", `${user.email} logged in`);
   };
 
   const requestPasswordReset = () => {
@@ -2680,9 +2808,9 @@ function getProductCategoryFromPath(pathname: string): ProductType | "all" | nul
   return null;
 }
 
-function getProductDetailFromPath(pathname: string): number | null {
-  const m = pathname.match(/^\/product\/(\d+)\/?$/);
-  return m ? Number(m[1]) : null;
+function getProductDetailFromPath(pathname: string): string | null {
+  const m = pathname.match(/^\/product\/([^/]+)\/?$/);
+  return m ? decodeURIComponent(m[1]) : null;
 }
 
 function getServicesRouteFromPath(pathname: string): { slug: string | null; child?: string | null } | null {
@@ -3383,8 +3511,8 @@ function DashboardRouter({ kind, tab }: { kind: "customer" | "staff" | "admin"; 
     );
   }
 
-  return kind === "customer" ? <CustomerDashboard user={resolved} /> :
-         kind === "staff"     ? <StaffDashboard user={resolved} /> :
+  return kind === "customer" ? <CustomerDashboard user={resolved} initialTab={tab} /> :
+         kind === "staff"     ? <StaffDashboard user={resolved} initialTab={tab} /> :
                                 <AdminDashboard user={resolved} initialTab={tab} />;
 }
 

@@ -12,7 +12,7 @@ export function SectionCard({ title, subtitle, action, children, padded = true }
   return (
     <div className="glass-card" style={{ display: "flex", flexDirection: "column" }}>
       {(title || action) && (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)", flexWrap: "wrap", gap: 12 }}>
           <div>
             {title && (
               <h3 style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 13, color: "white", letterSpacing: 1, margin: 0 }}>{title}</h3>

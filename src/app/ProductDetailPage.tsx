@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Star, Heart, ShoppingCart, Zap, Truck, ShieldCheck, ShieldCheck as ShieldIcon,
   RefreshCw, Plus, Minus, ChevronRight, CheckCircle, Phone, MessageCircle,
@@ -10,6 +10,7 @@ import {
   PRODUCTS, ProductCard, BADGE_CLR, CATEGORY_LABELS, Product,
   Navbar, FooterSection, SectionHeader, Reveal, ScrollToTop,
   loadCart, saveCart, CART_STORAGE_KEY, mergedCatalogProducts,
+  PUBLIC_PRODUCTS_API_BASE, publicProductToProduct,
 } from "@/app/App";
 import { useWishlist } from "@/app/lib/wishlist";
 import { getProductDetails, ProductDetails } from "@/app/lib/productDetails";
@@ -806,7 +807,7 @@ function DescriptionSection({ details }: { details: ProductDetails }) {
             </GlassCard>
           </Reveal>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 22 }}>
+          <div className="two-col-workflow" style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 22 }}>
             <Reveal delay={.15}>
               <GlassCard>
                 <h3 style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 18, color: "#FF1F45", marginBottom: 12 }}>Technical Details</h3>
@@ -997,7 +998,7 @@ function WarrantySection({ details }: { details: ProductDetails }) {
             <div style={{ marginBottom: 16, color: "#CFCFCF", fontSize: 13, lineHeight: 1.7, fontFamily: "'Space Grotesk', sans-serif" }}>
               <strong style={{ color: "white" }}>Claim Process:</strong> {details.warranty.claimProcess}
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10 }}>
               {[
                 { n: 1, t: "Contact Us", d: "WhatsApp / Call" },
                 { n: 2, t: "Diagnose", d: "Free pickup & check" },
@@ -1027,7 +1028,7 @@ function ReviewsSection({ product, details }: { product: Product; details: Produ
       <div style={{ maxWidth: 1280, margin: "0 auto", padding: "0 24px" }}>
         <SectionHeader eyebrow="OPINIONS" title="CUSTOMER" accent="REVIEWS" sub={`${product.reviews.toLocaleString("en-IN")} verified ratings`} />
 
-        <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 22, alignItems: "flex-start" }}>
+        <div className="two-col-workflow" style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 22, alignItems: "flex-start" }}>
           <Reveal>
             <GlassCard>
               <div style={{ textAlign: "center", marginBottom: 18 }}>
@@ -1309,14 +1310,79 @@ function NotFoundView() {
 }
 
 // ─────────────── MAIN PAGE ───────────────
-export default function ProductDetailPage({ productId }: { productId: number }) {
-  const { store } = useDashboardData();
-  const products = mergedCatalogProducts(store.products);
+export default function ProductDetailPage({ productId }: { productId: string }) {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+
+  const loadProductCatalog = useCallback(async () => {
+    setLoading(true);
+    setLoadError("");
+    try {
+      const response = await fetch(`${PUBLIC_PRODUCTS_API_BASE}/products?limit=100`, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+      });
+      if (!response.ok) throw new Error(`Product API returned ${response.status}`);
+      const data = await response.json();
+      const liveProducts = (data.products || [])
+        .map(publicProductToProduct)
+        .filter((product: Product | null): product is Product => Boolean(product));
+      setProducts(liveProducts);
+    } catch (error: any) {
+      console.error("Product detail load failed:", error);
+      setLoadError(error?.message || "Unable to load product.");
+      setProducts([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [productId]);
 
-  const product = products.find((p) => p.id === productId);
+  useEffect(() => { loadProductCatalog(); }, [loadProductCatalog]);
+
+  const productKey = String(productId);
+  const product = products.find((p) =>
+    String(p.id) === productKey ||
+    String((p as any).liveId || "") === productKey ||
+    String((p as any).slug || "") === productKey
+  );
+
+  if (loading) {
+    return (
+      <div style={{ background: "#050505", color: "white", minHeight: "100vh" }}>
+        <Navbar />
+        <section className="section-pad" style={{ minHeight: "70vh", display: "grid", placeItems: "center", padding: "120px 24px" }}>
+          <div className="glass-card" style={{ borderRadius: 14, padding: 28, fontFamily: "'Space Grotesk', sans-serif", color: "#CFCFCF" }}>
+            Loading product details...
+          </div>
+        </section>
+        <FooterSection />
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div style={{ background: "#050505", color: "white", minHeight: "100vh" }}>
+        <Navbar />
+        <section className="section-pad" style={{ minHeight: "70vh", display: "grid", placeItems: "center", padding: "120px 24px" }}>
+          <div className="glass-card" style={{ borderRadius: 14, padding: 28, fontFamily: "'Space Grotesk', sans-serif", color: "#CFCFCF", textAlign: "center" }}>
+            Product details are temporarily unavailable.
+            <button onClick={loadProductCatalog} className="glass-pill glass-pill-outline" style={{ margin: "18px auto 0", padding: "10px 16px", fontSize: 10 }}>
+              <RefreshCw size={12} /> Retry
+            </button>
+          </div>
+        </section>
+        <FooterSection />
+      </div>
+    );
+  }
+
   if (!product) return <NotFoundView />;
 
   const details = getProductDetails(product, products);
@@ -1328,6 +1394,7 @@ export default function ProductDetailPage({ productId }: { productId: number }) 
 
       <section className="section-pad" style={{ padding: "40px 0" }}>
         <div
+          className="two-col-workflow"
           style={{
             maxWidth: 1280,
             margin: "0 auto",
@@ -1360,15 +1427,6 @@ export default function ProductDetailPage({ productId }: { productId: number }) 
       <FooterSection />
       <ScrollToTop />
       <StickyActionBar product={product} />
-
-      {/* Mobile-only responsive grid override */}
-      <style>{`
-        @media (max-width: 900px) {
-          .section-inner > div[style*="grid-template-columns: minmax"] {
-            grid-template-columns: 1fr !important;
-          }
-        }
-      `}</style>
     </div>
   );
 }
