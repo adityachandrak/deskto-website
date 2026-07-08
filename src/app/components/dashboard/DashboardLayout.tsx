@@ -22,7 +22,8 @@ interface DashboardLayoutProps {
 function getInitialHash(): string {
   if (typeof window === "undefined") return "overview";
   const h = window.location.hash.replace("#", "");
-  return h || "overview";
+  const pathTab = window.location.pathname.match(/^\/dashboard\/(?:customer|staff|admin)\/([a-z0-9-]+)\/?$/)?.[1];
+  return h || pathTab || "overview";
 }
 
 function setHash(key: string) {
