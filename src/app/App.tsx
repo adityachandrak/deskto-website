@@ -2330,7 +2330,7 @@ const OTP_TTL_MS = 5 * 60 * 1000;
 const MAX_OTP_ATTEMPTS = 3;
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCK_MS = 10 * 60 * 1000;
-const ADMIN_SIGNUP_CODE = "DESKTO-ADMIN-2026";
+const ADMIN_SIGNUP_CODE_CHECKSUM = 3715680592;
 
 const emptyAuthState = {
   users: [] as AuthUser[],
@@ -2364,6 +2364,19 @@ function normalizePhone(value: string) {
 
 function strongPassword(value: string) {
   return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(value);
+}
+
+function checksumSignupCode(value: string) {
+  let hash = 2166136261;
+  for (const char of value.trim().toUpperCase()) {
+    hash ^= char.charCodeAt(0);
+    hash = Math.imul(hash, 16777619) >>> 0;
+  }
+  return hash;
+}
+
+function isValidAdminSignupCode(value: string) {
+  return checksumSignupCode(value) === ADMIN_SIGNUP_CODE_CHECKSUM;
 }
 
 function AuthField({ label, type="text", value, onChange, placeholder }: { label:string; type?:string; value:string; onChange:(value:string)=>void; placeholder?:string }) {
@@ -2441,8 +2454,8 @@ function AuthSection({ initialMode="sign-in", initialRole="customer", standalone
     if (!strongPassword(signup.password)) return setMessage("Password needs 8+ chars with upper, lower, number, and symbol.");
     if (signup.password !== signup.confirm) return setMessage("Confirm password must match.");
     if (!signup.terms) return setMessage("Accept Terms and Privacy Policy.");
-    if (signup.role === "admin" && signup.adminCode.trim() !== ADMIN_SIGNUP_CODE) return setMessage("Enter the valid admin signup code.");
-    if (signup.role === "staff" && !/^STF-\d{4,}$/i.test(signup.staffId.trim())) return setMessage("Staff ID must use the format STF-1001.");
+    if (signup.role === "admin" && !isValidAdminSignupCode(signup.adminCode)) return setMessage("Enter the valid admin signup code.");
+    if (signup.role === "staff" && !/^STF-\d{4,}$/i.test(signup.staffId.trim())) return setMessage("Enter a valid staff ID.");
     if (signup.role === "staff" && signup.department.trim().length < 2) return setMessage("Department is required for staff signup.");
     if (state.users.some(u => u.email.toLowerCase() === signup.email.toLowerCase())) return setMessage("Duplicate email blocked.");
     if (state.users.some(u => normalizePhone(u.phone) === phone)) return setMessage("Duplicate mobile blocked.");
@@ -2651,11 +2664,11 @@ function AuthSection({ initialMode="sign-in", initialRole="customer", standalone
                 <AuthField label="Email" value={signup.email} onChange={v=>setSignup(p=>({...p,email:v}))} />
                 <AuthField label="Mobile Number" value={signup.phone} onChange={v=>setSignup(p=>({...p,phone:v}))} />
                 {signup.role === "admin" && (
-                  <AuthField label="Admin Signup Code" value={signup.adminCode} onChange={v=>setSignup(p=>({...p,adminCode:v}))} placeholder={ADMIN_SIGNUP_CODE} />
+                  <AuthField label="Admin Signup Code" value={signup.adminCode} onChange={v=>setSignup(p=>({...p,adminCode:v}))} placeholder="Enter admin signup code" />
                 )}
                 {signup.role === "staff" && (
                   <>
-                    <AuthField label="Staff ID" value={signup.staffId} onChange={v=>setSignup(p=>({...p,staffId:v}))} placeholder="STF-1001" />
+                    <AuthField label="Staff ID" value={signup.staffId} onChange={v=>setSignup(p=>({...p,staffId:v}))} placeholder="Enter staff ID" />
                     <AuthField label="Department" value={signup.department} onChange={v=>setSignup(p=>({...p,department:v}))} placeholder="Sales, Support, Service" />
                   </>
                 )}
