@@ -202,6 +202,9 @@ export interface Order {
   addressId: string;
   trackingSteps: { label: string; at: number; done: boolean }[];
   invoiceId?: string;
+  invoiceUrl?: string;
+  invoiceEmailStatus?: "queued" | "sent" | "failed";
+  invoiceEmailSentAt?: number;
   warrantyEndsAt?: number;
 }
 

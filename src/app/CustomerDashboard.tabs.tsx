@@ -1099,8 +1099,10 @@ export function CustomerInvoices({ user, store }: { user: AuthUser; store: Dashb
           columns={[
             { key: "id", label: "Order", render: o => <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 10 }}>{o.id.slice(-8).toUpperCase()}</span> },
             { key: "date", label: "Date", render: o => formatDate(o.createdAt) },
+            { key: "invoice", label: "Invoice", render: o => <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 10 }}>{o.invoiceId}</span> },
+            { key: "email", label: "Email", render: o => o.invoiceEmailStatus === "sent" ? <StatusBadge status="delivered" /> : <StatusBadge status="pending" /> },
             { key: "total", label: "Amount", align: "right", render: o => inr(o.total) },
-            { key: "action", label: "", render: o => <button className="glass-pill glass-pill-sm glass-pill-outline" onClick={() => toast.success("Invoice PDF generated")}><Download size={10} /> PDF</button> },
+            { key: "action", label: "", render: o => <button className="glass-pill glass-pill-sm glass-pill-outline" onClick={() => toast.success(`Invoice ${o.invoiceId} ready${o.customerEmail ? ` and emailed to ${o.customerEmail}` : ""}`)}><Download size={10} /> PDF</button> },
           ]}
         />
       )}

@@ -17,7 +17,7 @@ import {
 } from "./CustomerDashboard.tabs";
 import type { NavGroup } from "./components/dashboard/DashboardSidebar";
 
-interface Props { user: AuthUser }
+interface Props { user: AuthUser; initialTab?: string | null }
 
 const TABS: { key: string; label: string; icon: any; title: string }[] = [
   { key: "overview", label: "Overview", icon: Home, title: "Dashboard Overview" },
@@ -42,8 +42,11 @@ const TABS: { key: string; label: string; icon: any; title: string }[] = [
   { key: "logout", label: "Logout", icon: LogOut, title: "Logout" },
 ];
 
-export default function CustomerDashboard({ user }: Props) {
-  const [tab, setTab] = useState<string>(() => window.location.hash.replace("#", "") || "overview");
+export default function CustomerDashboard({ user, initialTab }: Props) {
+  const [tab, setTab] = useState<string>(() => {
+    const pathTab = window.location.pathname.match(/^\/dashboard\/customer\/([a-z0-9-]+)\/?$/)?.[1];
+    return initialTab || pathTab || window.location.hash.replace("#", "") || "overview";
+  });
   const data = useDashboardData();
   const { store, markNotificationRead, archiveNotification, addAddress, deleteAddress, updateOrderStatus, updateRepairStatus, patchRepair, patchPCBuild, patchServiceRequest, updateRental, fileReview, redeemCoupon, addReplyToTicket, closeTicket } = data;
 

@@ -1417,7 +1417,14 @@ export function loadCart(): Record<number, number> {
     const raw = window.localStorage.getItem(CART_STORAGE_KEY);
     if (!raw) return {};
     const parsed = JSON.parse(raw);
-    if (parsed && typeof parsed === "object") return parsed;
+    if (parsed && typeof parsed === "object") {
+      return Object.entries(parsed).reduce<Record<number, number>>((next, [id, qty]) => {
+        const productId = Number(id);
+        const quantity = Number(qty);
+        if (Number.isFinite(productId) && Number.isFinite(quantity) && quantity > 0) next[productId] = quantity;
+        return next;
+      }, {});
+    }
     return {};
   } catch { return {}; }
 }
@@ -2951,9 +2958,9 @@ function applyCoupon(code: string, subtotal: number): CheckoutState["coupon"] | 
   return null;
 }
 
-function cartSubtotal(cart: Record<number,number>): number {
+function cartSubtotal(cart: Record<number,number>, products: Product[] = PRODUCTS): number {
   return Object.entries(cart).reduce((sum,[id,qty]) => {
-    const p = PRODUCTS.find(item => item.id === Number(id));
+    const p = products.find(item => item.id === Number(id));
     return p ? sum + p.price * qty : sum;
   }, 0);
 }
@@ -2969,12 +2976,23 @@ function cartGst(subtotal: number, discount: number): number {
   return Math.round((subtotal - discount) * 0.18);
 }
 
-function cartGrandTotal(cart: Record<number,number>, coupon: CheckoutState["coupon"], deliveryMethod: DeliveryMethod): number {
-  const subtotal = cartSubtotal(cart);
+function cartGrandTotal(cart: Record<number,number>, coupon: CheckoutState["coupon"], deliveryMethod: DeliveryMethod, products: Product[] = PRODUCTS): number {
+  const subtotal = cartSubtotal(cart, products);
   const discount = cartDiscount(subtotal, coupon);
   const gst = cartGst(subtotal, discount);
   const shipping = deliveryMethod === "ship" ? (subtotal > 50000 ? 0 : 499) : 0;
   return subtotal - discount + gst + shipping;
+}
+
+function validatePayment(payment: CheckoutState["payment"]): string | null {
+  if (payment.method === "upi" && !/^[\w.-]+@[\w.-]+$/.test((payment.details || "").trim())) return "Enter a valid UPI ID.";
+  if (payment.method === "card") {
+    const [card = "", expiry = "", cvv = ""] = (payment.details || "").split("|");
+    if (card.replace(/\D/g, "").length < 12) return "Enter a valid card number.";
+    if (!/^\d{2}\/\d{2}$/.test(expiry.trim())) return "Enter card expiry as MM/YY.";
+    if (!/^\d{3,4}$/.test(cvv.trim())) return "Enter a valid CVV.";
+  }
+  return null;
 }
 
 function checkoutReducer(state: CheckoutState, action: CheckoutAction): CheckoutState {
@@ -3018,11 +3036,45 @@ function CheckoutPage() {
   const [error, setError] = useState<string | null>(null);
   const [couponInput, setCouponInput] = useState("");
   const [couponMsg, setCouponMsg] = useState<string | null>(null);
+  const [liveProducts, setLiveProducts] = useState<Product[]>([]);
+  const [checkoutLoading, setCheckoutLoading] = useState(true);
+  const [checkoutCatalogError, setCheckoutCatalogError] = useState("");
   const user = useCurrentUser();
   const { addOrder, store } = useDashboardData();
-  const checkoutProducts = mergedCatalogProducts(store.products);
+  const checkoutProducts = useMemo(() => {
+    const byId = new Map<number, Product>();
+    [...mergedCatalogProducts(store.products), ...liveProducts].forEach(product => byId.set(product.id, product));
+    return Array.from(byId.values());
+  }, [store.products, liveProducts]);
 
   useEffect(() => { dispatch({ type:"load", cart: loadCart() }); }, []);
+  useEffect(() => {
+    let cancelled = false;
+    async function loadCheckoutProducts() {
+      setCheckoutLoading(true);
+      setCheckoutCatalogError("");
+      try {
+        const response = await fetch(`${PUBLIC_PRODUCTS_API_BASE}/products?limit=100`, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+          cache: "no-store",
+        });
+        if (!response.ok) throw new Error(`Product API returned ${response.status}`);
+        const data = await response.json();
+        const products = (data.products || [])
+          .map(publicProductToProduct)
+          .filter((product: Product | null): product is Product => Boolean(product));
+        if (!cancelled) setLiveProducts(products);
+      } catch (error: any) {
+        console.error("Checkout product catalog load failed:", error);
+        if (!cancelled) setCheckoutCatalogError(error?.message || "Unable to load checkout products.");
+      } finally {
+        if (!cancelled) setCheckoutLoading(false);
+      }
+    }
+    loadCheckoutProducts();
+    return () => { cancelled = true; };
+  }, []);
   useEffect(() => {
     if (!user) return;
     dispatch({
@@ -3039,16 +3091,20 @@ function CheckoutPage() {
 
   const cartRows = Object.entries(state.cart)
     .map(([id,qty]) => ({ product:checkoutProducts.find(p => p.id === Number(id)), qty }))
-    .filter((row): row is { product:Product; qty:number } => Boolean(row.product));
+    .filter((row): row is { product:Product; qty:number } => Boolean(row.product) && row.qty > 0);
   const subtotal = cartRows.reduce((sum, row) => sum + row.product.price * row.qty, 0);
   const discount = cartDiscount(subtotal, state.coupon);
   const gst = cartGst(subtotal, discount);
   const shipping = state.delivery.method === "ship" ? (subtotal > 50000 ? 0 : 499) : 0;
   const total = subtotal - discount + gst + shipping;
+  const storedCartCount = Object.values(state.cart).reduce((sum, qty) => sum + Math.max(0, Number(qty) || 0), 0);
+  const unresolvedCartCount = Math.max(0, storedCartCount - cartRows.reduce((sum, row) => sum + row.qty, 0));
 
   const goNext = () => {
     setError(null);
     if (state.step === "cart") {
+      if (checkoutLoading && storedCartCount > 0) return setError("Restoring your cart items. Please wait a moment.");
+      if (!checkoutLoading && unresolvedCartCount > 0) return setError("Some cart items are no longer available. Remove unavailable items or refresh products.");
       if (cartRows.length === 0) return setError("Your cart is empty.");
       return dispatch({ type:"goto", step:"address" });
     }
@@ -3062,7 +3118,11 @@ function CheckoutPage() {
       return dispatch({ type:"goto", step:"coupon" });
     }
     if (state.step === "coupon") return dispatch({ type:"goto", step:"payment" });
-    if (state.step === "payment") return dispatch({ type:"goto", step:"review" });
+    if (state.step === "payment") {
+      const paymentError = validatePayment(state.payment);
+      if (paymentError) return setError(paymentError);
+      return dispatch({ type:"goto", step:"review" });
+    }
     if (state.step === "review") {
       if (!user || user.role !== "customer") {
         setError("Please sign in with a customer account before placing an order.");
@@ -3075,6 +3135,9 @@ function CheckoutPage() {
       dispatch({ type:"setPayment", payment:{ processing:true, error:undefined } });
       setTimeout(() => {
         const orderId = `ORD-${Date.now().toString(36).toUpperCase()}`;
+        const invoiceId = `INV-${orderId.slice(-8)}`;
+        const invoiceUrl = `/dashboard/customer/invoices?invoice=${encodeURIComponent(invoiceId)}`;
+        const now = Date.now();
         const firstAddress = store.addresses.find(a => a.id === `${user.id}-checkout`) || store.addresses.find(a => a.id.startsWith(`${user.id}-`));
         addOrder({
           id: orderId,
@@ -3100,7 +3163,11 @@ function CheckoutPage() {
           shippingAddress: { ...state.address },
           addressId: firstAddress?.id || `${user.id}-checkout`,
           status: "placed",
-          invoiceId: `INV-${orderId.slice(-6)}`,
+          invoiceId,
+          invoiceUrl,
+          invoiceEmailStatus: "sent",
+          invoiceEmailSentAt: now,
+          createdAt: now,
         });
         dispatch({ type:"placeOrder", orderId });
         if (state.payment.method === "cod") {
@@ -3110,6 +3177,7 @@ function CheckoutPage() {
           dispatch({ type:"setPayment", payment:{ processing:false } });
         }
         saveCart({});
+        dispatch({ type:"load", cart:{} });
         dispatch({ type:"goto", step:"done" });
       }, 900);
     }
@@ -3187,6 +3255,11 @@ function CheckoutPage() {
         {error && (
           <div className="glass-red" style={{ borderRadius:10,padding:12,fontFamily:"'Space Grotesk',sans-serif",fontSize:12,color:"#FFC0C8",marginBottom:18 }}>{error}</div>
         )}
+        {checkoutCatalogError && (
+          <div className="glass-red" style={{ borderRadius:10,padding:12,fontFamily:"'Space Grotesk',sans-serif",fontSize:12,color:"#FFC0C8",marginBottom:18 }}>
+            Live checkout catalog could not be refreshed: {checkoutCatalogError}
+          </div>
+        )}
 
         <div style={{ display:"grid",gridTemplateColumns:state.step==="done"?"1fr":"minmax(0,1fr) 360px",gap:24,alignItems:"start" }}>
           {/* Step content */}
@@ -3194,7 +3267,16 @@ function CheckoutPage() {
             {state.step === "cart" && (
               <div>
                 <h3 style={{ fontFamily:"'Orbitron',sans-serif",fontSize:14,color:"white",marginBottom:16,display:"flex",alignItems:"center",gap:8 }}><ShoppingCart size={16} color="#FF1F45" /> Your Cart</h3>
-                {cartRows.length === 0 ? (
+                {checkoutLoading && storedCartCount > 0 ? (
+                  <div style={{ textAlign:"center",padding:40 }}>
+                    <RefreshCw size={34} color="#777" style={{ marginBottom:12 }} />
+                    <p style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:13,color:"#CFCFCF" }}>Restoring your cart items from the live catalog...</p>
+                  </div>
+                ) : unresolvedCartCount > 0 ? (
+                  <div className="glass-red" style={{ borderRadius:10,padding:14,fontFamily:"'Space Grotesk',sans-serif",fontSize:12,color:"#FFC0C8",lineHeight:1.7 }}>
+                    {unresolvedCartCount} cart item{unresolvedCartCount !== 1 ? "s are" : " is"} no longer available in the live catalog. Refresh products or add the item again from Shop Products.
+                  </div>
+                ) : cartRows.length === 0 ? (
                   <div style={{ textAlign:"center",padding:40 }}>
                     <ShoppingCart size={36} color="#444" style={{marginBottom:12}} />
                     <p style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:13,color:"#777" }}>Your cart is empty.</p>
@@ -3210,7 +3292,12 @@ function CheckoutPage() {
                           <div style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:10,color:"#777" }}>{product.brand} · {CATEGORY_LABELS[product.category]}</div>
                         </div>
                         <div style={{ display:"flex",alignItems:"center",gap:6 }}>
-                          <button className="glass-pill glass-pill-outline" onClick={() => dispatch({ type:"load", cart:{ ...state.cart, [product.id]: Math.max(0, qty-1) } })} style={{ width:28,height:28,padding:0,fontSize:0 }}><Minus size={11} /></button>
+                          <button className="glass-pill glass-pill-outline" onClick={() => {
+                            const next = { ...state.cart };
+                            if (qty <= 1) delete next[product.id];
+                            else next[product.id] = qty - 1;
+                            dispatch({ type:"load", cart:next });
+                          }} style={{ width:28,height:28,padding:0,fontSize:0 }}><Minus size={11} /></button>
                           <span style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:12,color:"#CFCFCF",minWidth:18,textAlign:"center" }}>{qty}</span>
                           <button className="glass-pill glass-pill-outline" onClick={() => dispatch({ type:"load", cart:{ ...state.cart, [product.id]: qty+1 } })} style={{ width:28,height:28,padding:0,fontSize:0 }}><Plus size={11} /></button>
                         </div>
@@ -3433,9 +3520,10 @@ function CheckoutPage() {
                   })}
                 </div>
                 <p style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:12,color:"#CFCFCF",marginBottom:24 }}>
-                  Tracking details have been sent to <strong style={{ color:"white" }}>{state.address.email || "your email"}</strong>. Use the admin tool to advance this order through shipping, packing and delivery.
+                  Invoice and tracking details have been sent to <strong style={{ color:"white" }}>{state.address.email || "your email"}</strong>. Use the admin or staff dashboards to advance this order through verification, packing, shipping, and delivery.
                 </p>
                 <div style={{ display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap" }}>
+                  <a href="/dashboard/customer/invoices" className="glass-pill glass-pill-primary" style={{ padding:"12px 20px",fontSize:10 }}>View Invoice</a>
                   <a href="/products" onClick={() => { dispatch({type:"reset"}); saveCart({}); }} className="glass-pill glass-pill-outline" style={{ padding:"12px 20px",fontSize:10 }}>Continue Shopping</a>
                   <button onClick={() => {
                     if (state.status === "RESERVED") dispatch({type:"markShipped"});
