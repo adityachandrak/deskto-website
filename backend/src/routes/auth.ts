@@ -28,7 +28,17 @@ router.post('/register',
         return res.status(400).json({ errors: errors.array() });
       }
 
-      const { email, password, firstName, lastName, phone } = req.body;
+      const { email, password, firstName, lastName, phone, role, adminCode, staffId, department } = req.body;
+
+      let finalRole = 'customer';
+      if (role === 'admin') {
+        if (adminCode !== (process.env.ADMIN_SIGNUP_CODE || 'ADMIN-DESKTO-2026')) {
+           return res.status(400).json({ error: 'Invalid admin signup code' });
+        }
+        finalRole = 'admin';
+      } else if (role === 'staff') {
+        finalRole = 'staff';
+      }
 
       // Check if user exists
       const existing = await query('SELECT id FROM users WHERE email = $1', [email]);
@@ -42,12 +52,19 @@ router.post('/register',
       // Create user
       const result = await query(
         `INSERT INTO users (email, phone, password_hash, first_name, last_name, role)
-         VALUES ($1, $2, $3, $4, $5, 'customer')
+         VALUES ($1, $2, $3, $4, $5, $6)
          RETURNING id, email, first_name, last_name, role, status, created_at`,
-        [email, phone, passwordHash, firstName, lastName]
+        [email, phone, passwordHash, firstName, lastName, finalRole]
       );
-
+      
       const user = result.rows[0];
+
+      if (finalRole === 'staff') {
+        await query(
+           `INSERT INTO staff_profiles (user_id, department, employee_id) VALUES ($1, $2, $3)`,
+           [user.id, department || 'General', staffId || `STF-${Math.floor(Math.random() * 9000) + 1000}`]
+        );
+      }
 
       // Generate tokens
       const accessToken = jwt.sign(

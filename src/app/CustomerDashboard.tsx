@@ -43,10 +43,7 @@ const TABS: { key: string; label: string; icon: any; title: string }[] = [
 ];
 
 export default function CustomerDashboard({ user, initialTab }: Props) {
-  const [tab, setTab] = useState<string>(() => {
-    const pathTab = window.location.pathname.match(/^\/dashboard\/customer\/([a-z0-9-]+)\/?$/)?.[1];
-    return initialTab || pathTab || window.location.hash.replace("#", "") || "overview";
-  });
+  const [tab, setTab] = useState<string>(() => initialTab || window.location.hash.replace("#", "") || "overview");
   const data = useDashboardData();
   const { store, markNotificationRead, archiveNotification, addAddress, deleteAddress, updateOrderStatus, updateRepairStatus, patchRepair, patchPCBuild, patchServiceRequest, updateRental, fileReview, redeemCoupon, addReplyToTicket, closeTicket } = data;
 
@@ -65,10 +62,11 @@ export default function CustomerDashboard({ user, initialTab }: Props) {
     },
   ], [store.notifications, user.id]);
 
-  const tabMeta = TABS.find(t => t.key === tab) || TABS[0];
+  const normalizedTab = TABS.some(t => t.key === tab) ? tab : "overview";
+  const tabMeta = TABS.find(t => t.key === normalizedTab) || TABS[0];
 
   const renderTab = () => {
-    switch (tab) {
+    switch (normalizedTab) {
       case "overview":       return <CustomerOverview user={user} data={data} onTab={setTab} />;
       case "profile":        return <CustomerProfile user={user} />;
       case "addresses":      return <CustomerAddresses user={user} store={store} addAddress={addAddress} deleteAddress={deleteAddress} />;
@@ -99,7 +97,7 @@ export default function CustomerDashboard({ user, initialTab }: Props) {
     <DashboardLayout
       user={user}
       groups={groups}
-      active={tab}
+      active={normalizedTab}
       onTabChange={setTab}
       title="Customer"
       pageTitle={tabMeta.title}

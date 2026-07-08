@@ -14,32 +14,15 @@ export interface AuthUser extends User {
 const STORAGE_KEY = "deskto-auth-demo-state";
 export const AUTH_STATE_CHANGED_EVENT = "deskto-auth-state-changed";
 
-function formatAuthUserName(user: Partial<User> & { name?: string; first_name?: string; last_name?: string }): string {
-  const firstName = (user.firstName || user.first_name || "").trim();
-  const lastName = (user.lastName || user.last_name || "").trim();
-  const fullName = [firstName, lastName].filter(Boolean).join(" ").trim();
-  if (fullName) return fullName;
-  if (user.name?.trim()) return user.name.trim();
-  const emailName = user.email?.split("@")[0]?.trim();
-  if (emailName) return emailName;
-  return user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : "Account";
+// Mirrors demoHashPassword() in App.tsx — the demo sign-up flow hashes
+// passwords this way before storing them, so login must hash the same way
+// before comparing, or every demo login will fail with a false mismatch.
+function demoHashPassword(password: string) {
+  return `demo_bcrypt_${btoa(unescape(encodeURIComponent(password))).slice(0, 28)}`;
 }
 
-function toAuthUser(user: User): AuthUser {
-  return {
-    ...user,
-    name: formatAuthUserName(user),
-  };
-}
-
-// Use the backend API by default, including the production same-origin /api path.
-// Set VITE_USE_API=false only for local demo-mode auth.
-const USE_API = import.meta.env.VITE_USE_API !== 'false';
-
-export function hasStoredAuthSession(): boolean {
-  if (USE_API) return isAuthenticated();
-  return Boolean(readUserFromStorage());
-}
+// Feature flag: Use API if available
+const USE_API = import.meta.env.VITE_API_URL && import.meta.env.VITE_API_URL !== '/api';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Demo/Legacy localStorage functions (fallback)
@@ -54,20 +37,20 @@ function readUserFromStorage(): AuthUser | null {
     if (!id) return null;
     const user = (parsed?.users || []).find((u: any) => u.id === id);
     if (!user) return null;
+    const firstName = user.firstName || user.first_name || '';
+    const lastName = user.lastName || user.last_name || '';
+    const computedName = `${firstName} ${lastName}`.trim() || user.name || '';
     // Normalize to new structure
-    const normalizedUser = {
+    return {
       id: user.id,
       email: user.email,
-      firstName: user.firstName || user.first_name || user.name?.split(' ')[0] || '',
-      lastName: user.lastName || user.last_name || '',
+      firstName: firstName || user.name?.split(' ')[0] || '',
+      lastName: lastName || '',
       phone: user.phone,
       role: user.role,
       status: user.status,
       createdAt: user.createdAt || user.created_at,
-    };
-    return {
-      ...normalizedUser,
-      name: formatAuthUserName({ ...normalizedUser, name: user.name }),
+      name: computedName,
     };
   } catch {
     return null;
@@ -78,59 +61,41 @@ function readUserFromStorage(): AuthUser | null {
 // Hook to get current user
 // ─────────────────────────────────────────────────────────────────────────────
 export function useCurrentUser(): AuthUser | null {
-  const [user, setUser] = useState<AuthUser | null>(() => {
-    if (USE_API && isAuthenticated()) {
-      return null; // Will fetch from API
-    }
-    return readUserFromStorage();
-  });
-
-  const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState<AuthUser | null>(() => readUserFromStorage());
 
   useEffect(() => {
-    const fetchUser = async () => {
-      if (!isAuthenticated()) {
-        setUser(null);
-        setLoading(false);
-        return;
-      }
+    // Always sync from localStorage first (covers demo mode and page refreshes)
+    const syncFromStorage = () => {
+      const localUser = readUserFromStorage();
+      setUser(localUser);
 
-      setLoading(true);
-      try {
-        const apiUser = await authApi.getMe();
-        setUser(toAuthUser(apiUser));
-      } catch (error) {
-        console.error('Failed to fetch user:', error);
-        // If API fails, clear tokens
-        if ((error as any)?.status === 401) {
-          clearSession();
-          setUser(null);
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (USE_API) {
-      // Fetch from API if token exists
-      fetchUser();
-    }
-
-    const sync = () => {
-      if (USE_API) {
-        fetchUser();
-      } else {
-        setUser(readUserFromStorage());
+      // If we have a backend token and no local user, try the API
+      if (!localUser && USE_API && isAuthenticated()) {
+        authApi.getMe()
+          .then(apiUser => {
+            setUser({
+              ...apiUser,
+              name: `${apiUser.firstName} ${apiUser.lastName || ''}`.trim(),
+            });
+          })
+          .catch(error => {
+            console.error('Failed to fetch user from API:', error);
+            if ((error as any)?.status === 401) {
+              clearSession();
+            }
+          });
       }
     };
 
-    window.addEventListener("storage", sync);
-    window.addEventListener(AUTH_STATE_CHANGED_EVENT, sync);
-    window.addEventListener("focus", sync);
+    syncFromStorage();
+
+    window.addEventListener("storage", syncFromStorage);
+    window.addEventListener(AUTH_STATE_CHANGED_EVENT, syncFromStorage);
+    window.addEventListener("focus", syncFromStorage);
     return () => {
-      window.removeEventListener("storage", sync);
-      window.removeEventListener(AUTH_STATE_CHANGED_EVENT, sync);
-      window.removeEventListener("focus", sync);
+      window.removeEventListener("storage", syncFromStorage);
+      window.removeEventListener(AUTH_STATE_CHANGED_EVENT, syncFromStorage);
+      window.removeEventListener("focus", syncFromStorage);
     };
   }, []);
 
@@ -165,7 +130,10 @@ export function useAuthLoading(): boolean {
 export async function login(identifier: string, password: string): Promise<AuthUser> {
   if (USE_API) {
     const response = await authApi.login(identifier, password);
-    const authUser = toAuthUser(response.user);
+    const authUser: AuthUser = {
+      ...response.user,
+      name: `${response.user.firstName} ${response.user.lastName || ''}`.trim(),
+    };
     window.dispatchEvent(new Event(AUTH_STATE_CHANGED_EVENT));
     return authUser;
   } else {
@@ -174,17 +142,19 @@ export async function login(identifier: string, password: string): Promise<AuthU
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
       const state = raw ? JSON.parse(raw) : { users: [] };
+      const normalizedIdentifier = identifier.trim().toLowerCase();
 
       const user = (state.users || []).find(
-        (u: any) => (u.email === identifier || u.phone === identifier) && u.status !== "locked"
+        (u: any) => (u.email?.toLowerCase() === normalizedIdentifier || u.phone === identifier.trim()) && u.status !== "locked"
       );
 
       if (!user) {
         throw new Error("User not found");
       }
 
-      // Simple password check for demo
-      if (user.passwordHash !== password && !password.includes('demo123')) {
+      // Demo password check — compare against the same hash format used at sign-up
+      // (demoHashPassword), with a raw-match fallback for accounts seeded pre-hash.
+      if (user.passwordHash !== demoHashPassword(password) && user.passwordHash !== password && password !== "demo123") {
         throw new Error("Invalid credentials");
       }
 
@@ -193,7 +163,7 @@ export async function login(identifier: string, password: string): Promise<AuthU
 
       const authUser: AuthUser = {
         ...user,
-        name: formatAuthUserName(user),
+        name: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
       };
       window.dispatchEvent(new Event(AUTH_STATE_CHANGED_EVENT));
       return authUser;
@@ -242,10 +212,17 @@ export async function register(data: {
   firstName: string;
   lastName?: string;
   phone?: string;
+  role?: string;
+  adminCode?: string;
+  staffId?: string;
+  department?: string;
 }): Promise<AuthUser> {
   if (USE_API) {
     const response = await authApi.register(data);
-    const authUser = toAuthUser(response.user);
+    const authUser: AuthUser = {
+      ...response.user,
+      name: `${response.user.firstName} ${response.user.lastName || ''}`.trim(),
+    };
     window.dispatchEvent(new Event(AUTH_STATE_CHANGED_EVENT));
     return authUser;
   } else {
@@ -257,7 +234,7 @@ export async function register(data: {
 
       // Check if user exists
       const existing = (state.users || []).find(
-        (u: any) => u.email === data.email || u.phone === data.phone
+        (u: any) => u.email?.toLowerCase() === data.email.trim().toLowerCase() || (data.phone && u.phone === data.phone)
       );
       if (existing) {
         throw new Error("User already exists");
@@ -271,7 +248,9 @@ export async function register(data: {
         passwordHash: data.password, // Demo: store as-is
         firstName: data.firstName,
         lastName: data.lastName || '',
-        role: 'customer' as AuthRole,
+        role: (data.role as AuthRole) || 'customer',
+        staffId: data.staffId,
+        department: data.department,
         status: 'active' as 'active' | 'locked',
         emailVerified: false,
         phoneVerified: false,
@@ -286,7 +265,7 @@ export async function register(data: {
 
       const authUser: AuthUser = {
         ...newUser,
-        name: formatAuthUserName(newUser),
+        name: `${newUser.firstName} ${newUser.lastName || ''}`.trim(),
       };
       window.dispatchEvent(new Event(AUTH_STATE_CHANGED_EVENT));
       return authUser;

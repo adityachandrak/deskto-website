@@ -15,7 +15,7 @@ import {
   StaffOrders,
 } from "./StaffDashboard.tabs";
 
-interface Props { user: AuthUser }
+interface Props { user: AuthUser; initialTab?: string | null }
 
 const TABS = [
   { key: "overview", label: "Overview", icon: Home, title: "Dashboard Overview" },
@@ -38,8 +38,8 @@ const TABS = [
   { key: "profile", label: "Profile", icon: User, title: "Profile" },
 ];
 
-export default function StaffDashboard({ user }: Props) {
-  const [tab, setTab] = useState<string>(() => window.location.hash.replace("#", "") || "overview");
+export default function StaffDashboard({ user, initialTab }: Props) {
+  const [tab, setTab] = useState<string>(() => initialTab || window.location.hash.replace("#", "") || "overview");
   const data = useDashboardData();
   const { store, updateRepairStatus, patchRepair, patchPCBuild, patchServiceRequest, advanceTask, clockIn, clockOut, submitInventoryRequest, approveInventoryRequest, rejectInventoryRequest, markInventoryReceived, approveGamingHubComment, rejectGamingHubComment, updateDeliveryStatus, assignDeliveryStaff, updateDelivery, addReplyToTicket, closeTicket, markNotificationRead, archiveNotification, patchGamingHubItem } = data;
 
@@ -73,10 +73,11 @@ export default function StaffDashboard({ user }: Props) {
     },
   ], [store.notifications, myStaffId]);
 
-  const tabMeta = TABS.find(t => t.key === tab) || TABS[0];
+  const normalizedTab = TABS.some(t => t.key === tab) ? tab : "overview";
+  const tabMeta = TABS.find(t => t.key === normalizedTab) || TABS[0];
 
   const renderTab = () => {
-    switch (tab) {
+    switch (normalizedTab) {
       case "overview":      return <StaffOverview user={user} data={data} staff={myStaff} onTab={setTab} />;
       case "tasks":          return <StaffTasks staff={myStaff} store={store} advanceTask={advanceTask} />;
       case "repairs":        return <StaffRepairs staff={myStaff} store={store} updateRepairStatus={updateRepairStatus} patchRepair={patchRepair} />;
@@ -105,7 +106,7 @@ export default function StaffDashboard({ user }: Props) {
     <DashboardLayout
       user={user}
       groups={groups}
-      active={tab}
+      active={normalizedTab}
       onTabChange={setTab}
       title="Staff"
       pageTitle={tabMeta.title}

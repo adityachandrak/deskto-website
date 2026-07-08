@@ -350,6 +350,9 @@ export interface ServiceRequest {
   companyName?: string;
   priority?: string;
   address?: string;
+  pincode?: string;
+  paymentMethod?: "online" | "cod" | "upi" | "card" | "wallet" | string;
+  paymentStatus?: "pending" | "paid" | "cod";
   assemblyType?: string;
   equipmentChecklist?: { label: string; provided: boolean }[];
   uploads?: string[];
@@ -5230,6 +5233,7 @@ export function useDashboardData() {
       ...input,
       id: input.id || rid(input.kind === "upgrade" ? "upg" : input.kind === "assembly" ? "asm" : "sft"),
       status,
+      paymentStatus: input.paymentStatus || "pending",
       checklist: input.checklist || defaultServiceChecklist(input.kind),
       qaChecks: input.qaChecks || defaultServiceQa(input.kind),
       timeline: serviceTimelineThrough(input.kind, status, Date.now()),

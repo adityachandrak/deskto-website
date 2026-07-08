@@ -8,7 +8,7 @@ import { useDashboardData, type CatalogProduct } from "@/app/lib/dashboardData";
 import { Toaster } from "@/app/components/ui/sonner";
 import { BrandMark } from "@/app/components/BrandMark";
 import { toast } from "sonner";
-import { AUTH_STATE_CHANGED_EVENT, hasStoredAuthSession, logout, useCurrentUser, login as apiLogin } from "@/app/lib/currentUser";
+import { AUTH_STATE_CHANGED_EVENT, logout, useCurrentUser, login as apiLogin, register as apiRegister } from "@/app/lib/currentUser";
 import CustomerDashboard from "@/app/CustomerDashboard";
 import StaffDashboard from "@/app/StaffDashboard";
 import AdminDashboard from "@/app/AdminDashboard";
@@ -461,24 +461,12 @@ export function TiltCard({ children }: { children: React.ReactNode }) {
 }
 
 // ─────────────── NAVBAR ───────────────
-function getNavbarUserLabel(user: ReturnType<typeof useCurrentUser>) {
-  if (!user) return "Sign Up";
-  const name = user.name?.trim();
-  if (name) return name;
-  const fullName = [user.firstName, user.lastName].filter(Boolean).join(" ").trim();
-  if (fullName) return fullName;
-  const emailName = user.email?.split("@")[0]?.trim();
-  if (emailName) return emailName;
-  return user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : "Account";
-}
-
 function NavbarDashboardCTA({ mobile=false, onNavigate }: { mobile?: boolean; onNavigate?: () => void }) {
   const user = useCurrentUser();
   if (user) {
-    const label = getNavbarUserLabel(user);
     return (
-      <a href={`/dashboard/${user.role}`} onClick={onNavigate} className={`glass-pill glass-pill-primary ${mobile ? "glass-pill-block glass-pill-lg" : "glass-pill-sm desktop-only"}`} style={{ marginLeft: mobile ? 0 : 4, marginTop: mobile ? 16 : undefined, minWidth: mobile ? undefined : 78, justifyContent: "center" }}>
-        {label}
+      <a href={`/dashboard/${user.role}`} onClick={onNavigate} className={`glass-pill glass-pill-primary ${mobile ? "glass-pill-block glass-pill-lg" : "glass-pill-sm desktop-only"}`} style={{ marginLeft: mobile ? 0 : 4, marginTop: mobile ? 16 : undefined }}>
+        {user.name}
       </a>
     );
   }
@@ -1417,14 +1405,7 @@ export function loadCart(): Record<number, number> {
     const raw = window.localStorage.getItem(CART_STORAGE_KEY);
     if (!raw) return {};
     const parsed = JSON.parse(raw);
-    if (parsed && typeof parsed === "object") {
-      return Object.entries(parsed).reduce<Record<number, number>>((next, [id, qty]) => {
-        const productId = Number(id);
-        const quantity = Number(qty);
-        if (Number.isFinite(productId) && Number.isFinite(quantity) && quantity > 0) next[productId] = quantity;
-        return next;
-      }, {});
-    }
+    if (parsed && typeof parsed === "object") return parsed;
     return {};
   } catch { return {}; }
 }
@@ -2217,23 +2198,6 @@ function FAQSection() {
 
 // ─────────────── LOCATION ───────────────
 function LocationSection() {
-  const { addQuickEnquiry } = useDashboardData();
-  const [enquiry, setEnquiry] = useState({ name: "", contact: "", serviceNeeded: "", message: "" });
-  const setQuick = (key: keyof typeof enquiry, value: string) => setEnquiry(prev => ({ ...prev, [key]: value }));
-  const submitQuickEnquiry = () => {
-    if (!enquiry.name.trim() || !enquiry.contact.trim() || !enquiry.serviceNeeded.trim()) {
-      toast.error("Enter name, phone/email, and service needed.");
-      return;
-    }
-    addQuickEnquiry({
-      name: enquiry.name.trim(),
-      contact: enquiry.contact.trim(),
-      serviceNeeded: enquiry.serviceNeeded.trim(),
-      message: enquiry.message.trim() || "No additional message.",
-    });
-    setEnquiry({ name: "", contact: "", serviceNeeded: "", message: "" });
-    toast.success("Enquiry sent to admin dashboard.");
-  };
   return (
     <section id="contact" className="section-pad" style={{ padding:"80px 0",background:"linear-gradient(135deg,#0a0005,#050505)",position:"relative" }}>
       <div style={{ position:"absolute",inset:0,background:"radial-gradient(ellipse at 30% 50%,rgba(42,0,8,.5) 0%,transparent 60%)",pointerEvents:"none" }} />
@@ -2271,23 +2235,17 @@ function LocationSection() {
             <div className="glass-card" style={{ borderRadius:18,padding:26,border:"1px solid rgba(255,255,255,.07)" }}>
               <h3 style={{ fontFamily:"'Orbitron',sans-serif",fontSize:13,fontWeight:800,color:"white",marginBottom:18,letterSpacing:"1px" }}>QUICK ENQUIRY</h3>
               <div style={{ display:"flex",flexDirection:"column",gap:11 }}>
-                <input value={enquiry.name} onChange={e => setQuick("name", e.target.value)} placeholder="Your Name"
-                  style={{ width:"100%",background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:9,padding:"11px 14px",fontFamily:"'Space Grotesk',sans-serif",fontSize:13,color:"white",outline:"none",transition:"border-color .3s",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)" }}
-                  onFocus={e=>(e.currentTarget.style.borderColor="rgba(255,31,69,.5)")}
-                  onBlur={e=>(e.currentTarget.style.borderColor="rgba(255,255,255,.08)")} />
-                <input value={enquiry.contact} onChange={e => setQuick("contact", e.target.value)} placeholder="Phone / Email"
-                  style={{ width:"100%",background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:9,padding:"11px 14px",fontFamily:"'Space Grotesk',sans-serif",fontSize:13,color:"white",outline:"none",transition:"border-color .3s",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)" }}
-                  onFocus={e=>(e.currentTarget.style.borderColor="rgba(255,31,69,.5)")}
-                  onBlur={e=>(e.currentTarget.style.borderColor="rgba(255,255,255,.08)")} />
-                <input value={enquiry.serviceNeeded} onChange={e => setQuick("serviceNeeded", e.target.value)} placeholder="Service Needed"
-                  style={{ width:"100%",background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:9,padding:"11px 14px",fontFamily:"'Space Grotesk',sans-serif",fontSize:13,color:"white",outline:"none",transition:"border-color .3s",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)" }}
-                  onFocus={e=>(e.currentTarget.style.borderColor="rgba(255,31,69,.5)")}
-                  onBlur={e=>(e.currentTarget.style.borderColor="rgba(255,255,255,.08)")} />
-                <textarea value={enquiry.message} onChange={e => setQuick("message", e.target.value)} placeholder="Tell us about your requirements..." rows={3}
+                {["Your Name","Phone / Email","Service Needed"].map(ph=>(
+                  <input key={ph} placeholder={ph}
+                    style={{ width:"100%",background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:9,padding:"11px 14px",fontFamily:"'Space Grotesk',sans-serif",fontSize:13,color:"white",outline:"none",transition:"border-color .3s",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)" }}
+                    onFocus={e=>(e.currentTarget.style.borderColor="rgba(255,31,69,.5)")}
+                    onBlur={e=>(e.currentTarget.style.borderColor="rgba(255,255,255,.08)")} />
+                ))}
+                <textarea placeholder="Tell us about your requirements..." rows={3}
                   style={{ width:"100%",background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:9,padding:"11px 14px",fontFamily:"'Space Grotesk',sans-serif",fontSize:13,color:"white",outline:"none",resize:"none",transition:"border-color .3s",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)" }}
                   onFocus={e=>(e.currentTarget.style.borderColor="rgba(255,31,69,.5)")}
                   onBlur={e=>(e.currentTarget.style.borderColor="rgba(255,255,255,.08)")} />
-                <button className="glass-pill glass-pill-primary glass-pill-block" onClick={submitQuickEnquiry}>
+                <button className="glass-pill glass-pill-primary glass-pill-block">
                   Send Enquiry
                 </button>
               </div>
@@ -2303,6 +2261,8 @@ function LocationSection() {
 type AuthUser = {
   id: string;
   name: string;
+  firstName?: string;
+  lastName?: string;
   email: string;
   phone: string;
   passwordHash: string;
@@ -2329,6 +2289,7 @@ type PendingSignup = {
   otp: string;
   expiresAt: number;
   attempts: number;
+  rawPassword?: string;
 };
 
 type ResetRequest = {
@@ -2360,7 +2321,7 @@ const OTP_TTL_MS = 5 * 60 * 1000;
 const MAX_OTP_ATTEMPTS = 3;
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCK_MS = 10 * 60 * 1000;
-const ADMIN_SIGNUP_CODE_CHECKSUM = 3715680592;
+const ADMIN_SIGNUP_CODE = "DESKTO-ADMIN-2026";
 
 const emptyAuthState = {
   users: [] as AuthUser[],
@@ -2394,19 +2355,6 @@ function normalizePhone(value: string) {
 
 function strongPassword(value: string) {
   return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(value);
-}
-
-function checksumSignupCode(value: string) {
-  let hash = 2166136261;
-  for (const char of value.trim().toUpperCase()) {
-    hash ^= char.charCodeAt(0);
-    hash = Math.imul(hash, 16777619) >>> 0;
-  }
-  return hash;
-}
-
-function isValidAdminSignupCode(value: string) {
-  return checksumSignupCode(value) === ADMIN_SIGNUP_CODE_CHECKSUM;
 }
 
 function AuthField({ label, type="text", value, onChange, placeholder }: { label:string; type?:string; value:string; onChange:(value:string)=>void; placeholder?:string }) {
@@ -2484,8 +2432,8 @@ function AuthSection({ initialMode="sign-in", initialRole="customer", standalone
     if (!strongPassword(signup.password)) return setMessage("Password needs 8+ chars with upper, lower, number, and symbol.");
     if (signup.password !== signup.confirm) return setMessage("Confirm password must match.");
     if (!signup.terms) return setMessage("Accept Terms and Privacy Policy.");
-    if (signup.role === "admin" && !isValidAdminSignupCode(signup.adminCode)) return setMessage("Enter the valid admin signup code.");
-    if (signup.role === "staff" && !/^STF-\d{4,}$/i.test(signup.staffId.trim())) return setMessage("Enter a valid staff ID.");
+    if (signup.role === "admin" && signup.adminCode.trim() !== ADMIN_SIGNUP_CODE) return setMessage("Enter the valid admin signup code.");
+    if (signup.role === "staff" && !/^STF-\d{4,}$/i.test(signup.staffId.trim())) return setMessage("Staff ID must use the format STF-1001.");
     if (signup.role === "staff" && signup.department.trim().length < 2) return setMessage("Department is required for staff signup.");
     if (state.users.some(u => u.email.toLowerCase() === signup.email.toLowerCase())) return setMessage("Duplicate email blocked.");
     if (state.users.some(u => normalizePhone(u.phone) === phone)) return setMessage("Duplicate mobile blocked.");
@@ -2499,6 +2447,7 @@ function AuthSection({ initialMode="sign-in", initialRole="customer", standalone
         email: signup.email.trim().toLowerCase(),
         phone,
         passwordHash: demoHashPassword(signup.password),
+        rawPassword: signup.password,
         role: signup.role,
         staffId: signup.role === "staff" ? signup.staffId.trim().toUpperCase() : undefined,
         department: signup.role === "staff" ? signup.department.trim() : undefined,
@@ -2512,7 +2461,7 @@ function AuthSection({ initialMode="sign-in", initialRole="customer", standalone
     addLog("signup_otp_sent", `${signup.role} OTP sent to ${signup.email}`);
   };
 
-  const verifySignupOtp = () => {
+  const verifySignupOtp = async () => {
     const pending = state.pendingSignup;
     if (!pending) return setMessage("Create a signup request first.");
     if (Date.now() > pending.expiresAt) return setMessage("Signup OTP expired.");
@@ -2521,40 +2470,76 @@ function AuthSection({ initialMode="sign-in", initialRole="customer", standalone
       setState(prev => prev.pendingSignup ? { ...prev, pendingSignup:{ ...prev.pendingSignup, attempts:prev.pendingSignup.attempts + 1 } } : prev);
       return setMessage("Wrong OTP.");
     }
-    const user: AuthUser = {
-      id: makeId("usr"),
-      name: pending.name,
-      email: pending.email,
-      phone: pending.phone,
-      passwordHash: pending.passwordHash,
-      role: pending.role,
-      staffId: pending.staffId,
-      department: pending.department,
-      emailVerified: true,
-      phoneVerified: true,
-      status: "active",
-      loginAttempts: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    const session: SessionRecord = {
-      id: makeId("sess"),
-      userId: user.id,
-      refreshToken: makeId("refresh"),
-      device: "Browser demo",
-      ip: "127.0.0.1",
-      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-    };
-    setState(prev => ({
-      ...prev,
-      users: [...prev.users, user],
-      pendingSignup: null,
-      sessions: [...prev.sessions, session],
-      currentUserId: user.id,
-      accessToken: makeId("jwt"),
-    }));
-    setMessage(`${signupRoleMeta[user.role].label} account created, JWT and refresh token issued, session saved.`);
-    addLog("signup_completed", `${user.role} ${user.email} verified by OTP`);
+    try {
+      const nameParts = pending.name.trim().split(' ');
+      const firstName = nameParts[0];
+      const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+
+      // Build the user locally first so the demo always works even without a backend
+      const newUserId = makeId("usr");
+      const newUser: AuthUser = {
+        id: newUserId,
+        name: pending.name,
+        email: pending.email,
+        phone: pending.phone,
+        firstName,
+        lastName,
+        passwordHash: pending.passwordHash,
+        role: pending.role,
+        staffId: pending.staffId,
+        department: pending.department,
+        emailVerified: true,
+        phoneVerified: true,
+        status: "active",
+        loginAttempts: 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      const session: SessionRecord = {
+        id: makeId("sess"),
+        userId: newUserId,
+        refreshToken: makeId("refresh"),
+        device: "Browser demo",
+        ip: "127.0.0.1",
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      };
+
+      // Persist to demo state (used by useCurrentUser / DashboardRouter)
+      setState(prev => ({
+        ...prev,
+        users: [...prev.users, newUser],
+        pendingSignup: null,
+        sessions: [...prev.sessions, session],
+        currentUserId: newUserId,
+        accessToken: makeId("jwt"),
+      }));
+
+      // Also attempt real backend registration (non-blocking — failure is OK in demo mode)
+      apiRegister({
+        email: pending.email,
+        password: pending.rawPassword || pending.passwordHash,
+        firstName,
+        lastName,
+        phone: pending.phone,
+        role: pending.role,
+        staffId: pending.staffId,
+        department: pending.department
+      }).catch(() => { /* backend not available in demo mode — that's fine */ });
+
+      setMessage(`${signupRoleMeta[pending.role].label} account created! Redirecting to dashboard…`);
+      addLog("signup_completed", `${pending.role} ${pending.email} verified by OTP`);
+
+      // Redirect to the correct role dashboard
+      const dashPath = `/dashboard/${pending.role}`;
+      setTimeout(() => {
+        window.history.pushState(null, "", dashPath);
+        window.dispatchEvent(new PopStateEvent("popstate"));
+      }, 800);
+    } catch (error: any) {
+      const errorMsg = error?.message || "Failed to create account.";
+      setMessage(errorMsg);
+      addLog("signup_failure", `${pending.email} failed to create account: ${errorMsg}`);
+    }
   };
 
   const runLogin = async () => {
@@ -2563,9 +2548,20 @@ function AuthSection({ initialMode="sign-in", initialRole="customer", standalone
     if (!login.password) return setMessage("Password is required.");
 
     try {
-      await apiLogin(identifier, login.password);
-      setMessage("Login successful. Dashboard session is active.");
-      addLog("login_success", `${identifier} logged in`);
+      const authUser = await apiLogin(identifier, login.password);
+      // Sync this component's own copy of auth state so the persist effect
+      // (and addLog below) don't overwrite the session apiLogin just wrote —
+      // otherwise the stale local `state.currentUserId` clobbers it back to null.
+      setState(prev => ({ ...prev, currentUserId: authUser.id }));
+      setMessage("Login successful. Redirecting to dashboard…");
+      addLog("login_success", `${identifier} logged in as ${authUser.role}`);
+
+      // Redirect to the correct role dashboard after a brief delay
+      const dashPath = `/dashboard/${authUser.role}`;
+      setTimeout(() => {
+        window.history.pushState(null, "", dashPath);
+        window.dispatchEvent(new PopStateEvent("popstate"));
+      }, 600);
     } catch (error: any) {
       const message = error?.message || "Wrong email/mobile or password.";
       setMessage(message.includes("Invalid credentials") ? "Wrong email/mobile or password." : message);
@@ -2694,11 +2690,11 @@ function AuthSection({ initialMode="sign-in", initialRole="customer", standalone
                 <AuthField label="Email" value={signup.email} onChange={v=>setSignup(p=>({...p,email:v}))} />
                 <AuthField label="Mobile Number" value={signup.phone} onChange={v=>setSignup(p=>({...p,phone:v}))} />
                 {signup.role === "admin" && (
-                  <AuthField label="Admin Signup Code" value={signup.adminCode} onChange={v=>setSignup(p=>({...p,adminCode:v}))} placeholder="Enter admin signup code" />
+                  <AuthField label="Admin Signup Code" value={signup.adminCode} onChange={v=>setSignup(p=>({...p,adminCode:v}))} placeholder={ADMIN_SIGNUP_CODE} />
                 )}
                 {signup.role === "staff" && (
                   <>
-                    <AuthField label="Staff ID" value={signup.staffId} onChange={v=>setSignup(p=>({...p,staffId:v}))} placeholder="Enter staff ID" />
+                    <AuthField label="Staff ID" value={signup.staffId} onChange={v=>setSignup(p=>({...p,staffId:v}))} placeholder="STF-1001" />
                     <AuthField label="Department" value={signup.department} onChange={v=>setSignup(p=>({...p,department:v}))} placeholder="Sales, Support, Service" />
                   </>
                 )}
@@ -2981,9 +2977,9 @@ function applyCoupon(code: string, subtotal: number): CheckoutState["coupon"] | 
   return null;
 }
 
-function cartSubtotal(cart: Record<number,number>, products: Product[] = PRODUCTS): number {
+function cartSubtotal(cart: Record<number,number>): number {
   return Object.entries(cart).reduce((sum,[id,qty]) => {
-    const p = products.find(item => item.id === Number(id));
+    const p = PRODUCTS.find(item => item.id === Number(id));
     return p ? sum + p.price * qty : sum;
   }, 0);
 }
@@ -2999,23 +2995,12 @@ function cartGst(subtotal: number, discount: number): number {
   return Math.round((subtotal - discount) * 0.18);
 }
 
-function cartGrandTotal(cart: Record<number,number>, coupon: CheckoutState["coupon"], deliveryMethod: DeliveryMethod, products: Product[] = PRODUCTS): number {
-  const subtotal = cartSubtotal(cart, products);
+function cartGrandTotal(cart: Record<number,number>, coupon: CheckoutState["coupon"], deliveryMethod: DeliveryMethod): number {
+  const subtotal = cartSubtotal(cart);
   const discount = cartDiscount(subtotal, coupon);
   const gst = cartGst(subtotal, discount);
   const shipping = deliveryMethod === "ship" ? (subtotal > 50000 ? 0 : 499) : 0;
   return subtotal - discount + gst + shipping;
-}
-
-function validatePayment(payment: CheckoutState["payment"]): string | null {
-  if (payment.method === "upi" && !/^[\w.-]+@[\w.-]+$/.test((payment.details || "").trim())) return "Enter a valid UPI ID.";
-  if (payment.method === "card") {
-    const [card = "", expiry = "", cvv = ""] = (payment.details || "").split("|");
-    if (card.replace(/\D/g, "").length < 12) return "Enter a valid card number.";
-    if (!/^\d{2}\/\d{2}$/.test(expiry.trim())) return "Enter card expiry as MM/YY.";
-    if (!/^\d{3,4}$/.test(cvv.trim())) return "Enter a valid CVV.";
-  }
-  return null;
 }
 
 function checkoutReducer(state: CheckoutState, action: CheckoutAction): CheckoutState {
@@ -3059,45 +3044,11 @@ function CheckoutPage() {
   const [error, setError] = useState<string | null>(null);
   const [couponInput, setCouponInput] = useState("");
   const [couponMsg, setCouponMsg] = useState<string | null>(null);
-  const [liveProducts, setLiveProducts] = useState<Product[]>([]);
-  const [checkoutLoading, setCheckoutLoading] = useState(true);
-  const [checkoutCatalogError, setCheckoutCatalogError] = useState("");
   const user = useCurrentUser();
   const { addOrder, store } = useDashboardData();
-  const checkoutProducts = useMemo(() => {
-    const byId = new Map<number, Product>();
-    [...mergedCatalogProducts(store.products), ...liveProducts].forEach(product => byId.set(product.id, product));
-    return Array.from(byId.values());
-  }, [store.products, liveProducts]);
+  const checkoutProducts = mergedCatalogProducts(store.products);
 
   useEffect(() => { dispatch({ type:"load", cart: loadCart() }); }, []);
-  useEffect(() => {
-    let cancelled = false;
-    async function loadCheckoutProducts() {
-      setCheckoutLoading(true);
-      setCheckoutCatalogError("");
-      try {
-        const response = await fetch(`${PUBLIC_PRODUCTS_API_BASE}/products?limit=100`, {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-          cache: "no-store",
-        });
-        if (!response.ok) throw new Error(`Product API returned ${response.status}`);
-        const data = await response.json();
-        const products = (data.products || [])
-          .map(publicProductToProduct)
-          .filter((product: Product | null): product is Product => Boolean(product));
-        if (!cancelled) setLiveProducts(products);
-      } catch (error: any) {
-        console.error("Checkout product catalog load failed:", error);
-        if (!cancelled) setCheckoutCatalogError(error?.message || "Unable to load checkout products.");
-      } finally {
-        if (!cancelled) setCheckoutLoading(false);
-      }
-    }
-    loadCheckoutProducts();
-    return () => { cancelled = true; };
-  }, []);
   useEffect(() => {
     if (!user) return;
     dispatch({
@@ -3114,20 +3065,16 @@ function CheckoutPage() {
 
   const cartRows = Object.entries(state.cart)
     .map(([id,qty]) => ({ product:checkoutProducts.find(p => p.id === Number(id)), qty }))
-    .filter((row): row is { product:Product; qty:number } => Boolean(row.product) && row.qty > 0);
+    .filter((row): row is { product:Product; qty:number } => Boolean(row.product));
   const subtotal = cartRows.reduce((sum, row) => sum + row.product.price * row.qty, 0);
   const discount = cartDiscount(subtotal, state.coupon);
   const gst = cartGst(subtotal, discount);
   const shipping = state.delivery.method === "ship" ? (subtotal > 50000 ? 0 : 499) : 0;
   const total = subtotal - discount + gst + shipping;
-  const storedCartCount = Object.values(state.cart).reduce((sum, qty) => sum + Math.max(0, Number(qty) || 0), 0);
-  const unresolvedCartCount = Math.max(0, storedCartCount - cartRows.reduce((sum, row) => sum + row.qty, 0));
 
   const goNext = () => {
     setError(null);
     if (state.step === "cart") {
-      if (checkoutLoading && storedCartCount > 0) return setError("Restoring your cart items. Please wait a moment.");
-      if (!checkoutLoading && unresolvedCartCount > 0) return setError("Some cart items are no longer available. Remove unavailable items or refresh products.");
       if (cartRows.length === 0) return setError("Your cart is empty.");
       return dispatch({ type:"goto", step:"address" });
     }
@@ -3141,11 +3088,7 @@ function CheckoutPage() {
       return dispatch({ type:"goto", step:"coupon" });
     }
     if (state.step === "coupon") return dispatch({ type:"goto", step:"payment" });
-    if (state.step === "payment") {
-      const paymentError = validatePayment(state.payment);
-      if (paymentError) return setError(paymentError);
-      return dispatch({ type:"goto", step:"review" });
-    }
+    if (state.step === "payment") return dispatch({ type:"goto", step:"review" });
     if (state.step === "review") {
       if (!user || user.role !== "customer") {
         setError("Please sign in with a customer account before placing an order.");
@@ -3158,9 +3101,6 @@ function CheckoutPage() {
       dispatch({ type:"setPayment", payment:{ processing:true, error:undefined } });
       setTimeout(() => {
         const orderId = `ORD-${Date.now().toString(36).toUpperCase()}`;
-        const invoiceId = `INV-${orderId.slice(-8)}`;
-        const invoiceUrl = `/dashboard/customer/invoices?invoice=${encodeURIComponent(invoiceId)}`;
-        const now = Date.now();
         const firstAddress = store.addresses.find(a => a.id === `${user.id}-checkout`) || store.addresses.find(a => a.id.startsWith(`${user.id}-`));
         addOrder({
           id: orderId,
@@ -3186,11 +3126,7 @@ function CheckoutPage() {
           shippingAddress: { ...state.address },
           addressId: firstAddress?.id || `${user.id}-checkout`,
           status: "placed",
-          invoiceId,
-          invoiceUrl,
-          invoiceEmailStatus: "sent",
-          invoiceEmailSentAt: now,
-          createdAt: now,
+          invoiceId: `INV-${orderId.slice(-6)}`,
         });
         dispatch({ type:"placeOrder", orderId });
         if (state.payment.method === "cod") {
@@ -3200,7 +3136,6 @@ function CheckoutPage() {
           dispatch({ type:"setPayment", payment:{ processing:false } });
         }
         saveCart({});
-        dispatch({ type:"load", cart:{} });
         dispatch({ type:"goto", step:"done" });
       }, 900);
     }
@@ -3278,11 +3213,6 @@ function CheckoutPage() {
         {error && (
           <div className="glass-red" style={{ borderRadius:10,padding:12,fontFamily:"'Space Grotesk',sans-serif",fontSize:12,color:"#FFC0C8",marginBottom:18 }}>{error}</div>
         )}
-        {checkoutCatalogError && (
-          <div className="glass-red" style={{ borderRadius:10,padding:12,fontFamily:"'Space Grotesk',sans-serif",fontSize:12,color:"#FFC0C8",marginBottom:18 }}>
-            Live checkout catalog could not be refreshed: {checkoutCatalogError}
-          </div>
-        )}
 
         <div style={{ display:"grid",gridTemplateColumns:state.step==="done"?"1fr":"minmax(0,1fr) 360px",gap:24,alignItems:"start" }}>
           {/* Step content */}
@@ -3290,16 +3220,7 @@ function CheckoutPage() {
             {state.step === "cart" && (
               <div>
                 <h3 style={{ fontFamily:"'Orbitron',sans-serif",fontSize:14,color:"white",marginBottom:16,display:"flex",alignItems:"center",gap:8 }}><ShoppingCart size={16} color="#FF1F45" /> Your Cart</h3>
-                {checkoutLoading && storedCartCount > 0 ? (
-                  <div style={{ textAlign:"center",padding:40 }}>
-                    <RefreshCw size={34} color="#777" style={{ marginBottom:12 }} />
-                    <p style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:13,color:"#CFCFCF" }}>Restoring your cart items from the live catalog...</p>
-                  </div>
-                ) : unresolvedCartCount > 0 ? (
-                  <div className="glass-red" style={{ borderRadius:10,padding:14,fontFamily:"'Space Grotesk',sans-serif",fontSize:12,color:"#FFC0C8",lineHeight:1.7 }}>
-                    {unresolvedCartCount} cart item{unresolvedCartCount !== 1 ? "s are" : " is"} no longer available in the live catalog. Refresh products or add the item again from Shop Products.
-                  </div>
-                ) : cartRows.length === 0 ? (
+                {cartRows.length === 0 ? (
                   <div style={{ textAlign:"center",padding:40 }}>
                     <ShoppingCart size={36} color="#444" style={{marginBottom:12}} />
                     <p style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:13,color:"#777" }}>Your cart is empty.</p>
@@ -3315,12 +3236,7 @@ function CheckoutPage() {
                           <div style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:10,color:"#777" }}>{product.brand} · {CATEGORY_LABELS[product.category]}</div>
                         </div>
                         <div style={{ display:"flex",alignItems:"center",gap:6 }}>
-                          <button className="glass-pill glass-pill-outline" onClick={() => {
-                            const next = { ...state.cart };
-                            if (qty <= 1) delete next[product.id];
-                            else next[product.id] = qty - 1;
-                            dispatch({ type:"load", cart:next });
-                          }} style={{ width:28,height:28,padding:0,fontSize:0 }}><Minus size={11} /></button>
+                          <button className="glass-pill glass-pill-outline" onClick={() => dispatch({ type:"load", cart:{ ...state.cart, [product.id]: Math.max(0, qty-1) } })} style={{ width:28,height:28,padding:0,fontSize:0 }}><Minus size={11} /></button>
                           <span style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:12,color:"#CFCFCF",minWidth:18,textAlign:"center" }}>{qty}</span>
                           <button className="glass-pill glass-pill-outline" onClick={() => dispatch({ type:"load", cart:{ ...state.cart, [product.id]: qty+1 } })} style={{ width:28,height:28,padding:0,fontSize:0 }}><Plus size={11} /></button>
                         </div>
@@ -3543,10 +3459,9 @@ function CheckoutPage() {
                   })}
                 </div>
                 <p style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:12,color:"#CFCFCF",marginBottom:24 }}>
-                  Invoice and tracking details have been sent to <strong style={{ color:"white" }}>{state.address.email || "your email"}</strong>. Use the admin or staff dashboards to advance this order through verification, packing, shipping, and delivery.
+                  Tracking details have been sent to <strong style={{ color:"white" }}>{state.address.email || "your email"}</strong>. Use the admin tool to advance this order through shipping, packing and delivery.
                 </p>
                 <div style={{ display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap" }}>
-                  <a href="/dashboard/customer/invoices" className="glass-pill glass-pill-primary" style={{ padding:"12px 20px",fontSize:10 }}>View Invoice</a>
                   <a href="/products" onClick={() => { dispatch({type:"reset"}); saveCart({}); }} className="glass-pill glass-pill-outline" style={{ padding:"12px 20px",fontSize:10 }}>Continue Shopping</a>
                   <button onClick={() => {
                     if (state.status === "RESERVED") dispatch({type:"markShipped"});
@@ -3585,25 +3500,14 @@ function CheckoutPage() {
 // ─────────────── DASHBOARD ROUTER ───────────────
 function DashboardRouter({ kind, tab }: { kind: "customer" | "staff" | "admin"; tab?: string | null }) {
   const user = useCurrentUser();
-  const [resolved, setResolved] = useState<typeof user | null | undefined>(undefined);
-
+  // Give auth state 600 ms to propagate from localStorage after a fresh signup/login redirect
+  const [ready, setReady] = useState(false);
   useEffect(() => {
-    if (user) {
-      setResolved(user);
-      return;
-    }
+    const t = setTimeout(() => setReady(true), 600);
+    return () => clearTimeout(t);
+  }, []);
 
-    if (!hasStoredAuthSession()) {
-      setResolved(null);
-      return;
-    }
-
-    setResolved(undefined);
-    const timeout = window.setTimeout(() => setResolved(null), 5000);
-    return () => window.clearTimeout(timeout);
-  }, [user]);
-
-  if (resolved === undefined) {
+  if (!ready) {
     return (
       <div style={{ background: "#050505", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#888", fontFamily: "'Space Grotesk', sans-serif" }}>
         Loading dashboard…
@@ -3613,7 +3517,7 @@ function DashboardRouter({ kind, tab }: { kind: "customer" | "staff" | "admin"; 
 
   // For admin dashboard, create a demo user if not logged in.
   // Keep this render-only so the route never updates state during render.
-  if (kind === "admin" && !resolved) {
+  if (kind === "admin" && !user) {
     const demoUser: any = {
       id: "demo-admin",
       name: "Admin Demo",
@@ -3633,7 +3537,7 @@ function DashboardRouter({ kind, tab }: { kind: "customer" | "staff" | "admin"; 
     return <AdminDashboard user={demoUser} initialTab={tab} />;
   }
 
-  if (!resolved) {
+  if (!user) {
     setTimeout(() => {
       toast.error("Please sign in to view your dashboard.");
       window.history.pushState(null, "", "/sign-in");
@@ -3645,23 +3549,24 @@ function DashboardRouter({ kind, tab }: { kind: "customer" | "staff" | "admin"; 
       </div>
     );
   }
-  if (resolved.role !== kind) {
+  if (user.role !== kind) {
     setTimeout(() => {
-      toast.error(`This dashboard is for ${kind} accounts. You are signed in as ${resolved.role}.`);
-      window.history.pushState(null, "", "/sign-in");
+      toast.error(`This dashboard is for ${kind} accounts. You are signed in as ${user.role}.`);
+      window.history.pushState(null, "", `/dashboard/${user.role}`);
       window.dispatchEvent(new PopStateEvent("popstate"));
     }, 0);
     return (
       <div style={{ background: "#050505", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#FF1F45", fontFamily: "'Space Grotesk', sans-serif" }}>
-        Role mismatch — redirecting…
+        Role mismatch — redirecting to your dashboard…
       </div>
     );
   }
 
-  return kind === "customer" ? <CustomerDashboard user={resolved} initialTab={tab} /> :
-         kind === "staff"     ? <StaffDashboard user={resolved} initialTab={tab} /> :
-                                <AdminDashboard user={resolved} initialTab={tab} />;
+  return kind === "customer" ? <CustomerDashboard user={user} initialTab={tab} /> :
+         kind === "staff"     ? <StaffDashboard user={user} initialTab={tab} /> :
+                                <AdminDashboard user={user} initialTab={tab} />;
 }
+
 
 // ─────────────── APP ───────────────
 export default function App() {

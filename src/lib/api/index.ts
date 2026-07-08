@@ -128,6 +128,10 @@ export const authApi = {
     firstName: string;
     lastName?: string;
     phone?: string;
+    role?: string;
+    adminCode?: string;
+    staffId?: string;
+    department?: string;
   }): Promise<AuthResponse> {
     const result = await request<AuthResponse>('/auth/register', {
       method: 'POST',
