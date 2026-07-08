@@ -13,6 +13,14 @@ const inr = (n: number) => `₹${(n || 0).toLocaleString("en-IN")}`;
 const formatDate = (value?: number) => value ? new Date(value).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "Pending";
 const formatTime = (value?: number) => value ? new Date(value).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) : "--:--";
 const formatDateTime = (value?: number) => value ? new Date(value).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "Pending";
+const serviceAddressText = (r: ServiceRequest | Repair | PCBuild) => r.serviceAddress
+  ? `${r.serviceAddress.line1}, ${r.serviceAddress.area}, ${r.serviceAddress.city} ${r.serviceAddress.pincode}`
+  : (("address" in r && typeof r.address === "string" && r.address) ? r.address : "No service address");
+const servicePaymentText = (r: ServiceRequest | Repair | PCBuild) => {
+  if (r.paymentInfo) return `${r.paymentInfo.method === "cod" ? "COD" : "Online"} · ${inr(r.paymentInfo.amount)} · ${r.paymentInfo.invoiceId}`;
+  if (r.invoiceId) return `Invoice ${r.invoiceId}`;
+  return "Pending invoice";
+};
 
 // Work-stage statuses a technician can set on an assigned repair. These sync to
 // the admin Repair Management dashboard via the shared dashboard store.
@@ -1210,7 +1218,7 @@ function StaffServiceQueue({ title, kind, staff, store, patchServiceRequest }: {
   const [filter, setFilter] = useState<"all" | "active" | "completed">("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const allMine = store.serviceRequests.filter(request => request.kind === kind && staffOwns(staff, request.technicianId));
+  const allMine = store.serviceRequests.filter(request => request.kind === kind && (!request.technicianId || staffOwns(staff, request.technicianId)));
   const active = allMine.filter(r => !["completed", "delivered", "closed", "ready"].includes(r.status));
   const completed = allMine.filter(r => ["completed", "delivered", "closed", "ready"].includes(r.status));
   const filtered = filter === "all" ? allMine : filter === "active" ? active : completed;
@@ -1239,6 +1247,8 @@ function StaffServiceQueue({ title, kind, staff, store, patchServiceRequest }: {
             { key: "title", label: "Request", render: r => <div><div style={{ color: "white", fontWeight: 500 }}>{r.title}</div>{r.category && <div style={{ color: "#666", fontSize: 11 }}>{r.category}</div>}</div> },
             { key: "customer", label: "Customer", render: r => <div><div style={{ color: "#ccc", fontSize: 13 }}>{r.customerName || "Walk-in"}</div>{r.contactPhone && <div style={{ color: "#666", fontSize: 11 }}>{r.contactPhone}</div>}</div> },
             { key: "method", label: "Method", render: r => <span style={{ color: "#888", fontSize: 12 }}>{r.serviceMethod}</span> },
+            { key: "area", label: "Area / Pincode", render: r => <span style={{ color: r.serviceAddress ? "#ddd" : "#777", fontSize: 11 }}>{r.serviceAddress ? `${r.serviceAddress.area} · ${r.serviceAddress.pincode}` : "Pending"}</span> },
+            { key: "payment", label: "Payment", render: r => <span style={{ color: r.paymentInfo ? "#00cc66" : "#777", fontSize: 11 }}>{r.paymentInfo ? `${r.paymentInfo.method === "cod" ? "COD" : "Online"} · ${inr(r.paymentInfo.amount)}` : "Pending"}</span> },
             { key: "status", label: "Status", render: r => <StatusBadge status={r.status} /> },
             { key: "updated", label: "Updated", render: r => <span style={{ color: "#888", fontSize: 12 }}>{formatDate(r.technicianLastStatusAt || r.updatedAt)}</span> },
             { key: "progress", label: "Update Status", render: r => <StaffServiceStatusControl request={r} patchServiceRequest={patchServiceRequest} /> },
@@ -1263,6 +1273,8 @@ function StaffServiceQueue({ title, kind, staff, store, patchServiceRequest }: {
               <div><div style={{ color: "#888", fontSize: 10, marginBottom: 4 }}>CUSTOMER</div><div style={{ color: "white", fontWeight: 500 }}>{r.customerName || "Walk-in"}</div>{r.contactPhone && <div style={{ color: "#888", fontSize: 12 }}>{r.contactPhone}</div>}{r.contactEmail && <div style={{ color: "#666", fontSize: 11 }}>{r.contactEmail}</div>}</div>
               <div><div style={{ color: "#888", fontSize: 10, marginBottom: 4 }}>SERVICE METHOD</div><div style={{ color: "#00b4ff", fontWeight: 500 }}>{r.serviceMethod}</div>{r.preferredSlot && <div style={{ color: "#888", fontSize: 12 }}>{r.preferredSlot}</div>}</div>
               <div><div style={{ color: "#888", fontSize: 10, marginBottom: 4 }}>EXPECTED PRICE</div><div style={{ fontFamily: "'Orbitron', sans-serif", color: "white", fontSize: 16 }}>{r.expectedPrice ? `₹${r.expectedPrice.toLocaleString()}` : r.quotation ? `₹${r.quotation.toLocaleString()}` : "TBD"}</div>{r.paidAmount && <div style={{ color: "#00cc66", fontSize: 11 }}>Paid: ₹{r.paidAmount.toLocaleString()}</div>}</div>
+              <div><div style={{ color: "#888", fontSize: 10, marginBottom: 4 }}>ADDRESS / PINCODE</div><div style={{ color: "#ccc", fontSize: 12, lineHeight: 1.45 }}>{serviceAddressText(r)}</div></div>
+              <div><div style={{ color: "#888", fontSize: 10, marginBottom: 4 }}>PAYMENT / INVOICE</div><div style={{ color: "#00cc66", fontSize: 12, lineHeight: 1.45 }}>{servicePaymentText(r)}</div></div>
             </div>
             {r.requirements && <div style={{ marginBottom: 16 }}><div style={{ color: "#888", fontSize: 10, marginBottom: 4 }}>REQUIREMENTS</div><div style={{ color: "#ccc", fontSize: 13, lineHeight: 1.4, background: "rgba(255,255,255,0.03)", padding: "10px 12px", borderRadius: 6 }}>{r.requirements}</div></div>}
             {r.diagnosisReport && <div style={{ marginBottom: 16 }}><div style={{ color: "#888", fontSize: 10, marginBottom: 4 }}>DIAGNOSIS REPORT</div><div style={{ color: "#ccc", fontSize: 13, lineHeight: 1.4, background: "rgba(0,180,255,0.08)", padding: "10px 12px", borderRadius: 6, border: "1px solid rgba(0,180,255,0.2)" }}>{r.diagnosisReport}</div></div>}

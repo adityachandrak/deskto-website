@@ -1089,20 +1089,25 @@ export function CustomerReviews({ user, store, fileReview }: { user: AuthUser; s
 // ─── Invoices ─────────────────────────────────────────────────────────────
 
 export function CustomerInvoices({ user, store }: { user: AuthUser; store: DashboardStore }) {
-  const items = store.orders.filter(o => o.customerId === user.id && o.invoiceId);
+  const items = [
+    ...store.orders.filter(o => o.customerId === user.id && o.invoiceId).map(o => ({ id: o.id, date: o.createdAt, source: "Order", invoiceId: o.invoiceId, emailStatus: o.invoiceEmailStatus, amount: o.total, email: o.customerEmail })),
+    ...store.repairs.filter(r => r.customerId === user.id && r.invoiceId).map(r => ({ id: r.id, date: r.createdAt, source: "Repair", invoiceId: r.invoiceId, emailStatus: r.paymentInfo?.invoiceEmailStatus || "sent", amount: r.paymentInfo?.amount || r.quotation || r.estimatedCharge || 0, email: r.contactEmail })),
+    ...store.pcBuilds.filter(b => b.customerId === user.id && b.invoiceId).map(b => ({ id: b.id, date: b.createdAt, source: "PC Build", invoiceId: b.invoiceId, emailStatus: b.paymentInfo?.invoiceEmailStatus || "sent", amount: b.paymentInfo?.amount || b.total || b.quotation || 0, email: b.contactEmail })),
+    ...store.serviceRequests.filter(r => r.customerId === user.id && r.invoiceId).map(r => ({ id: r.id, date: r.createdAt, source: r.kind.toUpperCase(), invoiceId: r.invoiceId, emailStatus: r.paymentInfo?.invoiceEmailStatus || "sent", amount: r.paymentInfo?.amount || r.quotation || 0, email: r.contactEmail })),
+  ].sort((a, b) => b.date - a.date);
   return (
-    <SectionCard title="Invoices" subtitle="One invoice per order">
+    <SectionCard title="Invoices" subtitle="Orders and service invoices generated from checkout, service payment, and COD requests">
       {items.length === 0 ? <EmptyState icon={<FileText size={24} />} title="No invoices" /> : (
         <DataTable
           rowKey={o => o.id}
           data={items}
           columns={[
-            { key: "id", label: "Order", render: o => <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 10 }}>{o.id.slice(-8).toUpperCase()}</span> },
-            { key: "date", label: "Date", render: o => formatDate(o.createdAt) },
+            { key: "id", label: "Reference", render: o => <div><span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 10 }}>{o.id.slice(-8).toUpperCase()}</span><div style={{ color: "#777", fontSize: 10 }}>{o.source}</div></div> },
+            { key: "date", label: "Date", render: o => formatDate(o.date) },
             { key: "invoice", label: "Invoice", render: o => <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 10 }}>{o.invoiceId}</span> },
-            { key: "email", label: "Email", render: o => o.invoiceEmailStatus === "sent" ? <StatusBadge status="delivered" /> : <StatusBadge status="pending" /> },
-            { key: "total", label: "Amount", align: "right", render: o => inr(o.total) },
-            { key: "action", label: "", render: o => <button className="glass-pill glass-pill-sm glass-pill-outline" onClick={() => toast.success(`Invoice ${o.invoiceId} ready${o.customerEmail ? ` and emailed to ${o.customerEmail}` : ""}`)}><Download size={10} /> PDF</button> },
+            { key: "email", label: "Email", render: o => o.emailStatus === "sent" ? <StatusBadge status="delivered" /> : <StatusBadge status="pending" /> },
+            { key: "total", label: "Amount", align: "right", render: o => inr(o.amount) },
+            { key: "action", label: "", render: o => <button className="glass-pill glass-pill-sm glass-pill-outline" onClick={() => toast.success(`Invoice ${o.invoiceId} ready${o.email ? ` and emailed to ${o.email}` : ""}`)}><Download size={10} /> PDF</button> },
           ]}
         />
       )}

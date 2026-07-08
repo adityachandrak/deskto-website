@@ -2217,6 +2217,23 @@ function FAQSection() {
 
 // ─────────────── LOCATION ───────────────
 function LocationSection() {
+  const { addQuickEnquiry } = useDashboardData();
+  const [enquiry, setEnquiry] = useState({ name: "", contact: "", serviceNeeded: "", message: "" });
+  const setQuick = (key: keyof typeof enquiry, value: string) => setEnquiry(prev => ({ ...prev, [key]: value }));
+  const submitQuickEnquiry = () => {
+    if (!enquiry.name.trim() || !enquiry.contact.trim() || !enquiry.serviceNeeded.trim()) {
+      toast.error("Enter name, phone/email, and service needed.");
+      return;
+    }
+    addQuickEnquiry({
+      name: enquiry.name.trim(),
+      contact: enquiry.contact.trim(),
+      serviceNeeded: enquiry.serviceNeeded.trim(),
+      message: enquiry.message.trim() || "No additional message.",
+    });
+    setEnquiry({ name: "", contact: "", serviceNeeded: "", message: "" });
+    toast.success("Enquiry sent to admin dashboard.");
+  };
   return (
     <section id="contact" className="section-pad" style={{ padding:"80px 0",background:"linear-gradient(135deg,#0a0005,#050505)",position:"relative" }}>
       <div style={{ position:"absolute",inset:0,background:"radial-gradient(ellipse at 30% 50%,rgba(42,0,8,.5) 0%,transparent 60%)",pointerEvents:"none" }} />
@@ -2254,17 +2271,23 @@ function LocationSection() {
             <div className="glass-card" style={{ borderRadius:18,padding:26,border:"1px solid rgba(255,255,255,.07)" }}>
               <h3 style={{ fontFamily:"'Orbitron',sans-serif",fontSize:13,fontWeight:800,color:"white",marginBottom:18,letterSpacing:"1px" }}>QUICK ENQUIRY</h3>
               <div style={{ display:"flex",flexDirection:"column",gap:11 }}>
-                {["Your Name","Phone / Email","Service Needed"].map(ph=>(
-                  <input key={ph} placeholder={ph}
-                    style={{ width:"100%",background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:9,padding:"11px 14px",fontFamily:"'Space Grotesk',sans-serif",fontSize:13,color:"white",outline:"none",transition:"border-color .3s",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)" }}
-                    onFocus={e=>(e.currentTarget.style.borderColor="rgba(255,31,69,.5)")}
-                    onBlur={e=>(e.currentTarget.style.borderColor="rgba(255,255,255,.08)")} />
-                ))}
-                <textarea placeholder="Tell us about your requirements..." rows={3}
+                <input value={enquiry.name} onChange={e => setQuick("name", e.target.value)} placeholder="Your Name"
+                  style={{ width:"100%",background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:9,padding:"11px 14px",fontFamily:"'Space Grotesk',sans-serif",fontSize:13,color:"white",outline:"none",transition:"border-color .3s",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)" }}
+                  onFocus={e=>(e.currentTarget.style.borderColor="rgba(255,31,69,.5)")}
+                  onBlur={e=>(e.currentTarget.style.borderColor="rgba(255,255,255,.08)")} />
+                <input value={enquiry.contact} onChange={e => setQuick("contact", e.target.value)} placeholder="Phone / Email"
+                  style={{ width:"100%",background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:9,padding:"11px 14px",fontFamily:"'Space Grotesk',sans-serif",fontSize:13,color:"white",outline:"none",transition:"border-color .3s",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)" }}
+                  onFocus={e=>(e.currentTarget.style.borderColor="rgba(255,31,69,.5)")}
+                  onBlur={e=>(e.currentTarget.style.borderColor="rgba(255,255,255,.08)")} />
+                <input value={enquiry.serviceNeeded} onChange={e => setQuick("serviceNeeded", e.target.value)} placeholder="Service Needed"
+                  style={{ width:"100%",background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:9,padding:"11px 14px",fontFamily:"'Space Grotesk',sans-serif",fontSize:13,color:"white",outline:"none",transition:"border-color .3s",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)" }}
+                  onFocus={e=>(e.currentTarget.style.borderColor="rgba(255,31,69,.5)")}
+                  onBlur={e=>(e.currentTarget.style.borderColor="rgba(255,255,255,.08)")} />
+                <textarea value={enquiry.message} onChange={e => setQuick("message", e.target.value)} placeholder="Tell us about your requirements..." rows={3}
                   style={{ width:"100%",background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:9,padding:"11px 14px",fontFamily:"'Space Grotesk',sans-serif",fontSize:13,color:"white",outline:"none",resize:"none",transition:"border-color .3s",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)" }}
                   onFocus={e=>(e.currentTarget.style.borderColor="rgba(255,31,69,.5)")}
                   onBlur={e=>(e.currentTarget.style.borderColor="rgba(255,255,255,.08)")} />
-                <button className="glass-pill glass-pill-primary glass-pill-block">
+                <button className="glass-pill glass-pill-primary glass-pill-block" onClick={submitQuickEnquiry}>
                   Send Enquiry
                 </button>
               </div>
