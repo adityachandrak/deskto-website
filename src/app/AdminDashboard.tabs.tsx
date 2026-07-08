@@ -2357,7 +2357,8 @@ export function AdminRepairs({ store, updateRepairStatus, patchRepair }: { store
                   <div style={{ fontSize: 10, color: "#777" }}>{r.deviceType || "Device"} · {r.serialNumber || "No serial"}</div>
                 </div>
               ) },
-              { key: "issue", label: "Issue", render: r => <span style={{ maxWidth: 150, display: "inline-block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.issue}</span> },
+              { key: "issue", label: "Issue", render: r => <IssueCell issue={r.issue} /> },
+              { key: "media", label: "Media", render: r => <RepairMediaCell files={r.uploadedFiles} /> },
               { key: "quote", label: "Quote Details", render: r => (
                 <RepairQuoteEditor repair={r} patchRepair={patchRepair} />
               ) },
@@ -2419,6 +2420,169 @@ export function AdminRepairs({ store, updateRepairStatus, patchRepair }: { store
               <RepairQuoteEditor repair={selectedRepair} patchRepair={patchRepair} />
             </div>
           </SectionCard>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function IssueCell({ issue }: { issue: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const isLong = issue && issue.length > 60;
+  return (
+    <div style={{ maxWidth: 200 }}>
+      <div
+        style={{
+          fontSize: 12,
+          color: "#ccc",
+          lineHeight: 1.5,
+          ...(expanded ? {} : {
+            display: "-webkit-box",
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical" as const,
+            overflow: "hidden",
+          })
+        }}
+      >
+        {issue}
+      </div>
+      {isLong && (
+        <button
+          onClick={() => setExpanded(p => !p)}
+          style={{ background: "none", border: "none", color: "#00b4ff", fontSize: 10, cursor: "pointer", padding: "2px 0", marginTop: 2 }}
+        >
+          {expanded ? "Show less ▲" : "Read more ▼"}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function RepairMediaCell({ files }: { files?: string[] }) {
+  const [lightbox, setLightbox] = useState<string | null>(null);
+  const [blobUrls, setBlobUrls] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!files || files.length === 0) return;
+    let mounted = true;
+    const load = async () => {
+      const entries: Record<string, string> = {};
+      for (const f of files) {
+        if (hasValidRef(f)) {
+          const url = await mediaBlobUrl(f);
+          if (url) entries[f] = url;
+        } else {
+          // Fallback: treat filename as a placeholder icon key
+          entries[f] = "";
+        }
+      }
+      if (mounted) setBlobUrls(entries);
+    };
+    load();
+    return () => { mounted = false; };
+  }, [files]);
+
+  if (!files || files.length === 0) {
+    return <span style={{ fontSize: 11, color: "#555" }}>No files</span>;
+  }
+
+  const imageFiles = files.filter(f => mediaMime(f).startsWith("image/") || /\.(jpg|jpeg|png|webp|gif)$/i.test(mediaName(f)));
+  const otherFiles = files.filter(f => !imageFiles.includes(f));
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 120 }}>
+      {/* Image thumbnails */}
+      {imageFiles.length > 0 && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+          {imageFiles.map((f, i) => (
+            <div
+              key={i}
+              onClick={() => setLightbox(f)}
+              title={mediaName(f)}
+              style={{
+                width: 44, height: 44, borderRadius: 6, overflow: "hidden",
+                border: "1px solid rgba(255,255,255,0.15)", cursor: "pointer",
+                background: "#111", display: "flex", alignItems: "center", justifyContent: "center",
+                position: "relative",
+              }}
+            >
+              {blobUrls[f] ? (
+                <img
+                  src={blobUrls[f]}
+                  alt={mediaName(f)}
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
+              ) : (
+                <div style={{ fontSize: 18, textAlign: "center" }}>🖼️</div>
+              )}
+              <div style={{
+                position: "absolute", inset: 0, background: "rgba(0,0,0,0.35)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                opacity: 0, transition: "opacity .15s",
+              }}
+                onMouseEnter={e => (e.currentTarget.style.opacity = "1")}
+                onMouseLeave={e => (e.currentTarget.style.opacity = "0")}
+              >
+                <EyeIcon size={14} color="white" />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {/* Non-image files */}
+      {otherFiles.map((f, i) => (
+        <div key={i} style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(255,255,255,0.05)", borderRadius: 5, padding: "3px 7px" }}>
+          <span style={{ fontSize: 14 }}>
+            {mediaMime(f).includes("pdf") ? "📄" : mediaMime(f).startsWith("video") ? "🎬" : "📎"}
+          </span>
+          <span style={{ fontSize: 10, color: "#aaa", maxWidth: 80, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {mediaName(f) || f}
+          </span>
+          <span style={{ fontSize: 9, color: "#555", flexShrink: 0 }}>{mediaKind(f)}</span>
+        </div>
+      ))}
+      <div style={{ fontSize: 10, color: "#555" }}>{files.length} file{files.length !== 1 ? "s" : ""}</div>
+
+      {/* Lightbox */}
+      {lightbox && (
+        <div
+          onClick={() => setLightbox(null)}
+          style={{
+            position: "fixed", inset: 0, background: "rgba(0,0,0,0.92)", zIndex: 9999,
+            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+            cursor: "zoom-out",
+          }}
+        >
+          <div style={{ position: "relative", maxWidth: "90vw", maxHeight: "85vh" }}>
+            {blobUrls[lightbox] ? (
+              <img
+                src={blobUrls[lightbox]}
+                alt={mediaName(lightbox)}
+                style={{ maxWidth: "90vw", maxHeight: "80vh", borderRadius: 12, boxShadow: "0 0 60px rgba(0,0,0,0.8)" }}
+                onClick={e => e.stopPropagation()}
+              />
+            ) : (
+              <div style={{ color: "white", fontSize: 14, padding: 32, background: "#111", borderRadius: 12 }}>
+                <div style={{ fontSize: 48, textAlign: "center", marginBottom: 12 }}>🖼️</div>
+                <div style={{ textAlign: "center", color: "#aaa" }}>{mediaName(lightbox)}</div>
+                <div style={{ textAlign: "center", color: "#555", fontSize: 11, marginTop: 4 }}>File stored locally — open in customer upload view</div>
+              </div>
+            )}
+            <div style={{ textAlign: "center", marginTop: 12, color: "#aaa", fontSize: 12 }}>
+              {mediaName(lightbox)}
+            </div>
+          </div>
+          <button
+            onClick={() => setLightbox(null)}
+            style={{
+              position: "absolute", top: 24, right: 24, background: "rgba(255,255,255,0.1)",
+              border: "1px solid rgba(255,255,255,0.2)", borderRadius: 8, color: "white",
+              width: 36, height: 36, cursor: "pointer", fontSize: 18, display: "flex",
+              alignItems: "center", justifyContent: "center",
+            }}
+          >
+            ✕
+          </button>
         </div>
       )}
     </div>
