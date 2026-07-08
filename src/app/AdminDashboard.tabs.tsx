@@ -26,12 +26,20 @@ import type {
   GamingHubItem, GamingHubContentType, GamingHubStatus,
   CustomBuilderConfig, ComponentCategory, MarketTag, BuildPurpose,
   PerformanceTier, BuilderComponent, BuilderContentConfig,
-  Delivery,
+  Delivery, QuickEnquiry,
 } from "./lib/dashboardData";
 
 const inr = (n: number) => `₹${(n || 0).toLocaleString("en-IN")}`;
 const formatDate = (t: number) => new Date(t).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 const formatTime = (t: number) => new Date(t).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+const serviceAddressText = (r: ServiceRequest | Repair | PCBuild) => r.serviceAddress
+  ? `${r.serviceAddress.line1}, ${r.serviceAddress.area}, ${r.serviceAddress.city} ${r.serviceAddress.pincode}`
+  : (("address" in r && typeof r.address === "string" && r.address) ? r.address : "No service address");
+const servicePaymentText = (r: ServiceRequest | Repair | PCBuild) => {
+  if (r.paymentInfo) return `${r.paymentInfo.method === "cod" ? "COD" : "Online"} · ${inr(r.paymentInfo.amount)} · ${r.paymentInfo.invoiceId}`;
+  if (r.invoiceId) return `Invoice ${r.invoiceId}`;
+  return "Pending invoice";
+};
 
 const PIE_COLORS = ["#FF1F45", "#00cc66", "#00b4ff", "#ff6b00", "#a855f7", "#ffd700"];
 const AUTH_STORAGE_KEY = "deskto-auth-demo-state";
@@ -2675,6 +2683,12 @@ function AdminServiceManagement({ store, kind, patchServiceRequest }: { store: D
               <div style={{ fontSize: 10, color: "#777" }}>{r.deviceType} · {r.serviceMethod}</div>
             </div>
           ) },
+          { key: "address", label: "Address / Pincode", render: r => (
+            <span style={{ maxWidth: 230, display: "inline-block", whiteSpace: "normal", color: r.serviceAddress ? "#ddd" : "#777", fontSize: 11 }}>{serviceAddressText(r)}</span>
+          ) },
+          { key: "payment", label: "Payment / Invoice", render: r => (
+            <span style={{ maxWidth: 210, display: "inline-block", whiteSpace: "normal", color: r.paymentInfo ? "#00cc66" : "#777", fontSize: 11 }}>{servicePaymentText(r)}</span>
+          ) },
           { key: "details", label: "Requirements", render: r => <span style={{ maxWidth: 240, display: "inline-block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.requirements}</span> },
           { key: "media", label: "Media", render: r => <MediaCell files={r.uploads} /> },
           { key: "technician", label: "Technician", render: r => (
@@ -3663,6 +3677,34 @@ export function AdminCRM({ store, addCRMNote }: { store: DashboardStore; addCRMN
         />
       </SectionCard>
     </div>
+  );
+}
+
+export function AdminQuickEnquiries({ store, updateQuickEnquiryStatus }: { store: DashboardStore; updateQuickEnquiryStatus: (id: string, status: QuickEnquiry["status"]) => void }) {
+  const enquiries = [...(store.enquiries || [])].sort((a, b) => b.createdAt - a.createdAt);
+  return (
+    <SectionCard title="Quick Enquiries" subtitle="Website contact enquiries synced immediately from the customer-facing quick enquiry form">
+      {enquiries.length === 0 ? <EmptyState title="No quick enquiries yet" /> : (
+        <DataTable
+          rowKey={e => e.id}
+          data={enquiries}
+          columns={[
+            { key: "id", label: "Enquiry", render: e => <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 10 }}>#{e.id.slice(-8).toUpperCase()}</span> },
+            { key: "customer", label: "Customer", render: e => <div><div style={{ color: "white" }}>{e.name}</div><div style={{ color: "#777", fontSize: 11 }}>{e.contact}</div></div> },
+            { key: "service", label: "Service Needed", render: e => <span style={{ color: "#FF1F45", fontWeight: 700 }}>{e.serviceNeeded}</span> },
+            { key: "message", label: "Message", render: e => <span style={{ maxWidth: 420, display: "inline-block", whiteSpace: "normal", color: "#ccc" }}>{e.message}</span> },
+            { key: "date", label: "Received", render: e => <div style={{ color: "#aaa", fontSize: 12 }}>{formatDate(e.createdAt)} · {formatTime(e.createdAt)}</div> },
+            { key: "status", label: "Status", render: e => <StatusBadge status={e.status} /> },
+            { key: "action", label: "", render: e => (
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                <button className="glass-pill glass-pill-sm glass-pill-info" onClick={() => updateQuickEnquiryStatus(e.id, "contacted")}>Contacted</button>
+                <button className="glass-pill glass-pill-sm glass-pill-success" onClick={() => updateQuickEnquiryStatus(e.id, "closed")}>Close</button>
+              </div>
+            ) },
+          ]}
+        />
+      )}
+    </SectionCard>
   );
 }
 

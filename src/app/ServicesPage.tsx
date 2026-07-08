@@ -11,7 +11,7 @@ import {
 import { SERVICES, Service, ServicePricingTier } from "@/app/lib/services";
 import { useCurrentUser } from "@/app/lib/currentUser";
 import { useDashboardData } from "@/app/lib/dashboardData";
-import type { GamingHubItem } from "@/app/lib/dashboardData";
+import type { GamingHubItem, ServiceAddress, ServicePaymentInfo } from "@/app/lib/dashboardData";
 import { saveMediaFile } from "@/app/lib/mediaStore";
 
 const WHATSAPP = "+919876543210";
@@ -23,6 +23,70 @@ function RepairField({ label, value, onChange, placeholder, type = "text" }: { l
       <input type={type} value={value} placeholder={placeholder} onChange={e => onChange(e.target.value)}
         style={{ width: "100%", background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.09)", borderRadius: 8, padding: "11px 12px", fontFamily: "'Space Grotesk', sans-serif", fontSize: 16, color: "white", outline: "none" }} />
     </label>
+  );
+}
+
+const emptyServiceAddress = (): ServiceAddress => ({ line1: "", area: "", city: "", state: "", pincode: "" });
+
+function validateServiceAddress(address: ServiceAddress) {
+  if (!address.line1.trim()) return "Enter full address.";
+  if (!address.area.trim()) return "Enter area/locality.";
+  if (!address.city.trim()) return "Enter city.";
+  if (!address.state.trim()) return "Enter state.";
+  if (!/^\d{6}$/.test(address.pincode.trim())) return "Enter valid 6-digit pincode.";
+  return "";
+}
+
+function createServicePaymentInfo(method: ServicePaymentInfo["method"], amount: number, requestId: string): ServicePaymentInfo {
+  const invoiceId = `INV-${requestId.slice(-8).toUpperCase()}`;
+  return {
+    method,
+    status: method === "cod" ? "cod" : "paid",
+    amount,
+    invoiceId,
+    invoiceEmailStatus: "sent",
+    invoiceEmailSentAt: Date.now(),
+  };
+}
+
+function serviceMethodBaseAmount(method: string, base = 499) {
+  const normalized = method.toLowerCase();
+  if (normalized.includes("pickup")) return base + 300;
+  if (normalized.includes("home") || normalized.includes("onsite") || normalized.includes("on-site")) return base + 500;
+  if (normalized.includes("delivery")) return base + 300;
+  if (normalized.includes("remote")) return base;
+  return base;
+}
+
+function ServiceAddressPaymentBox({ address, setAddress, amount, accent }: { address: ServiceAddress; setAddress: (address: ServiceAddress) => void; amount: number; accent: string }) {
+  const set = (key: keyof ServiceAddress, value: string) => setAddress({ ...address, [key]: value });
+  return (
+    <div className="glass" style={{ borderRadius: 12, padding: 14, marginTop: 16, border: `1px solid ${accent}35` }}>
+      <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 12, color: "white", marginBottom: 12 }}>Service Address</div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
+        <RepairField label="Address" value={address.line1} onChange={v => set("line1", v)} placeholder="House/shop, street" />
+        <RepairField label="Area / Locality" value={address.area} onChange={v => set("area", v)} placeholder="Supela, Nehru Nagar..." />
+        <RepairField label="City" value={address.city} onChange={v => set("city", v)} />
+        <RepairField label="State" value={address.state} onChange={v => set("state", v)} />
+        <RepairField label="Pincode" value={address.pincode} onChange={v => set("pincode", v)} placeholder="490023" />
+      </div>
+      <div style={{ marginTop: 12, fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, color: "#CFCFCF" }}>
+        Invoice will be generated instantly for ₹{amount.toLocaleString("en-IN")} after payment mode selection.
+      </div>
+    </div>
+  );
+}
+
+function ServicePaymentButtons({ amount, onSubmit }: { amount: number; onSubmit: (method: ServicePaymentInfo["method"]) => void }) {
+  return (
+    <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 }}>
+      <button className="glass-pill glass-pill-primary" onClick={() => onSubmit("online")} style={{ padding: "13px 18px", fontSize: 10 }}>
+        Pay Online · ₹{amount.toLocaleString("en-IN")}
+      </button>
+      <button className="glass-pill glass-pill-outline" onClick={() => onSubmit("cod")} style={{ padding: "13px 18px", fontSize: 10 }}>
+        Cash on Delivery
+      </button>
+    </div>
   );
 }
 
@@ -827,6 +891,7 @@ function RepairBookingPage({ kind }: { kind: "pc-repair" | "laptop-repair" }) {
     preferredSlot: "",
   });
   const [requestId, setRequestId] = useState("");
+  const [serviceAddress, setServiceAddress] = useState<ServiceAddress>(emptyServiceAddress);
   const serviceCharge = form.serviceType === "Home Visit" ? 999 : form.serviceType === "Pickup & Delivery" ? 799 : 499;
   const title = isLaptop ? "Laptop Repair" : "PC Repair";
   const accent = isLaptop ? "#00b4ff" : "#FF1F45";
@@ -860,7 +925,7 @@ function RepairBookingPage({ kind }: { kind: "pc-repair" | "laptop-repair" }) {
       return { ...prev, uploadFiles: next };
     });
   };
-  const submit = () => {
+  const submit = (paymentMethod: ServicePaymentInfo["method"] = "online") => {
     if (!form.name.trim() || !form.phone.trim() || !form.brand.trim() || !form.model.trim() || !form.issue.trim() || !form.preferredSlot.trim()) {
       toast.error("Complete customer, device, issue, and preferred slot details.");
       return;
@@ -873,7 +938,14 @@ function RepairBookingPage({ kind }: { kind: "pc-repair" | "laptop-repair" }) {
       toast.error("Repair uploads must be JPG, JPEG, PNG, or WEBP images.");
       return;
     }
+    const addressError = validateServiceAddress(serviceAddress);
+    if (addressError) {
+      toast.error(addressError);
+      return;
+    }
+    const tempId = `rep_${Date.now().toString(36)}`;
     const repair = addRepairRequest({
+      id: tempId,
       customerId: user?.id || `guest_${Date.now()}`,
       customerName: form.name.trim(),
       contactPhone: form.phone.trim(),
@@ -891,6 +963,10 @@ function RepairBookingPage({ kind }: { kind: "pc-repair" | "laptop-repair" }) {
       uploadedFiles: repairImages,
       qualityChecks: ["Stress Testing", "Temperature Test", "Performance Benchmark", "Hardware Verification", "Software Verification"].map(label => ({ label, done: false })),
       deliveryMode: form.serviceType === "Pickup & Delivery" ? "Home Delivery" : "Pickup",
+      serviceAddress,
+      paymentInfo: createServicePaymentInfo(paymentMethod, serviceCharge, tempId),
+      invoiceId: createServicePaymentInfo(paymentMethod, serviceCharge, tempId).invoiceId,
+      paidAmount: paymentMethod === "online" ? serviceCharge : 0,
     });
     setRequestId(repair.id);
     toast.success(`Repair request ${repair.id.slice(-8).toUpperCase()} submitted.`);
@@ -968,9 +1044,8 @@ function RepairBookingPage({ kind }: { kind: "pc-repair" | "laptop-repair" }) {
                   <button key={v} className={form.serviceType === v ? "glass-pill glass-pill-primary" : "glass-pill glass-pill-outline"} onClick={() => set("serviceType", v)} style={{ padding: "10px 14px", fontSize: 9 }}>{v}</button>
                 ))}
               </div>
-              <button className="glass-pill glass-pill-primary" onClick={submit} style={{ padding: "13px 22px", fontSize: 10, marginTop: 18 }}>
-                <CheckCircle size={13} /> Submit Repair Request
-              </button>
+              <ServiceAddressPaymentBox address={serviceAddress} setAddress={setServiceAddress} amount={serviceCharge} accent={accent} />
+              <ServicePaymentButtons amount={serviceCharge} onSubmit={submit} />
             </div>
 
             <div className="glass-card" style={{ borderRadius: 14, padding: 22, border: `1px solid ${accent}35` }}>
@@ -1246,6 +1321,7 @@ function CustomPCBuildPage({ service }: { service: Service }) {
     return acc;
   }, {} as Record<string, number>);
   const [selected, setSelected] = useState<Record<string, number>>(defaultSelected);
+  const [serviceAddress, setServiceAddress] = useState<ServiceAddress>(emptyServiceAddress);
   const [requestId, setRequestId] = useState("");
   const set = (key: keyof typeof form, value: string) => setForm(prev => ({ ...prev, [key]: value }));
 
@@ -1276,13 +1352,21 @@ function CustomPCBuildPage({ service }: { service: Service }) {
     return acc;
   }, {} as Record<string, string>);
 
-  const submit = () => {
+  const submit = (paymentMethod: ServicePaymentInfo["method"] = "online") => {
     if (!form.name.trim() || !form.phone.trim()) {
       toast.error("Enter customer name and phone.");
       return;
     }
+    const addressError = validateServiceAddress(serviceAddress);
+    if (addressError) {
+      toast.error(addressError);
+      return;
+    }
+    const tempId = `pcb_${Date.now().toString(36)}`;
+    const paymentInfo = createServicePaymentInfo(paymentMethod, total, tempId);
     const buildComponents = components.map(c => ({ type: c.type, name: c.name, price: c.price }));
     const build = addPCBuildRequest({
+      id: tempId,
       customerId: user?.id || `guest_${Date.now()}`,
       customerName: form.name.trim(),
       contactPhone: form.phone.trim(),
@@ -1305,6 +1389,10 @@ function CustomPCBuildPage({ service }: { service: Service }) {
       quotation: total,
       quotationNote: "Initial automated estimate. Admin will verify inventory and send final quotation.",
       total,
+      serviceAddress,
+      paymentInfo,
+      invoiceId: paymentInfo.invoiceId,
+      paidAmount: paymentInfo.status === "paid" ? total : 0,
     });
     setRequestId(build.id);
     toast.success(`Build request ${build.id.slice(-8).toUpperCase()} submitted.`);
@@ -1364,7 +1452,8 @@ function CustomPCBuildPage({ service }: { service: Service }) {
                 <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 11 }}>Final Estimate</span>
                 <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 28, color: "#7a00ff", fontWeight: 800 }}>₹{total.toLocaleString("en-IN")}</span>
               </div>
-              <button className="glass-pill glass-pill-primary" onClick={submit} style={{ padding: "13px 20px", fontSize: 10, marginTop: 18, width: "100%" }}>{ctaText}</button>
+              <ServiceAddressPaymentBox address={serviceAddress} setAddress={setServiceAddress} amount={total} accent="#7a00ff" />
+              <ServicePaymentButtons amount={total} onSubmit={submit} />
               {requestId && <div className="glass-red" style={{ borderRadius: 10, padding: 12, marginTop: 14, fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, color: "#FFC0C8", lineHeight: 1.6 }}>Build ID: <strong style={{ color: "white" }}>{requestId.slice(-8).toUpperCase()}</strong><br />Track it in Customer Dashboard → PC Builds.</div>}
             </div>
           </div>
@@ -1508,6 +1597,7 @@ function UpgradeOptimizationPage({ service }: { service: Service }) {
   });
   const [uploads, setUploads] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [serviceAddress, setServiceAddress] = useState<ServiceAddress>(emptyServiceAddress);
   const [requestId, setRequestId] = useState("");
   const set = (key: keyof typeof form, value: string) => setForm(prev => ({ ...prev, [key]: value }));
 
@@ -1529,12 +1619,18 @@ function UpgradeOptimizationPage({ service }: { service: Service }) {
     }
   };
 
-  const submit = () => {
+  const submit = (paymentMethod: ServicePaymentInfo["method"] = "online") => {
     if (!form.name.trim() || !form.phone.trim() || !form.requirements.trim()) {
       toast.error("Enter customer name, phone, and upgrade requirements.");
       return;
     }
+    const addressError = validateServiceAddress(serviceAddress);
+    if (addressError) { toast.error(addressError); return; }
+    const amount = serviceMethodBaseAmount(form.serviceMethod, 499);
+    const tempId = `upg_${Date.now().toString(36)}`;
+    const paymentInfo = createServicePaymentInfo(paymentMethod, amount, tempId);
     const request = addServiceRequest({
+      id: tempId,
       kind: "upgrade",
       customerId: user?.id || `guest_${Date.now()}`,
       customerName: form.name.trim(),
@@ -1548,6 +1644,11 @@ function UpgradeOptimizationPage({ service }: { service: Service }) {
       serviceMethod: form.serviceMethod,
       preferredSlot: form.slot,
       uploads: uploads.filter(Boolean),
+      quotation: amount,
+      paidAmount: paymentInfo.status === "paid" ? amount : 0,
+      invoiceId: paymentInfo.invoiceId,
+      serviceAddress,
+      paymentInfo,
     });
     setRequestId(request.id);
     toast.success(`Upgrade request ${request.id.slice(-8).toUpperCase()} submitted.`);
@@ -1589,7 +1690,8 @@ function UpgradeOptimizationPage({ service }: { service: Service }) {
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 }}>
                 {["Shop Visit", "Home Visit", "Pickup & Delivery"].map(v => <button key={v} className={form.serviceMethod === v ? "glass-pill glass-pill-primary" : "glass-pill glass-pill-outline"} onClick={() => set("serviceMethod", v)} style={{ padding: "10px 14px", fontSize: 9 }}>{v}</button>)}
               </div>
-              <button className="glass-pill glass-pill-primary" onClick={submit} style={{ padding: "13px 22px", fontSize: 10, marginTop: 20 }}><CheckCircle size={14} /> Submit Upgrade Request</button>
+              <ServiceAddressPaymentBox address={serviceAddress} setAddress={setServiceAddress} amount={serviceMethodBaseAmount(form.serviceMethod, 499)} accent={accent} />
+              <ServicePaymentButtons amount={serviceMethodBaseAmount(form.serviceMethod, 499)} onSubmit={submit} />
             </div>
             <WorkflowSummary accent={accent} title="Upgrade Status Timeline" timeline={UPGRADE_TIMELINE} requestId={requestId} dashboardText="Admin will verify compatibility, assign a technician, send quotation, complete optimization, and generate invoice/warranty." />
           </div>
@@ -1631,6 +1733,7 @@ function AssemblyServicePage({ service }: { service: Service }) {
   const [equipment, setEquipment] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(ASSEMBLY_EQUIPMENT["Home Setup"].map(item => [item, true])));
   const [uploads, setUploads] = useState<string[]>([]);
+  const [serviceAddress, setServiceAddress] = useState<ServiceAddress>(emptyServiceAddress);
   const [requestId, setRequestId] = useState("");
   const set = (key: keyof typeof form, value: string) => setForm(prev => ({ ...prev, [key]: value }));
 
@@ -1640,11 +1743,13 @@ function AssemblyServicePage({ service }: { service: Service }) {
   };
   const toggleItem = (item: string) => setEquipment(prev => ({ ...prev, [item]: !prev[item] }));
 
-  const submit = () => {
+  const submit = (paymentMethod: ServicePaymentInfo["method"] = "online") => {
     if (!form.name.trim() || !form.phone.trim()) {
       toast.error("Enter customer name and phone number.");
       return;
     }
+    const addressError = validateServiceAddress(serviceAddress);
+    if (addressError) { toast.error(addressError); return; }
     if (form.serviceMethod === "On-site Setup" && !form.address.trim()) {
       toast.error("Enter the on-site address for the assembly visit.");
       return;
@@ -1655,7 +1760,11 @@ function AssemblyServicePage({ service }: { service: Service }) {
       toast.error("Tick at least one equipment item you are providing.");
       return;
     }
+    const amount = serviceMethodBaseAmount(form.serviceMethod, 999);
+    const tempId = `asm_${Date.now().toString(36)}`;
+    const paymentInfo = createServicePaymentInfo(paymentMethod, amount, tempId);
     const request = addServiceRequest({
+      id: tempId,
       kind: "assembly",
       customerId: user?.id || `guest_${Date.now()}`,
       customerName: form.name.trim(),
@@ -1672,6 +1781,11 @@ function AssemblyServicePage({ service }: { service: Service }) {
       assemblyType: form.assemblyType,
       equipmentChecklist: checklist,
       uploads: uploads.filter(Boolean),
+      quotation: amount,
+      paidAmount: paymentInfo.status === "paid" ? amount : 0,
+      invoiceId: paymentInfo.invoiceId,
+      serviceAddress,
+      paymentInfo,
     });
     setRequestId(request.id);
     toast.success(`Assembly request ${request.id.slice(-8).toUpperCase()} submitted.`);
@@ -1718,7 +1832,8 @@ function AssemblyServicePage({ service }: { service: Service }) {
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 }}>
                 {["On-site Setup", "In-Shop Setup"].map(v => <button key={v} className={form.serviceMethod === v ? "glass-pill glass-pill-primary" : "glass-pill glass-pill-outline"} onClick={() => set("serviceMethod", v)} style={{ padding: "10px 14px", fontSize: 9 }}>{v}</button>)}
               </div>
-              <button className="glass-pill glass-pill-primary" onClick={submit} style={{ padding: "13px 22px", fontSize: 10, marginTop: 20 }}><CheckCircle size={14} /> Submit Assembly Request</button>
+              <ServiceAddressPaymentBox address={serviceAddress} setAddress={setServiceAddress} amount={serviceMethodBaseAmount(form.serviceMethod, 999)} accent={accent} />
+              <ServicePaymentButtons amount={serviceMethodBaseAmount(form.serviceMethod, 999)} onSubmit={submit} />
             </div>
             <WorkflowSummary accent={accent} title="Assembly Status Timeline" timeline={ASSEMBLY_TIMELINE} requestId={requestId} dashboardText="Admin will validate equipment, send a quotation, assign staff, and track assembly, testing, invoice, and warranty in your dashboard." />
           </div>
@@ -1753,6 +1868,7 @@ function SoftwareDataServicePage({ service }: { service: Service }) {
   });
   const [uploads, setUploads] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [serviceAddress, setServiceAddress] = useState<ServiceAddress>(emptyServiceAddress);
   const [requestId, setRequestId] = useState("");
   const set = (key: keyof typeof form, value: string) => setForm(prev => ({ ...prev, [key]: value }));
 
@@ -1774,12 +1890,18 @@ function SoftwareDataServicePage({ service }: { service: Service }) {
     }
   };
 
-  const submit = () => {
+  const submit = (paymentMethod: ServicePaymentInfo["method"] = "online") => {
     if (!form.name.trim() || !form.phone.trim() || !form.problem.trim()) {
       toast.error("Enter customer name, phone, and problem description.");
       return;
     }
+    const addressError = validateServiceAddress(serviceAddress);
+    if (addressError) { toast.error(addressError); return; }
+    const amount = serviceMethodBaseAmount(form.serviceMethod, 499);
+    const tempId = `sft_${Date.now().toString(36)}`;
+    const paymentInfo = createServicePaymentInfo(paymentMethod, amount, tempId);
     const request = addServiceRequest({
+      id: tempId,
       kind: "software",
       customerId: user?.id || `guest_${Date.now()}`,
       customerName: form.name.trim(),
@@ -1792,6 +1914,11 @@ function SoftwareDataServicePage({ service }: { service: Service }) {
       serviceMethod: form.serviceMethod,
       preferredSlot: form.slot,
       uploads: uploads.filter(Boolean),
+      quotation: amount,
+      paidAmount: paymentInfo.status === "paid" ? amount : 0,
+      invoiceId: paymentInfo.invoiceId,
+      serviceAddress,
+      paymentInfo,
     });
     setRequestId(request.id);
     toast.success(`Software request ${request.id.slice(-8).toUpperCase()} submitted.`);
@@ -1831,7 +1958,8 @@ function SoftwareDataServicePage({ service }: { service: Service }) {
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 }}>
                 {["Remote Support", "Shop Visit", "Home Visit", "Pickup & Delivery"].map(v => <button key={v} className={form.serviceMethod === v ? "glass-pill glass-pill-primary" : "glass-pill glass-pill-outline"} onClick={() => set("serviceMethod", v)} style={{ padding: "10px 14px", fontSize: 9 }}>{v}</button>)}
               </div>
-              <button className="glass-pill glass-pill-primary" onClick={submit} style={{ padding: "13px 22px", fontSize: 10, marginTop: 20 }}><CheckCircle size={14} /> Submit Service Request</button>
+              <ServiceAddressPaymentBox address={serviceAddress} setAddress={setServiceAddress} amount={serviceMethodBaseAmount(form.serviceMethod, 499)} accent={accent} />
+              <ServicePaymentButtons amount={serviceMethodBaseAmount(form.serviceMethod, 499)} onSubmit={submit} />
             </div>
             <WorkflowSummary accent={accent} title="Software Status Timeline" timeline={SOFTWARE_TIMELINE} requestId={requestId} dashboardText="Admin will review, assign a software technician, send quotation, complete service, and generate invoice/report." />
           </div>
@@ -1853,6 +1981,7 @@ function RentalSolutionsPage({ service }: { service: Service }) {
   });
   const [uploads, setUploads] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [serviceAddress, setServiceAddress] = useState<ServiceAddress>(emptyServiceAddress);
   const [requestId, setRequestId] = useState("");
   const set = (key: keyof typeof form, value: string) => setForm(prev => ({ ...prev, [key]: value }));
   const handleFiles = async (files: FileList | null) => {
@@ -1872,12 +2001,19 @@ function RentalSolutionsPage({ service }: { service: Service }) {
       setUploading(false);
     }
   };
-  const submit = () => {
+  const rentalAmount = Number(form.quantity || 1) * (form.duration === "Hour" ? 249 : form.duration === "Week" ? 2499 : form.duration === "Month" ? 7999 : 499) + (form.serviceMethod === "Home Delivery" ? 300 : 0);
+  const submit = (paymentMethod: ServicePaymentInfo["method"] = "online") => {
     if (!form.name.trim() || !form.phone.trim() || !form.startDate || !form.endDate) { toast.error("Enter customer, phone, start date, and end date."); return; }
+    const addressError = validateServiceAddress(serviceAddress);
+    if (addressError) { toast.error(addressError); return; }
+    const tempId = `rnt_${Date.now().toString(36)}`;
+    const paymentInfo = createServicePaymentInfo(paymentMethod, rentalAmount, tempId);
     const request = addServiceRequest({
+      id: tempId,
       kind: "rental", customerId: user?.id || `guest_${Date.now()}`, customerName: form.name.trim(), contactPhone: form.phone.trim(), contactEmail: form.email.trim(),
       title: `${form.category} Rental`, deviceType: form.category, category: form.category, requirements: form.requirements || `${form.quantity} unit(s), ${form.duration} rental`, serviceMethod: form.serviceMethod,
       companyName: form.companyName, quantity: Number(form.quantity || 1), rentalDuration: form.duration, startDate: form.startDate, endDate: form.endDate, uploads: uploads.filter(Boolean),
+      quotation: rentalAmount, paidAmount: paymentInfo.status === "paid" ? rentalAmount : 0, invoiceId: paymentInfo.invoiceId, serviceAddress, paymentInfo,
     });
     setRequestId(request.id);
     toast.success(`Rental request ${request.id.slice(-8).toUpperCase()} submitted.`);
@@ -1910,7 +2046,8 @@ function RentalSolutionsPage({ service }: { service: Service }) {
               </div>
               <WorkflowTextarea label="Rental Requirements" value={form.requirements} onChange={v => set("requirements", v)} placeholder="Software needed, event/office use, accessories, delivery address, business details..." />
               <ServiceImageSlots label="Upload Rental Document Images Optional (5 Slots)" uploads={uploads} setUploads={setUploads} accent={service.color} />
-              <button className="glass-pill glass-pill-primary" onClick={submit} style={{ padding: "13px 22px", fontSize: 10, marginTop: 20 }}><CheckCircle size={14} /> Submit Rental Request</button>
+              <ServiceAddressPaymentBox address={serviceAddress} setAddress={setServiceAddress} amount={rentalAmount} accent={service.color} />
+              <ServicePaymentButtons amount={rentalAmount} onSubmit={submit} />
             </div>
             <WorkflowSummary accent={service.color} title="Rental Status Timeline" timeline={["Rental Request Submitted", "Request Received", "Documents Verified", "Rental Approved", "Rental Agreement Generated", "Payment Successful", "Product Reserved", "Product Prepared", "Product Shipped", "Rental Active", "Return Requested", "Product Received", "Inspection Completed", "Final Invoice Generated", "Security Deposit Refunded", "Rental Closed", "Review Requested"]} requestId={requestId} dashboardText="Track verification, agreement, deposit, delivery, return inspection, final invoice, and refund in your dashboard." />
           </div>
@@ -1926,6 +2063,7 @@ function SellUsedProductsPage({ service }: { service: Service }) {
   const [form, setForm] = useState({ name: user?.name || "", phone: user?.phone || "", email: user?.email || "", category: "Laptop", brand: "", model: "", specs: "", age: "", condition: "Good", serialNumber: "", expectedPrice: "", serviceMethod: "Pickup", requirements: "" });
   const [uploads, setUploads] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [serviceAddress, setServiceAddress] = useState<ServiceAddress>(emptyServiceAddress);
   const [requestId, setRequestId] = useState("");
   const set = (key: keyof typeof form, value: string) => setForm(prev => ({ ...prev, [key]: value }));
   const handleFiles = async (files: FileList | null) => {
@@ -1945,12 +2083,19 @@ function SellUsedProductsPage({ service }: { service: Service }) {
       setUploading(false);
     }
   };
-  const submit = () => {
+  const inspectionAmount = form.serviceMethod === "Pickup" ? 299 : 0;
+  const submit = (paymentMethod: ServicePaymentInfo["method"] = "online") => {
     if (!form.name.trim() || !form.phone.trim() || !form.brand.trim() || !form.model.trim()) { toast.error("Enter customer, phone, brand, and model."); return; }
+    const addressError = validateServiceAddress(serviceAddress);
+    if (addressError) { toast.error(addressError); return; }
+    const tempId = `sel_${Date.now().toString(36)}`;
+    const paymentInfo = createServicePaymentInfo(paymentMethod, inspectionAmount, tempId);
     const request = addServiceRequest({
+      id: tempId,
       kind: "sell", customerId: user?.id || `guest_${Date.now()}`, customerName: form.name.trim(), contactPhone: form.phone.trim(), contactEmail: form.email.trim(),
       title: `Sell ${form.brand} ${form.model}`, deviceType: form.category, category: form.category, requirements: `${form.condition} condition · ${form.age || "Age not specified"} · ${form.requirements || "No notes"}`,
       currentSpecs: form.specs, serialNumber: form.serialNumber, expectedPrice: Number(form.expectedPrice || 0), serviceMethod: form.serviceMethod, uploads: uploads.filter(Boolean),
+      quotation: inspectionAmount, paidAmount: paymentInfo.status === "paid" ? inspectionAmount : 0, invoiceId: paymentInfo.invoiceId, serviceAddress, paymentInfo,
     });
     setRequestId(request.id);
     toast.success(`Sell request ${request.id.slice(-8).toUpperCase()} submitted.`);
@@ -1971,7 +2116,8 @@ function SellUsedProductsPage({ service }: { service: Service }) {
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>{["Excellent", "Good", "Fair", "Needs Repair"].map(v => <button key={v} className={form.condition === v ? "glass-pill glass-pill-primary" : "glass-pill glass-pill-outline"} onClick={() => set("condition", v)} style={{ padding: "9px 13px", fontSize: 9 }}>{v}</button>)}{["Pickup", "Shop Visit"].map(v => <button key={v} className={form.serviceMethod === v ? "glass-pill glass-pill-primary" : "glass-pill glass-pill-outline"} onClick={() => set("serviceMethod", v)} style={{ padding: "9px 13px", fontSize: 9 }}>{v}</button>)}</div>
               <WorkflowTextarea label="Specs / Notes" value={form.specs} onChange={v => set("specs", v)} placeholder="CPU, RAM, GPU, storage, bill availability, accessories, condition notes..." />
               <ServiceImageSlots label="Upload Product Photos / Invoice Images Optional (5 Slots)" uploads={uploads} setUploads={setUploads} accent={service.color} />
-              <button className="glass-pill glass-pill-primary" onClick={submit} style={{ padding: "13px 22px", fontSize: 10, marginTop: 20 }}><CheckCircle size={14} /> Submit Sell Request</button>
+              <ServiceAddressPaymentBox address={serviceAddress} setAddress={setServiceAddress} amount={inspectionAmount} accent={service.color} />
+              <ServicePaymentButtons amount={inspectionAmount} onSubmit={submit} />
             </div>
             <WorkflowSummary accent={service.color} title="Sell Request Timeline" timeline={["Sell Request Submitted", "Admin Review", "Inspection Scheduled", "Product Inspected", "Price Offer Sent", "Offer Accepted", "Payment Completed", "Added to Inventory", "Published for Resale", "Request Closed"]} requestId={requestId} dashboardText="Track inspection, price offer, acceptance, payment, inventory certification, and resale publishing in your dashboard." />
           </div>
@@ -1988,6 +2134,7 @@ function RemoteBusinessSupportPage({ service }: { service: Service }) {
   const [form, setForm] = useState({ name: user?.name || "", phone: user?.phone || "", email: user?.email || "", category: "Software Issue", deviceType: "Laptop", priority: "Normal", preferredSlot: "", companyName: "", businessSize: "", deviceCount: "", serviceMethod: "Remote", requirements: "" });
   const [uploads, setUploads] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [serviceAddress, setServiceAddress] = useState<ServiceAddress>(emptyServiceAddress);
   const [requestId, setRequestId] = useState("");
   const set = (key: keyof typeof form, value: string) => setForm(prev => ({ ...prev, [key]: value }));
   const handleFiles = async (files: FileList | null) => {
@@ -2007,12 +2154,19 @@ function RemoteBusinessSupportPage({ service }: { service: Service }) {
       setUploading(false);
     }
   };
-  const submit = () => {
+  const supportAmount = mode === "Business IT Support" ? serviceMethodBaseAmount(form.serviceMethod, 1499) : serviceMethodBaseAmount(form.serviceMethod, 499);
+  const submit = (paymentMethod: ServicePaymentInfo["method"] = "online") => {
     if (!form.name.trim() || !form.phone.trim() || !form.requirements.trim()) { toast.error("Enter customer, phone, and issue details."); return; }
+    const addressError = validateServiceAddress(serviceAddress);
+    if (addressError) { toast.error(addressError); return; }
+    const tempId = `sup_${Date.now().toString(36)}`;
+    const paymentInfo = createServicePaymentInfo(paymentMethod, supportAmount, tempId);
     const request = addServiceRequest({
+      id: tempId,
       kind: "support", customerId: user?.id || `guest_${Date.now()}`, customerName: form.name.trim(), contactPhone: form.phone.trim(), contactEmail: form.email.trim(),
       title: `${mode}: ${form.category}`, deviceType: form.deviceType, category: form.category, requirements: form.requirements, serviceMethod: form.serviceMethod,
       preferredSlot: form.preferredSlot, companyName: form.companyName, priority: form.priority, quantity: Number(form.deviceCount || 0), uploads: uploads.filter(Boolean),
+      quotation: supportAmount, paidAmount: paymentInfo.status === "paid" ? supportAmount : 0, invoiceId: paymentInfo.invoiceId, serviceAddress, paymentInfo,
     });
     setRequestId(request.id);
     toast.success(`Support ticket ${request.id.slice(-8).toUpperCase()} submitted.`);
@@ -2039,7 +2193,8 @@ function RemoteBusinessSupportPage({ service }: { service: Service }) {
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>{["Remote", "Onsite", "Hybrid"].map(v => <button key={v} className={form.serviceMethod === v ? "glass-pill glass-pill-primary" : "glass-pill glass-pill-outline"} onClick={() => set("serviceMethod", v)} style={{ padding: "9px 13px", fontSize: 9 }}>{v}</button>)}</div>
               <WorkflowTextarea label={mode === "Remote Support" ? "Describe Issue" : "Current Problems / Requirements"} value={form.requirements} onChange={v => set("requirements", v)} placeholder="Error messages, infrastructure, devices, software, network, server, SLA or AMC needs..." />
               <ServiceImageSlots label="Upload Support Screenshots Optional (5 Slots)" uploads={uploads} setUploads={setUploads} accent={service.color} />
-              <button className="glass-pill glass-pill-primary" onClick={submit} style={{ padding: "13px 22px", fontSize: 10, marginTop: 20 }}><CheckCircle size={14} /> Submit Support Request</button>
+              <ServiceAddressPaymentBox address={serviceAddress} setAddress={setServiceAddress} amount={supportAmount} accent={service.color} />
+              <ServicePaymentButtons amount={supportAmount} onSubmit={submit} />
             </div>
             <WorkflowSummary accent={service.color} title="Support Status Timeline" timeline={["Ticket Submitted", "Ticket Assigned", "Session Scheduled", "Technician Connected", "Issue Resolved", "Invoice Generated", "Payment Completed", "Ticket Closed"]} requestId={requestId} dashboardText="Track assignment, remote session, work notes, report, invoice, payment, and closure in your dashboard." />
           </div>
