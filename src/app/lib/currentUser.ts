@@ -36,6 +36,11 @@ function toAuthUser(user: User): AuthUser {
 // Set VITE_USE_API=false only for local demo-mode auth.
 const USE_API = import.meta.env.VITE_USE_API !== 'false';
 
+export function hasStoredAuthSession(): boolean {
+  if (USE_API) return isAuthenticated();
+  return Boolean(readUserFromStorage());
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Demo/Legacy localStorage functions (fallback)
 // ─────────────────────────────────────────────────────────────────────────────

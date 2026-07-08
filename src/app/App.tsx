@@ -8,7 +8,7 @@ import { useDashboardData, type CatalogProduct } from "@/app/lib/dashboardData";
 import { Toaster } from "@/app/components/ui/sonner";
 import { BrandMark } from "@/app/components/BrandMark";
 import { toast } from "sonner";
-import { AUTH_STATE_CHANGED_EVENT, logout, useCurrentUser, login as apiLogin } from "@/app/lib/currentUser";
+import { AUTH_STATE_CHANGED_EVENT, hasStoredAuthSession, logout, useCurrentUser, login as apiLogin } from "@/app/lib/currentUser";
 import CustomerDashboard from "@/app/CustomerDashboard";
 import StaffDashboard from "@/app/StaffDashboard";
 import AdminDashboard from "@/app/AdminDashboard";
@@ -3464,8 +3464,19 @@ function DashboardRouter({ kind, tab }: { kind: "customer" | "staff" | "admin"; 
   const [resolved, setResolved] = useState<typeof user | null | undefined>(undefined);
 
   useEffect(() => {
-    // Brief sync on mount
-    setResolved(user ?? null);
+    if (user) {
+      setResolved(user);
+      return;
+    }
+
+    if (!hasStoredAuthSession()) {
+      setResolved(null);
+      return;
+    }
+
+    setResolved(undefined);
+    const timeout = window.setTimeout(() => setResolved(null), 5000);
+    return () => window.clearTimeout(timeout);
   }, [user]);
 
   if (resolved === undefined) {
