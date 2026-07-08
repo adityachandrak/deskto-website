@@ -8,7 +8,7 @@ import { useDashboardData, type CatalogProduct } from "@/app/lib/dashboardData";
 import { Toaster } from "@/app/components/ui/sonner";
 import { BrandMark } from "@/app/components/BrandMark";
 import { toast } from "sonner";
-import { AUTH_STATE_CHANGED_EVENT, logout, useCurrentUser, login as apiLogin } from "@/app/lib/currentUser";
+import { AUTH_STATE_CHANGED_EVENT, logout, useCurrentUser, login as apiLogin, register as apiRegister } from "@/app/lib/currentUser";
 import CustomerDashboard from "@/app/CustomerDashboard";
 import StaffDashboard from "@/app/StaffDashboard";
 import AdminDashboard from "@/app/AdminDashboard";
@@ -2261,6 +2261,8 @@ function LocationSection() {
 type AuthUser = {
   id: string;
   name: string;
+  firstName?: string;
+  lastName?: string;
   email: string;
   phone: string;
   passwordHash: string;
@@ -2287,6 +2289,7 @@ type PendingSignup = {
   otp: string;
   expiresAt: number;
   attempts: number;
+  rawPassword?: string;
 };
 
 type ResetRequest = {
@@ -2444,6 +2447,7 @@ function AuthSection({ initialMode="sign-in", initialRole="customer", standalone
         email: signup.email.trim().toLowerCase(),
         phone,
         passwordHash: demoHashPassword(signup.password),
+        rawPassword: signup.password,
         role: signup.role,
         staffId: signup.role === "staff" ? signup.staffId.trim().toUpperCase() : undefined,
         department: signup.role === "staff" ? signup.department.trim() : undefined,
@@ -2457,7 +2461,7 @@ function AuthSection({ initialMode="sign-in", initialRole="customer", standalone
     addLog("signup_otp_sent", `${signup.role} OTP sent to ${signup.email}`);
   };
 
-  const verifySignupOtp = () => {
+  const verifySignupOtp = async () => {
     const pending = state.pendingSignup;
     if (!pending) return setMessage("Create a signup request first.");
     if (Date.now() > pending.expiresAt) return setMessage("Signup OTP expired.");
@@ -2466,40 +2470,76 @@ function AuthSection({ initialMode="sign-in", initialRole="customer", standalone
       setState(prev => prev.pendingSignup ? { ...prev, pendingSignup:{ ...prev.pendingSignup, attempts:prev.pendingSignup.attempts + 1 } } : prev);
       return setMessage("Wrong OTP.");
     }
-    const user: AuthUser = {
-      id: makeId("usr"),
-      name: pending.name,
-      email: pending.email,
-      phone: pending.phone,
-      passwordHash: pending.passwordHash,
-      role: pending.role,
-      staffId: pending.staffId,
-      department: pending.department,
-      emailVerified: true,
-      phoneVerified: true,
-      status: "active",
-      loginAttempts: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    const session: SessionRecord = {
-      id: makeId("sess"),
-      userId: user.id,
-      refreshToken: makeId("refresh"),
-      device: "Browser demo",
-      ip: "127.0.0.1",
-      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-    };
-    setState(prev => ({
-      ...prev,
-      users: [...prev.users, user],
-      pendingSignup: null,
-      sessions: [...prev.sessions, session],
-      currentUserId: user.id,
-      accessToken: makeId("jwt"),
-    }));
-    setMessage(`${signupRoleMeta[user.role].label} account created, JWT and refresh token issued, session saved.`);
-    addLog("signup_completed", `${user.role} ${user.email} verified by OTP`);
+    try {
+      const nameParts = pending.name.trim().split(' ');
+      const firstName = nameParts[0];
+      const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+
+      // Build the user locally first so the demo always works even without a backend
+      const newUserId = makeId("usr");
+      const newUser: AuthUser = {
+        id: newUserId,
+        name: pending.name,
+        email: pending.email,
+        phone: pending.phone,
+        firstName,
+        lastName,
+        passwordHash: pending.passwordHash,
+        role: pending.role,
+        staffId: pending.staffId,
+        department: pending.department,
+        emailVerified: true,
+        phoneVerified: true,
+        status: "active",
+        loginAttempts: 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      const session: SessionRecord = {
+        id: makeId("sess"),
+        userId: newUserId,
+        refreshToken: makeId("refresh"),
+        device: "Browser demo",
+        ip: "127.0.0.1",
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      };
+
+      // Persist to demo state (used by useCurrentUser / DashboardRouter)
+      setState(prev => ({
+        ...prev,
+        users: [...prev.users, newUser],
+        pendingSignup: null,
+        sessions: [...prev.sessions, session],
+        currentUserId: newUserId,
+        accessToken: makeId("jwt"),
+      }));
+
+      // Also attempt real backend registration (non-blocking — failure is OK in demo mode)
+      apiRegister({
+        email: pending.email,
+        password: pending.rawPassword || pending.passwordHash,
+        firstName,
+        lastName,
+        phone: pending.phone,
+        role: pending.role,
+        staffId: pending.staffId,
+        department: pending.department
+      }).catch(() => { /* backend not available in demo mode — that's fine */ });
+
+      setMessage(`${signupRoleMeta[pending.role].label} account created! Redirecting to dashboard…`);
+      addLog("signup_completed", `${pending.role} ${pending.email} verified by OTP`);
+
+      // Redirect to the correct role dashboard
+      const dashPath = `/dashboard/${pending.role}`;
+      setTimeout(() => {
+        window.history.pushState(null, "", dashPath);
+        window.dispatchEvent(new PopStateEvent("popstate"));
+      }, 800);
+    } catch (error: any) {
+      const errorMsg = error?.message || "Failed to create account.";
+      setMessage(errorMsg);
+      addLog("signup_failure", `${pending.email} failed to create account: ${errorMsg}`);
+    }
   };
 
   const runLogin = async () => {
@@ -2513,8 +2553,15 @@ function AuthSection({ initialMode="sign-in", initialRole="customer", standalone
       // (and addLog below) don't overwrite the session apiLogin just wrote —
       // otherwise the stale local `state.currentUserId` clobbers it back to null.
       setState(prev => ({ ...prev, currentUserId: authUser.id }));
-      setMessage("Login successful. Dashboard session is active.");
-      addLog("login_success", `${identifier} logged in`);
+      setMessage("Login successful. Redirecting to dashboard…");
+      addLog("login_success", `${identifier} logged in as ${authUser.role}`);
+
+      // Redirect to the correct role dashboard after a brief delay
+      const dashPath = `/dashboard/${authUser.role}`;
+      setTimeout(() => {
+        window.history.pushState(null, "", dashPath);
+        window.dispatchEvent(new PopStateEvent("popstate"));
+      }, 600);
     } catch (error: any) {
       const message = error?.message || "Wrong email/mobile or password.";
       setMessage(message.includes("Invalid credentials") ? "Wrong email/mobile or password." : message);
@@ -3453,14 +3500,14 @@ function CheckoutPage() {
 // ─────────────── DASHBOARD ROUTER ───────────────
 function DashboardRouter({ kind, tab }: { kind: "customer" | "staff" | "admin"; tab?: string | null }) {
   const user = useCurrentUser();
-  const [resolved, setResolved] = useState<typeof user | null | undefined>(undefined);
-
+  // Give auth state 600 ms to propagate from localStorage after a fresh signup/login redirect
+  const [ready, setReady] = useState(false);
   useEffect(() => {
-    // Brief sync on mount
-    setResolved(user ?? null);
-  }, [user]);
+    const t = setTimeout(() => setReady(true), 600);
+    return () => clearTimeout(t);
+  }, []);
 
-  if (resolved === undefined) {
+  if (!ready) {
     return (
       <div style={{ background: "#050505", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#888", fontFamily: "'Space Grotesk', sans-serif" }}>
         Loading dashboard…
@@ -3470,7 +3517,7 @@ function DashboardRouter({ kind, tab }: { kind: "customer" | "staff" | "admin"; 
 
   // For admin dashboard, create a demo user if not logged in.
   // Keep this render-only so the route never updates state during render.
-  if (kind === "admin" && !resolved) {
+  if (kind === "admin" && !user) {
     const demoUser: any = {
       id: "demo-admin",
       name: "Admin Demo",
@@ -3490,7 +3537,7 @@ function DashboardRouter({ kind, tab }: { kind: "customer" | "staff" | "admin"; 
     return <AdminDashboard user={demoUser} initialTab={tab} />;
   }
 
-  if (!resolved) {
+  if (!user) {
     setTimeout(() => {
       toast.error("Please sign in to view your dashboard.");
       window.history.pushState(null, "", "/sign-in");
@@ -3502,23 +3549,24 @@ function DashboardRouter({ kind, tab }: { kind: "customer" | "staff" | "admin"; 
       </div>
     );
   }
-  if (resolved.role !== kind) {
+  if (user.role !== kind) {
     setTimeout(() => {
-      toast.error(`This dashboard is for ${kind} accounts. You are signed in as ${resolved.role}.`);
-      window.history.pushState(null, "", "/sign-in");
+      toast.error(`This dashboard is for ${kind} accounts. You are signed in as ${user.role}.`);
+      window.history.pushState(null, "", `/dashboard/${user.role}`);
       window.dispatchEvent(new PopStateEvent("popstate"));
     }, 0);
     return (
       <div style={{ background: "#050505", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#FF1F45", fontFamily: "'Space Grotesk', sans-serif" }}>
-        Role mismatch — redirecting…
+        Role mismatch — redirecting to your dashboard…
       </div>
     );
   }
 
-  return kind === "customer" ? <CustomerDashboard user={resolved} initialTab={tab} /> :
-         kind === "staff"     ? <StaffDashboard user={resolved} initialTab={tab} /> :
-                                <AdminDashboard user={resolved} initialTab={tab} />;
+  return kind === "customer" ? <CustomerDashboard user={user} initialTab={tab} /> :
+         kind === "staff"     ? <StaffDashboard user={user} initialTab={tab} /> :
+                                <AdminDashboard user={user} initialTab={tab} />;
 }
+
 
 // ─────────────── APP ───────────────
 export default function App() {

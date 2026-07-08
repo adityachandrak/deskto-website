@@ -17,7 +17,7 @@ import {
 } from "./CustomerDashboard.tabs";
 import type { NavGroup } from "./components/dashboard/DashboardSidebar";
 
-interface Props { user: AuthUser }
+interface Props { user: AuthUser; initialTab?: string | null }
 
 const TABS: { key: string; label: string; icon: any; title: string }[] = [
   { key: "overview", label: "Overview", icon: Home, title: "Dashboard Overview" },
@@ -42,8 +42,8 @@ const TABS: { key: string; label: string; icon: any; title: string }[] = [
   { key: "logout", label: "Logout", icon: LogOut, title: "Logout" },
 ];
 
-export default function CustomerDashboard({ user }: Props) {
-  const [tab, setTab] = useState<string>(() => window.location.hash.replace("#", "") || "overview");
+export default function CustomerDashboard({ user, initialTab }: Props) {
+  const [tab, setTab] = useState<string>(() => initialTab || window.location.hash.replace("#", "") || "overview");
   const data = useDashboardData();
   const { store, markNotificationRead, archiveNotification, addAddress, deleteAddress, updateOrderStatus, updateRepairStatus, patchRepair, patchPCBuild, patchServiceRequest, updateRental, fileReview, redeemCoupon, addReplyToTicket, closeTicket } = data;
 
@@ -62,10 +62,11 @@ export default function CustomerDashboard({ user }: Props) {
     },
   ], [store.notifications, user.id]);
 
-  const tabMeta = TABS.find(t => t.key === tab) || TABS[0];
+  const normalizedTab = TABS.some(t => t.key === tab) ? tab : "overview";
+  const tabMeta = TABS.find(t => t.key === normalizedTab) || TABS[0];
 
   const renderTab = () => {
-    switch (tab) {
+    switch (normalizedTab) {
       case "overview":       return <CustomerOverview user={user} data={data} onTab={setTab} />;
       case "profile":        return <CustomerProfile user={user} />;
       case "addresses":      return <CustomerAddresses user={user} store={store} addAddress={addAddress} deleteAddress={deleteAddress} />;
@@ -96,7 +97,7 @@ export default function CustomerDashboard({ user }: Props) {
     <DashboardLayout
       user={user}
       groups={groups}
-      active={tab}
+      active={normalizedTab}
       onTabChange={setTab}
       title="Customer"
       pageTitle={tabMeta.title}

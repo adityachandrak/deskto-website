@@ -37,17 +37,20 @@ function readUserFromStorage(): AuthUser | null {
     if (!id) return null;
     const user = (parsed?.users || []).find((u: any) => u.id === id);
     if (!user) return null;
+    const firstName = user.firstName || user.first_name || '';
+    const lastName = user.lastName || user.last_name || '';
+    const computedName = `${firstName} ${lastName}`.trim() || user.name || '';
     // Normalize to new structure
     return {
       id: user.id,
       email: user.email,
-      firstName: user.firstName || user.first_name || user.name?.split(' ')[0] || '',
-      lastName: user.lastName || user.last_name || '',
+      firstName: firstName || user.name?.split(' ')[0] || '',
+      lastName: lastName || '',
       phone: user.phone,
       role: user.role,
       status: user.status,
       createdAt: user.createdAt || user.created_at,
-      name: `${user.firstName || user.first_name || ''} ${user.lastName || user.last_name || ''}`.trim(),
+      name: computedName,
     };
   } catch {
     return null;
@@ -58,59 +61,41 @@ function readUserFromStorage(): AuthUser | null {
 // Hook to get current user
 // ─────────────────────────────────────────────────────────────────────────────
 export function useCurrentUser(): AuthUser | null {
-  const [user, setUser] = useState<AuthUser | null>(() => {
-    if (USE_API && isAuthenticated()) {
-      return null; // Will fetch from API
-    }
-    return readUserFromStorage();
-  });
-
-  const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState<AuthUser | null>(() => readUserFromStorage());
 
   useEffect(() => {
-    if (USE_API) {
-      // Fetch from API if token exists
-      const fetchUser = async () => {
-        if (isAuthenticated()) {
-          setLoading(true);
-          try {
-            const apiUser = await authApi.getMe();
+    // Always sync from localStorage first (covers demo mode and page refreshes)
+    const syncFromStorage = () => {
+      const localUser = readUserFromStorage();
+      setUser(localUser);
+
+      // If we have a backend token and no local user, try the API
+      if (!localUser && USE_API && isAuthenticated()) {
+        authApi.getMe()
+          .then(apiUser => {
             setUser({
               ...apiUser,
               name: `${apiUser.firstName} ${apiUser.lastName || ''}`.trim(),
             });
-          } catch (error) {
-            console.error('Failed to fetch user:', error);
-            // If API fails, clear tokens
+          })
+          .catch(error => {
+            console.error('Failed to fetch user from API:', error);
             if ((error as any)?.status === 401) {
               clearSession();
             }
-          } finally {
-            setLoading(false);
-          }
-        } else {
-          setUser(null);
-          setLoading(false);
-        }
-      };
-      fetchUser();
-    }
-
-    const sync = () => {
-      if (USE_API) {
-        setUser(isAuthenticated() ? user : null);
-      } else {
-        setUser(readUserFromStorage());
+          });
       }
     };
 
-    window.addEventListener("storage", sync);
-    window.addEventListener(AUTH_STATE_CHANGED_EVENT, sync);
-    window.addEventListener("focus", sync);
+    syncFromStorage();
+
+    window.addEventListener("storage", syncFromStorage);
+    window.addEventListener(AUTH_STATE_CHANGED_EVENT, syncFromStorage);
+    window.addEventListener("focus", syncFromStorage);
     return () => {
-      window.removeEventListener("storage", sync);
-      window.removeEventListener(AUTH_STATE_CHANGED_EVENT, sync);
-      window.removeEventListener("focus", sync);
+      window.removeEventListener("storage", syncFromStorage);
+      window.removeEventListener(AUTH_STATE_CHANGED_EVENT, syncFromStorage);
+      window.removeEventListener("focus", syncFromStorage);
     };
   }, []);
 
@@ -227,6 +212,10 @@ export async function register(data: {
   firstName: string;
   lastName?: string;
   phone?: string;
+  role?: string;
+  adminCode?: string;
+  staffId?: string;
+  department?: string;
 }): Promise<AuthUser> {
   if (USE_API) {
     const response = await authApi.register(data);
@@ -259,7 +248,9 @@ export async function register(data: {
         passwordHash: data.password, // Demo: store as-is
         firstName: data.firstName,
         lastName: data.lastName || '',
-        role: 'customer' as AuthRole,
+        role: (data.role as AuthRole) || 'customer',
+        staffId: data.staffId,
+        department: data.department,
         status: 'active' as 'active' | 'locked',
         emailVerified: false,
         phoneVerified: false,
