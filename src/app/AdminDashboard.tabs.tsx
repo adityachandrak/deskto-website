@@ -1814,6 +1814,11 @@ export function AdminOrders({ store, updateOrderStatus }: { store: DashboardStor
   const customerName = (order: Order) => order.customerName || readDemoUsers().find(u => u.id === order.customerId)?.name || "Customer";
   const customerContact = (order: Order) => order.customerPhone || order.customerEmail || readDemoUsers().find(u => u.id === order.customerId)?.email || order.customerId;
   const setStatus = (order: Order, status: Order["status"]) => {
+    if (!order?.id || typeof order.id !== "string" || order.id.trim() === "") {
+      toast.error("Cannot update status: order has no ID");
+      console.warn("[admin] setStatus called with empty order.id", order);
+      return;
+    }
     updateOrderStatus(order.id, status);
     toast.success(`Order ${order.id.slice(-8).toUpperCase()} synced to ${status}`);
   };
