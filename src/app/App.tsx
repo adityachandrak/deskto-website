@@ -3054,7 +3054,48 @@ function CheckoutPage() {
   const [couponMsg, setCouponMsg] = useState<string | null>(null);
   const user = useCurrentUser();
   const { addOrder, store } = useDashboardData();
-  const checkoutProducts = mergedCatalogProducts(store.products);
+  // Cart items added on the /products page are keyed by stableNumericId(liveId) —
+  // see publicProductToProduct. The admin-managed store.products uses different
+  // numeric IDs, so resolving cartRows against it alone always returned an empty
+  // cart. Resolve against the live /api/products first (same source as the shop),
+  // and fall back to the admin catalog so checkout never silently disappears.
+  const fallbackCheckoutProducts = useMemo(
+    () => mergedCatalogProducts(store.products),
+    [store.products],
+  );
+  const [checkoutProducts, setCheckoutProducts] = useState<Product[]>(fallbackCheckoutProducts);
+  useEffect(() => {
+    let cancelled = false;
+    const loadLive = async () => {
+      try {
+        const response = await fetch(`${PUBLIC_PRODUCTS_API_BASE}/products?limit=100`, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+          cache: "no-store",
+        });
+        if (!response.ok) throw new Error(`Product API returned ${response.status}`);
+        const data = await response.json();
+        const liveProducts = (data.products || [])
+          .map(publicProductToProduct)
+          .filter((p: Product | null): p is Product => Boolean(p));
+        if (cancelled) return;
+        // Prefer the live catalog; fall back to admin catalog if the API returned nothing usable.
+        setCheckoutProducts(liveProducts.length ? liveProducts : fallbackCheckoutProducts);
+      } catch (err) {
+        if (cancelled) return;
+        // Live API unavailable — keep admin-catalog fallback so checkout still works for seeded items.
+        console.warn("[checkout] live product fetch failed, using admin catalog fallback:", err);
+        setCheckoutProducts(fallbackCheckoutProducts);
+      }
+    };
+    void loadLive();
+    return () => { cancelled = true; };
+  }, [fallbackCheckoutProducts]);
+  useEffect(() => {
+    // If the store.products fallback changes (e.g. admin catalog updated mid-session),
+    // re-sync so we don't keep a stale snapshot if the live API is offline.
+    setCheckoutProducts(prev => (prev.length === 0 ? fallbackCheckoutProducts : prev));
+  }, [fallbackCheckoutProducts]);
 
   useEffect(() => { dispatch({ type:"load", cart: loadCart() }); }, []);
   useEffect(() => {
