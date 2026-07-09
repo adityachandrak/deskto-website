@@ -1288,6 +1288,22 @@ const PRODUCT_BRANDS = Array.from(new Set(PRODUCTS.map(p => p.brand))).sort();
 
 export const CART_STORAGE_KEY = "deskto_cart_v1";
 
+function normalizeCart(cart: unknown): Record<number, number> {
+  if (!cart || typeof cart !== "object") return {};
+  const entries = Array.isArray(cart)
+    ? cart.map((line: any) => [line?.productId ?? line?.id, line?.qty ?? line?.quantity])
+    : Object.entries(cart);
+
+  return entries.reduce<Record<number, number>>((next, [id, qty]) => {
+    const productId = Number(id);
+    const quantity = Number(qty);
+    if (Number.isFinite(productId) && Number.isFinite(quantity) && quantity > 0) {
+      next[productId] = Math.max(1, Math.floor(quantity));
+    }
+    return next;
+  }, {});
+}
+
 export function ProductCard({ p, onAdd }: { p: Product; onAdd?: (product: Product) => void }) {
   const { has, toggle } = useWishlist();
   const wished = has(p.id);
@@ -1413,15 +1429,14 @@ export function loadCart(): Record<number, number> {
     const raw = window.localStorage.getItem(CART_STORAGE_KEY);
     if (!raw) return {};
     const parsed = JSON.parse(raw);
-    if (parsed && typeof parsed === "object") return parsed;
-    return {};
+    return normalizeCart(parsed);
   } catch { return {}; }
 }
 
 export function saveCart(cart: Record<number, number>) {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
+    window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(normalizeCart(cart)));
     window.dispatchEvent(new Event("deskto-cart-changed"));
   } catch {}
 }
@@ -1441,7 +1456,7 @@ function ProductCatalogPage({ category }: { category: ProductType | "all" }) {
   const [warrantyOnly,setWarrantyOnly] = useState(false);
   const [query,setQuery] = useState("");
   const [sort,setSort] = useState<SortKey>("featured");
-  const [cart,setCart] = useState<Record<number,number>>({});
+  const [cart,setCart] = useState<Record<number,number>>(() => loadCart());
   const [status,setStatus] = useState("Select products to add to your cart.");
   const [filtersOpen,setFiltersOpen] = useState(false);
   const dynamicCategories = Array.from(new Set(catalogProducts.map(p => p.category))) as ProductCategory[];
@@ -1473,7 +1488,6 @@ function ProductCatalogPage({ category }: { category: ProductType | "all" }) {
     }
   }, []);
 
-  useEffect(() => { setCart(loadCart()); }, []);
   useEffect(() => { saveCart(cart); }, [cart]);
   useEffect(() => { loadLiveProducts(); }, [loadLiveProducts]);
 
@@ -3011,6 +3025,27 @@ function cartGrandTotal(cart: Record<number,number>, coupon: CheckoutState["coup
   return subtotal - discount + gst + shipping;
 }
 
+function mergeCheckoutProducts(...groups: Product[][]): Product[] {
+  const seen = new Set<string>();
+  const products: Product[] = [];
+  for (const product of groups.flat()) {
+    const key = String(product.liveId || product.sku || product.id);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    products.push(product);
+  }
+  return products;
+}
+
+function resolveCartProduct(cartProductId: number, products: Product[]): Product | undefined {
+  return products.find(product => {
+    if (product.id === cartProductId) return true;
+    if (product.liveId && stableNumericId(product.liveId) === cartProductId) return true;
+    if (product.sku && stableNumericId(product.sku) === cartProductId) return true;
+    return false;
+  });
+}
+
 function checkoutReducer(state: CheckoutState, action: CheckoutAction): CheckoutState {
   switch (action.type) {
     case "load": return { ...state, cart: action.cart };
@@ -3048,19 +3083,21 @@ const INITIAL_CHECKOUT_STATE: CheckoutState = {
 };
 
 function CheckoutPage() {
-  const [state, dispatch] = useReducer(checkoutReducer, INITIAL_CHECKOUT_STATE);
+  const [state, dispatch] = useReducer(
+    checkoutReducer,
+    INITIAL_CHECKOUT_STATE,
+    initial => ({ ...initial, cart: loadCart() }),
+  );
   const [error, setError] = useState<string | null>(null);
   const [couponInput, setCouponInput] = useState("");
   const [couponMsg, setCouponMsg] = useState<string | null>(null);
   const user = useCurrentUser();
   const { addOrder, store } = useDashboardData();
-  // Cart items added on the /products page are keyed by stableNumericId(liveId) —
-  // see publicProductToProduct. The admin-managed store.products uses different
-  // numeric IDs, so resolving cartRows against it alone always returned an empty
-  // cart. Resolve against the live /api/products first (same source as the shop),
-  // and fall back to the admin catalog so checkout never silently disappears.
+  // Cart items can be keyed by live product hash, admin catalog ID, or older
+  // seeded product ID depending on where the customer added them. Keep all
+  // resolvers available so checkout never silently drops selected products.
   const fallbackCheckoutProducts = useMemo(
-    () => mergedCatalogProducts(store.products),
+    () => mergeCheckoutProducts(mergedCatalogProducts(store.products), PRODUCTS),
     [store.products],
   );
   const [checkoutProducts, setCheckoutProducts] = useState<Product[]>(fallbackCheckoutProducts);
@@ -3079,8 +3116,7 @@ function CheckoutPage() {
           .map(publicProductToProduct)
           .filter((p: Product | null): p is Product => Boolean(p));
         if (cancelled) return;
-        // Prefer the live catalog; fall back to admin catalog if the API returned nothing usable.
-        setCheckoutProducts(liveProducts.length ? liveProducts : fallbackCheckoutProducts);
+        setCheckoutProducts(mergeCheckoutProducts(liveProducts, fallbackCheckoutProducts));
       } catch (err) {
         if (cancelled) return;
         // Live API unavailable — keep admin-catalog fallback so checkout still works for seeded items.
@@ -3094,10 +3130,9 @@ function CheckoutPage() {
   useEffect(() => {
     // If the store.products fallback changes (e.g. admin catalog updated mid-session),
     // re-sync so we don't keep a stale snapshot if the live API is offline.
-    setCheckoutProducts(prev => (prev.length === 0 ? fallbackCheckoutProducts : prev));
+    setCheckoutProducts(prev => mergeCheckoutProducts(prev, fallbackCheckoutProducts));
   }, [fallbackCheckoutProducts]);
 
-  useEffect(() => { dispatch({ type:"load", cart: loadCart() }); }, []);
   useEffect(() => {
     if (!user) return;
     dispatch({
@@ -3113,7 +3148,7 @@ function CheckoutPage() {
   useEffect(() => { window.scrollTo({ top:0, behavior:"smooth" }); }, [state.step]);
 
   const cartRows = Object.entries(state.cart)
-    .map(([id,qty]) => ({ product:checkoutProducts.find(p => p.id === Number(id)), qty }))
+    .map(([id,qty]) => ({ product:resolveCartProduct(Number(id), checkoutProducts), qty }))
     .filter((row): row is { product:Product; qty:number } => Boolean(row.product));
   const subtotal = cartRows.reduce((sum, row) => sum + row.product.price * row.qty, 0);
   const discount = cartDiscount(subtotal, state.coupon);
