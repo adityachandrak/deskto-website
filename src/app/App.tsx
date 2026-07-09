@@ -9,6 +9,7 @@ import { Toaster } from "@/app/components/ui/sonner";
 import { BrandMark } from "@/app/components/BrandMark";
 import { toast } from "sonner";
 import { AUTH_STATE_CHANGED_EVENT, logout, useCurrentUser, login as apiLogin, register as apiRegister } from "@/app/lib/currentUser";
+import { ordersApi, isAuthenticated as isApiAuthenticated } from "@/app/lib/api";
 import CustomerDashboard from "@/app/CustomerDashboard";
 import StaffDashboard from "@/app/StaffDashboard";
 import AdminDashboard from "@/app/AdminDashboard";
@@ -1077,7 +1078,7 @@ export const PRODUCTS = [
 ];
 
 export const BADGE_CLR: Record<string,string> = { BESTSELLER:"linear-gradient(135deg,#FF1F45,#cc001a)",HOT:"linear-gradient(135deg,#ff6b00,#cc4400)",NEW:"linear-gradient(135deg,#00b4ff,#0066cc)",VALUE:"linear-gradient(135deg,#00cc66,#006633)",PRO:"linear-gradient(135deg,#7a00ff,#440099)" };
-export type Product = typeof PRODUCTS[number];
+export type Product = typeof PRODUCTS[number] & { liveId?: string; sku?: string };
 type ProductType = Product["type"];
 type ProductCondition = Product["condition"];
 type ProductCategory = Product["category"];
@@ -1088,6 +1089,12 @@ export const PUBLIC_PRODUCTS_API_BASE = import.meta.env.VITE_API_URL || "/api";
 function catalogProductToProduct(p: CatalogProduct): Product {
   return {
     id: p.id,
+    // Backend UUID — populated by the liveId-backfill effect in
+    // dashboardData.ts after login. Without this, the checkout flow sends
+    // the numeric CatalogProduct.id which the backend rejects with
+    // "Invalid product ID" because orders.*.productId requires a UUID.
+    liveId: (p as { liveId?: string }).liveId,
+    sku: p.sku,
     name: p.name,
     type: (p.type || "general") as Product["type"],
     category: (p.category || "others") as Product["category"],
@@ -1195,6 +1202,7 @@ export function publicProductToProduct(row: PublicProductApiRow): Product | null
   return {
     id: stableNumericId(row.id),
     liveId: row.id,
+    sku: row.sku,
     slug: row.slug,
     name: row.name,
     type: inferredType,
@@ -3097,13 +3105,12 @@ function CheckoutPage() {
         window.dispatchEvent(new PopStateEvent("popstate"));
         return;
       }
-      // Simulate payment + place order
+      // Place order: try the real backend first, fall back to local-only if it fails.
       dispatch({ type:"setPayment", payment:{ processing:true, error:undefined } });
-      setTimeout(() => {
-        const orderId = `ORD-${Date.now().toString(36).toUpperCase()}`;
+      const placeOrderAsync = async () => {
         const firstAddress = store.addresses.find(a => a.id === `${user.id}-checkout`) || store.addresses.find(a => a.id.startsWith(`${user.id}-`));
-        addOrder({
-          id: orderId,
+        const localId = `ORD-${Date.now().toString(36).toUpperCase()}`;
+        const baseOrder = {
           customerId: user.id,
           customerName: state.address.name || user.name,
           customerPhone: state.address.phone || user.phone,
@@ -3114,6 +3121,8 @@ function CheckoutPage() {
             qty,
             price: product.price,
             img: product.img,
+            sku: product.sku,
+            liveId: product.liveId,
           })),
           subtotal,
           discount,
@@ -3125,10 +3134,76 @@ function CheckoutPage() {
           deliveryMethod: state.delivery.method,
           shippingAddress: { ...state.address },
           addressId: firstAddress?.id || `${user.id}-checkout`,
-          status: "placed",
-          invoiceId: `INV-${orderId.slice(-6)}`,
+          status: "placed" as const,
+        };
+
+        let serverOrder: { id: string; orderNumber: string; totalAmount: number; createdAt?: string } | null = null;
+        let serverError: string | null = null;
+
+        // Try the real backend first (only when the user has an API access token).
+        if (isApiAuthenticated()) {
+          try {
+            // Backend requires each `items.*.productId` to be a UUID. Cart items
+            // carry the numeric CatalogProduct.id plus an optional `liveId`
+            // populated by the post-login backfill effect. Filter to items
+            // with a real UUID; numeric-only IDs (admin-created products not
+            // yet on the live API) are surfaced as a clear error below.
+            const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+            const liveItems = baseOrder.items
+              .map((it) => {
+                const candidate =
+                  typeof it.liveId === "string" && UUID_RE.test(it.liveId)
+                    ? it.liveId
+                    : typeof it.productId === "string" && UUID_RE.test(it.productId)
+                      ? it.productId
+                      : null;
+                if (!candidate) {
+                  console.warn("[checkout] dropping item without liveId UUID:", it.name, it.productId);
+                  return null;
+                }
+                return {
+                  productId: candidate,
+                  sku: it.sku,
+                  name: it.name,
+                  price: it.price,
+                  quantity: it.qty,
+                  img: it.img,
+                };
+              })
+              .filter((x): x is NonNullable<typeof x> => x !== null);
+
+            if (liveItems.length === 0) {
+              throw new Error("No cart items have a backend product UUID — refresh the catalog and try again");
+            }
+
+            serverOrder = await ordersApi.create({
+              items: liveItems,
+              shippingAddress: {
+                name: baseOrder.customerName || "",
+                phone: baseOrder.customerPhone || "",
+                email: baseOrder.customerEmail || "",
+                line1: state.address.line1,
+                line2: state.address.line2,
+                city: state.address.city,
+                state: state.address.state,
+                pincode: state.address.pincode,
+                country: state.address.country,
+              },
+              notes: `deliveryMethod=${state.delivery.method}; coupon=${state.coupon?.code || ""}`,
+            });
+          } catch (err) {
+            console.error("[checkout] backend order create failed:", err);
+            serverError = err instanceof Error ? err.message : "Could not place order on server";
+          }
+        }
+
+        addOrder({
+          ...baseOrder,
+          id: serverOrder?.orderNumber || localId,
+          ...(serverOrder ? { invoiceId: `INV-${serverOrder.orderNumber.slice(-6).toUpperCase()}` } : { invoiceId: `INV-${localId.slice(-6)}` }),
         });
-        dispatch({ type:"placeOrder", orderId });
+        dispatch({ type:"placeOrder", orderId: serverOrder?.orderNumber || localId });
+
         if (state.payment.method === "cod") {
           dispatch({ type:"setPayment", payment:{ processing:false } });
         } else {
@@ -3137,7 +3212,14 @@ function CheckoutPage() {
         }
         saveCart({});
         dispatch({ type:"goto", step:"done" });
-      }, 900);
+
+        if (serverError) {
+          toast.warning(`Order saved locally — server sync failed: ${serverError}`);
+        } else if (serverOrder) {
+          toast.success(`Order ${serverOrder.orderNumber} placed`);
+        }
+      };
+      void placeOrderAsync();
     }
   };
 

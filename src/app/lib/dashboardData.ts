@@ -5,6 +5,14 @@
 // ──────────────────────────────────────────────────────────────────────────
 
 import { useEffect, useState, useCallback } from "react";
+import {
+  ordersApi,
+  productsApi,
+  servicesApi,
+  isAuthenticated as isApiAuthenticated,
+  getAccessToken,
+} from "./api";
+import { apiOrderToFrontend, apiServiceToFrontend } from "./apiTypes";
 
 // ── TYPES ─────────────────────────────────────────────────────────────────
 
@@ -4948,14 +4956,14 @@ export function useDashboardData() {
   const updateOrderStatus = useCallback((orderId: string, status: OrderStatus) => {
     let customerId = "";
     let oldStatus = "";
-    
+
     setStore(prev => {
       const order = prev.orders.find(o => o.id === orderId);
       if (order) {
         customerId = order.customerId;
         oldStatus = order.status;
       }
-      
+
       const next = {
         ...prev,
         orders: prev.orders.map(o => o.id === orderId ? {
@@ -4970,11 +4978,25 @@ export function useDashboardData() {
       saveStore(next);
       return next;
     });
-    
+
     if (customerId && oldStatus !== status) {
       autoNotifyStatusChange("order", orderId, customerId, oldStatus, status);
     }
     addLog("order_status", `Order ${orderId} → ${status}`);
+
+    // Sync to backend if we have an API token. Fire-and-forget so the UI
+    // stays responsive; on failure we keep the local change (the next
+    // hydration from the backend will reconcile).
+    if (isApiAuthenticated()) {
+      // The orderId in the local store may be the human-friendly order number
+      // (e.g. ORD-1717000000000). Backend updateStatus uses the primary key.
+      // We rely on the backend's `id::text = $1 OR order_number = $1` lookup,
+      // so passing the order number is safe.
+      ordersApi.updateStatus(orderId, status)
+        .catch((err) => {
+          console.warn("[dashboard] failed to sync order status to backend:", err);
+        });
+    }
   }, [addLog, autoNotifyStatusChange]);
 
   const addOrder = useCallback((input: AddOrderInput) => {
@@ -6119,6 +6141,135 @@ export function useDashboardData() {
       window.removeEventListener("focus", refreshStore);
       window.removeEventListener("deskto-auth-state-changed", refreshStore);
     };
+  }, []);
+
+  // Hydrate from backend when the user has an API session.
+  // For customers: pull /api/orders/my and /api/services/my so their dashboard
+  // reflects the real PostgreSQL store. For admin/staff: pull all orders.
+  // Local mock orders are preserved as a fallback when the API is unavailable
+  // (demo / offline mode).
+  useEffect(() => {
+    let cancelled = false;
+
+    async function hydrateFromBackend() {
+      if (typeof window === "undefined") return;
+      if (!isApiAuthenticated() || !getAccessToken()) return;
+
+      try {
+        // Detect role from the local user record (auth state) — use a tiny
+        // synchronous read so we don't have to import the whole auth module.
+        const authRaw = window.localStorage.getItem("deskto-auth-demo-state");
+        let role: "customer" | "admin" | "staff" = "customer";
+        if (authRaw) {
+          try {
+            const parsed = JSON.parse(authRaw);
+            const uid = parsed?.currentUserId;
+            const user = (parsed?.users || []).find((u: any) => u.id === uid);
+            if (user?.role === "admin" || user?.role === "staff" || user?.role === "customer") {
+              role = user.role;
+            }
+          } catch { /* ignore */ }
+        }
+
+        const ordersPromise = role === "customer"
+          ? ordersApi.getMy({ limit: 50 })
+          : ordersApi.getAll({ limit: 50 });
+        const servicesPromise = servicesApi.getMy({ limit: 50 }).catch(() => ({ services: [], pagination: { page: 1, limit: 50, total: 0, totalPages: 0 } }));
+
+        const [ordersRes, servicesRes] = await Promise.all([ordersPromise, servicesPromise]);
+        if (cancelled) return;
+
+        const apiOrders = (ordersRes?.orders || []).map(apiOrderToFrontend);
+        const apiServices = (servicesRes?.services || []).map(apiServiceToFrontend);
+
+        setStore(prev => {
+          // Merge strategy: API orders take precedence when their orderNumber
+          // matches a local order; everything else from the API is added.
+          // We keep local-only mock orders (so the demo dataset still appears)
+          // for admin/staff only — customers see exactly what the backend has.
+          const next = { ...prev };
+
+          if (role === "customer") {
+            next.orders = apiOrders;
+            next.services = apiServices;
+          } else {
+            // Admin/staff: keep local mock + add API orders not already in the
+            // local store.
+            const localOrderNumbers = new Set(prev.orders.map((o: Order) => o.id));
+            const merged = [
+              ...apiOrders.filter((o: Order) => !localOrderNumbers.has(o.id)),
+              ...prev.orders,
+            ];
+            next.orders = merged;
+
+            const localServiceNumbers = new Set(prev.services.map((s: ServiceRequest) => s.id));
+            const mergedServices = [
+              ...apiServices.filter((s: ServiceRequest) => !localServiceNumbers.has(s.id)),
+              ...prev.services,
+            ];
+            next.services = mergedServices;
+          }
+          saveStore(next);
+          return next;
+        });
+      } catch (err) {
+        // Silent: dashboard still works with the local mock data.
+        console.warn("[dashboard] backend hydration failed (falling back to local data):", err);
+      }
+    }
+
+    hydrateFromBackend();
+    const onAuth = () => hydrateFromBackend();
+    window.addEventListener("deskto-auth-state-changed", onAuth);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("deskto-auth-state-changed", onAuth);
+    };
+  }, []);
+
+  // Backfill `liveId` (backend product UUID) onto every CatalogProduct whose
+  // SKU matches a row in the live API. Without this, the checkout flow sends
+  // the numeric CatalogProduct.id and the backend rejects the order with
+  // "Invalid product ID". Public-API products already carry liveId via
+  // `publicProductToProduct` in App.tsx; this covers admin catalog entries.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!isApiAuthenticated() || !getAccessToken()) return;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const { products } = await productsApi.getAll({ limit: 100 });
+        if (cancelled || !Array.isArray(products)) return;
+        const bySku: Record<string, string> = {};
+        for (const p of products) {
+          if (p && typeof p.sku === "string" && p.sku && typeof p.id === "string" && p.id) {
+            bySku[p.sku] = p.id;
+          }
+        }
+        if (Object.keys(bySku).length === 0) return;
+        setStore(prev => {
+          let changed = false;
+          const nextProducts = prev.products.map(cp => {
+            const sku = (cp as { sku?: string }).sku;
+            const existingLiveId = (cp as { liveId?: string }).liveId;
+            if (sku && bySku[sku] && bySku[sku] !== existingLiveId) {
+              changed = true;
+              return { ...cp, liveId: bySku[sku] } as typeof cp;
+            }
+            return cp;
+          });
+          if (!changed) return prev;
+          const next = { ...prev, products: nextProducts };
+          saveStore(next);
+          return next;
+        });
+      } catch {
+        // Offline / API down: silently keep existing data.
+      }
+    })();
+
+    return () => { cancelled = true; };
   }, []);
 
   return {

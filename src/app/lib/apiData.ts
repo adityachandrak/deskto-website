@@ -255,13 +255,23 @@ export function useOrderActions() {
   const [error, setError] = useState<string | null>(null);
 
   const createOrder = useCallback(async (data: {
-    items: { productId: string; quantity: number }[];
+    items: { productId: string; sku?: string; quantity: number }[];
     shippingAddress: any;
     billingAddress?: any;
     notes?: string;
   }) => {
     if (!USE_API || !isAuthenticated()) {
       throw new Error('Not authenticated');
+    }
+    // Backend requires each items.*.productId to be a UUID. Surface a clear
+    // error here instead of letting the backend reject the request with a
+    // 400 that's been observed to bubble up as the generic "Failed to create
+    // order" string in the checkout flow.
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    for (const it of data.items) {
+      if (!it.productId || typeof it.productId !== "string" || !UUID_RE.test(it.productId)) {
+        throw new Error(`createOrder: item missing backend productId UUID (sku=${it.sku ?? "<none>"})`);
+      }
     }
     setLoading(true);
     setError(null);
