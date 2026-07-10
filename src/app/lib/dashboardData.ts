@@ -6,6 +6,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import {
+  authApi,
   ordersApi,
   productsApi,
   servicesApi,
@@ -6156,10 +6157,12 @@ export function useDashboardData() {
       if (!isApiAuthenticated() || !getAccessToken()) return;
 
       try {
-        // Detect role from the local user record (auth state) — use a tiny
-        // synchronous read so we don't have to import the whole auth module.
+        // Detect role from local auth state first. API logins may not always
+        // mirror the full user payload into demo storage, so fall back to
+        // /auth/me before deciding whether to load customer-only or admin data.
         const authRaw = window.localStorage.getItem("deskto-auth-demo-state");
         let role: "customer" | "admin" | "staff" = "customer";
+        let roleFound = false;
         if (authRaw) {
           try {
             const parsed = JSON.parse(authRaw);
@@ -6167,8 +6170,17 @@ export function useDashboardData() {
             const user = (parsed?.users || []).find((u: any) => u.id === uid);
             if (user?.role === "admin" || user?.role === "staff" || user?.role === "customer") {
               role = user.role;
+              roleFound = true;
             }
           } catch { /* ignore */ }
+        }
+        if (!roleFound) {
+          try {
+            const me = await authApi.getMe();
+            if (me?.role === "admin" || me?.role === "staff" || me?.role === "customer") {
+              role = me.role;
+            }
+          } catch { /* keep customer default */ }
         }
 
         const ordersPromise = role === "customer"
@@ -6222,10 +6234,15 @@ export function useDashboardData() {
 
     hydrateFromBackend();
     const onAuth = () => hydrateFromBackend();
+    const onFocus = () => hydrateFromBackend();
+    const interval = window.setInterval(() => hydrateFromBackend(), 30000);
     window.addEventListener("deskto-auth-state-changed", onAuth);
+    window.addEventListener("focus", onFocus);
     return () => {
       cancelled = true;
+      window.clearInterval(interval);
       window.removeEventListener("deskto-auth-state-changed", onAuth);
+      window.removeEventListener("focus", onFocus);
     };
   }, []);
 

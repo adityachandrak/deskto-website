@@ -96,6 +96,7 @@ function normalizeAdminTab(value?: string | null) {
   if (raw === "gaming-hub" || raw === "gaming-hub-management") return "gaming";
   if (raw === "custom-builder" || raw === "builder-management") return "builder";
   if (raw === "pc-builds" || raw === "custom-pc") return "builds";
+  if (raw === "quick-enquiry" || raw === "quick-enquiries" || raw === "enquiries") return "enquiries";
   return raw || "overview";
 }
 

@@ -3849,11 +3849,37 @@ export function AdminCRM({ store, addCRMNote }: { store: DashboardStore; addCRMN
   );
 }
 
+function isBackendQuickEnquiry(request: ServiceRequest) {
+  return request.serviceMethod === "Quick Enquiry"
+    || request.deviceType === "Enquiry"
+    || request.id.startsWith("ENQ-")
+    || String(request.title || "").toLowerCase().startsWith("quick enquiry:");
+}
+
+function quickServiceToEnquiry(request: ServiceRequest): QuickEnquiry {
+  const status = request.status === "completed" || request.status === "cancelled" ? "closed" : "new";
+  return {
+    id: request.id,
+    name: request.customerName || "Website Visitor",
+    contact: request.contactPhone || request.contactEmail || request.customerId || "No contact",
+    serviceNeeded: request.category || request.title?.replace(/^Quick Enquiry:\s*/i, "") || "General enquiry",
+    message: request.requirements || request.title || "No details provided",
+    status,
+    createdAt: request.createdAt || Date.now(),
+  };
+}
+
 export function AdminQuickEnquiries({ store, updateQuickEnquiryStatus }: { store: DashboardStore; updateQuickEnquiryStatus: (id: string, status: QuickEnquiry["status"]) => void }) {
-  const enquiries = [...(store.enquiries || [])].sort((a, b) => b.createdAt - a.createdAt);
+  const byId = new Map<string, QuickEnquiry>();
+  (store.serviceRequests || [])
+    .filter(isBackendQuickEnquiry)
+    .map(quickServiceToEnquiry)
+    .forEach(enquiry => byId.set(enquiry.id, enquiry));
+  (store.enquiries || []).forEach(enquiry => byId.set(enquiry.id, enquiry));
+  const enquiries = Array.from(byId.values()).sort((a, b) => b.createdAt - a.createdAt);
   return (
     <SectionCard title="Quick Enquiries" subtitle="Website contact enquiries synced immediately from the customer-facing quick enquiry form">
-      {enquiries.length === 0 ? <EmptyState title="No quick enquiries yet" /> : (
+      {enquiries.length === 0 ? <EmptyState icon={<MessageSquare size={24} />} title="No quick enquiries yet" hint="New customer enquiries will appear here automatically after submission." /> : (
         <DataTable
           rowKey={e => e.id}
           data={enquiries}
