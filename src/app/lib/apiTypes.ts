@@ -114,6 +114,15 @@ export interface ApiService {
   status: string;
   title: string;
   description?: string;
+  deviceInfo?: {
+    source?: string;
+    serviceNeeded?: string;
+    contact?: string;
+    customerName?: string;
+    customerEmail?: string;
+    customerPhone?: string;
+    [key: string]: unknown;
+  };
   estimatedCost?: number;
   finalCost?: number;
   customerName?: string;
@@ -171,22 +180,26 @@ export function apiOrderToFrontend(o: ApiOrder): Order {
 export function apiServiceToFrontend(s: ApiService): ServiceRequest {
   const createdAt = typeof s.createdAt === "string" ? new Date(s.createdAt).getTime() : Date.now();
   // Backend serviceType → frontend ServiceRequestKind (closest match)
-  const kind = (s.serviceType === "repair" || s.serviceType === "upgrade" || s.serviceType === "rental"
+  const kind = (s.serviceType === "upgrade" || s.serviceType === "rental"
     || s.serviceType === "assembly" || s.serviceType === "support"
     ? s.serviceType
     : "support") as ServiceRequest["kind"];
+  const deviceInfo = s.deviceInfo || {};
+  const serviceNeeded = typeof deviceInfo.serviceNeeded === "string" ? deviceInfo.serviceNeeded : kind;
+  const source = typeof deviceInfo.source === "string" ? deviceInfo.source : "";
+  const deviceContact = typeof deviceInfo.contact === "string" ? deviceInfo.contact : undefined;
   return {
     id: s.serviceNumber,
-    customerId: "",
+    customerId: s.customerEmail || s.customerPhone || "quick-enquiry",
     kind,
-    serviceMethod: "",
-    deviceType: "",
-    category: kind,
+    serviceMethod: source === "homepage-quick-enquiry" ? "Quick Enquiry" : "",
+    deviceType: source === "homepage-quick-enquiry" ? "Enquiry" : "",
+    category: serviceNeeded,
     requirements: s.description || s.title,
     title: s.title,
-    customerName: s.customerName,
-    contactEmail: s.customerEmail,
-    contactPhone: s.customerPhone,
+    customerName: s.customerName || deviceInfo.customerName,
+    contactEmail: s.customerEmail || deviceInfo.customerEmail,
+    contactPhone: s.customerPhone || deviceInfo.customerPhone || deviceContact,
     expectedPrice: s.estimatedCost,
     status: (s.status as ServiceRequest["status"]) || "submitted",
     createdAt,

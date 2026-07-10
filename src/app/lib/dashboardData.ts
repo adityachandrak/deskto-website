@@ -5183,11 +5183,11 @@ export function useDashboardData() {
     addLog("pc_build_updated", `PC build ${buildId} updated`);
   }, [addLog, autoNotifyStatusChange]);
 
-  const addServiceRequest = useCallback((input: Omit<ServiceRequest, "id" | "status" | "timeline" | "createdAt" | "updatedAt" | "checklist" | "qaChecks"> & { status?: ServiceRequestStatus; checklist?: ServiceRequest["checklist"]; qaChecks?: ServiceRequest["qaChecks"] }) => {
+  const addServiceRequest = useCallback((input: Omit<ServiceRequest, "id" | "status" | "timeline" | "createdAt" | "updatedAt" | "checklist" | "qaChecks"> & { id?: string; status?: ServiceRequestStatus; checklist?: ServiceRequest["checklist"]; qaChecks?: ServiceRequest["qaChecks"] }) => {
     const status = input.status || "submitted";
     const request: ServiceRequest = {
       ...input,
-      id: rid(input.kind === "upgrade" ? "upg" : input.kind === "assembly" ? "asm" : "sft"),
+      id: input.id || rid(input.kind === "upgrade" ? "upg" : input.kind === "assembly" ? "asm" : "sft"),
       status,
       paymentStatus: input.paymentStatus || "pending",
       checklist: input.checklist || defaultServiceChecklist(input.kind),
@@ -6108,7 +6108,9 @@ export function useDashboardData() {
         const ordersPromise = role === "customer"
           ? ordersApi.getMy({ limit: 50 })
           : ordersApi.getAll({ limit: 50 });
-        const servicesPromise = servicesApi.getMy({ limit: 50 }).catch(() => ({ services: [], pagination: { page: 1, limit: 50, total: 0, totalPages: 0 } }));
+        const servicesPromise = role === "customer"
+          ? servicesApi.getMy({ limit: 50 })
+          : servicesApi.getAll({ limit: 100 }).catch(() => servicesApi.getMy({ limit: 50 }));
 
         const [ordersRes, servicesRes] = await Promise.all([ordersPromise, servicesPromise]);
         if (cancelled) return;
@@ -6125,7 +6127,7 @@ export function useDashboardData() {
 
           if (role === "customer") {
             next.orders = apiOrders;
-            next.services = apiServices;
+            next.serviceRequests = apiServices;
           } else {
             // Admin/staff: keep local mock + add API orders not already in the
             // local store.
@@ -6136,12 +6138,12 @@ export function useDashboardData() {
             ];
             next.orders = merged;
 
-            const localServiceNumbers = new Set(prev.services.map((s: ServiceRequest) => s.id));
+            const localServiceNumbers = new Set((prev.serviceRequests || []).map((s: ServiceRequest) => s.id));
             const mergedServices = [
               ...apiServices.filter((s: ServiceRequest) => !localServiceNumbers.has(s.id)),
-              ...prev.services,
+              ...(prev.serviceRequests || []),
             ];
-            next.services = mergedServices;
+            next.serviceRequests = mergedServices;
           }
           saveStore(next);
           return next;

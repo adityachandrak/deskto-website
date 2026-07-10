@@ -279,8 +279,17 @@ export const servicesApi = {
     return apiFetch(`/services/my${qs}`);
   },
 
+  async getAll(params?: { page?: number; limit?: number; status?: string; serviceType?: string }): Promise<{ services: ApiService[]; pagination: { page: number; limit: number; total: number; totalPages: number } }> {
+    const qs = params ? "?" + new URLSearchParams(Object.entries(params).filter(([, v]) => v !== undefined && v !== "").map(([k, v]) => [k, String(v)])).toString() : "";
+    return apiFetch(`/services${qs}`);
+  },
+
   async create(input: { serviceType: "repair" | "upgrade" | "rental" | "assembly" | "support"; title: string; description?: string; deviceInfo?: unknown }): Promise<{ id: string; serviceNumber: string; serviceType: string; status: string; title: string; createdAt: string }> {
     return apiFetch(`/services`, { method: "POST", json: input });
+  },
+
+  async createQuickEnquiry(input: { name: string; contact: string; serviceNeeded: string; requirements?: string }): Promise<{ id: string; serviceNumber: string; serviceType: string; status: string; title: string; createdAt: string }> {
+    return apiFetch(`/services/quick-enquiry`, { method: "POST", json: input, retryOn401: false });
   },
 
   async updateStatus(serviceId: string, status: string, extras?: { estimatedCost?: number; finalCost?: number; technicianId?: string }): Promise<{ id: string; serviceNumber: string; status: string }> {
