@@ -877,23 +877,13 @@ export function AdminProducts({ store, addCatalogProduct, patchCatalogProduct, d
         title="Catalog Management"
         subtitle={`${store.products.length} SKUs`}
         action={
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <div className="catalog-toolbar">
             <input
+              className="catalog-search"
               type="text"
               placeholder="Search products..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              style={{
-                background: "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(255,255,255,0.1)",
-                borderRadius: 999,
-                padding: "8px 14px",
-                color: "white",
-                fontFamily: "'Space Grotesk', sans-serif",
-                fontSize: 12,
-                outline: "none",
-                width: 200
-              }}
             />
             <button
               className="glass-pill glass-pill-primary glass-pill-sm"
@@ -955,7 +945,7 @@ export function AdminProducts({ store, addCatalogProduct, patchCatalogProduct, d
               key: "actions",
               label: "",
               render: p => (
-                <div style={{ display: "flex", gap: 6 }}>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                   <button
                     className="glass-pill glass-pill-sm glass-pill-outline"
                     onClick={(e) => { e.stopPropagation(); setEditing(p); }}

@@ -367,6 +367,20 @@ function GlobalStyles() {
       .dash-timeline-step.current::before{background:#FF1F45;border-color:#FF1F45;box-shadow:0 0 8px rgba(255,31,69,0.6);}
       .dash-sidebar-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:590;display:none;}
       .dash-menu-btn,.dash-sidebar-close{display:none;}
+      .data-table-mobile-cards{display:none;}
+      .checkout-shell-grid{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:24px;align-items:start;}
+      .checkout-shell-grid.checkout-done{grid-template-columns:1fr;}
+      .checkout-card{border-radius:14px;padding:24px;min-height:380px;}
+      .checkout-address-grid,.checkout-payment-grid,.checkout-review-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+      .checkout-review-grid{gap:18px;}
+      .checkout-cart-row{border-radius:10px;padding:12px;display:grid;grid-template-columns:60px minmax(0,1fr) auto auto;gap:14px;align-items:center;}
+      .checkout-step-card{border-radius:14px;padding:18px 16px;margin-bottom:24px;overflow:hidden;}
+      .checkout-step-list{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+      .checkout-step-item{display:flex;align-items:center;gap:8px;flex:1;min-width:90px;}
+      .checkout-step-copy{min-width:0;}
+      .checkout-summary{border-radius:14px;padding:20px;position:sticky;top:86px;}
+      .catalog-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:flex-end;}
+      .catalog-search{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:999px;padding:8px 14px;color:white;font-family:'Space Grotesk',sans-serif;font-size:12px;outline:none;width:200px;max-width:100%;}
       @media (max-width:768px){
         .dash-shell{grid-template-columns:1fr;}
         .dash-sidebar{position:fixed;top:0;left:0;width:270px;max-width:82vw;height:100vh;z-index:600;transform:translateX(-100%);transition:transform .28s ease;box-shadow:12px 0 32px rgba(0,0,0,.55);}
@@ -379,6 +393,41 @@ function GlobalStyles() {
         .dash-search-box{min-width:0!important;flex:1 1 100%!important;order:3;margin-right:0!important;}
         .dash-search-box input{font-size:16px!important;}
         .dash-kpi-grid{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))!important;gap:10px!important;}
+        .data-table-desktop{display:none!important;}
+        .data-table-mobile-cards{display:grid!important;gap:10px;}
+        .data-table-mobile-card .glass-pill{min-height:34px;}
+        .checkout-shell{padding:82px 0 56px!important;}
+        .checkout-shell .section-inner{padding:0 14px!important;}
+        .checkout-shell .section-h2{font-size:clamp(30px,10vw,46px)!important;line-height:1.08!important;}
+        .checkout-shell-grid{grid-template-columns:1fr!important;gap:14px!important;}
+        .checkout-card{padding:16px!important;min-height:0!important;}
+        .checkout-summary{position:static!important;padding:16px!important;order:-1;}
+        .checkout-step-card{padding:12px!important;margin-bottom:14px!important;}
+        .checkout-step-list{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important;}
+        .checkout-step-item{min-width:0!important;gap:6px!important;align-items:flex-start!important;}
+        .checkout-step-item > div:first-child{width:28px!important;height:28px!important;border-radius:8px!important;}
+        .checkout-step-item .checkout-step-copy div:first-child{font-size:7px!important;letter-spacing:1px!important;}
+        .checkout-step-item .checkout-step-copy div:last-child{font-size:9px!important;line-height:1.1!important;overflow-wrap:anywhere;}
+        .checkout-step-line{display:none!important;}
+        .checkout-address-grid,.checkout-payment-grid,.checkout-review-grid{grid-template-columns:1fr!important;}
+        .checkout-cart-row{grid-template-columns:52px minmax(0,1fr)!important;gap:10px!important;}
+        .checkout-cart-row .checkout-qty-controls{grid-column:1 / -1;justify-content:flex-start;}
+        .checkout-cart-row .checkout-line-price{grid-column:1 / -1;text-align:left!important;min-width:0!important;}
+        .checkout-footer-nav{display:grid!important;grid-template-columns:1fr;align-items:stretch!important;text-align:center;}
+        .checkout-footer-nav .glass-pill{width:100%;justify-content:center;}
+        .checkout-security{align-items:flex-start!important;}
+        .catalog-toolbar{width:100%;justify-content:stretch;}
+        .catalog-toolbar .glass-pill{width:100%;justify-content:center;}
+        .catalog-search{width:100%!important;font-size:16px!important;}
+        .dash-main > div:first-child{align-items:flex-start!important;gap:10px!important;flex-direction:column!important;}
+        .dash-main > div:first-child > div{font-size:10px!important;line-height:1.5;overflow-wrap:anywhere;}
+        .glass-card{border-radius:10px!important;}
+        input,textarea,select{font-size:16px!important;}
+      }
+      @media (max-width:420px){
+        .checkout-step-list{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+        .checkout-shell .section-inner{padding:0 12px!important;}
+        .checkout-card,.checkout-summary{padding:14px!important;}
       }
     `}</style>
   );
@@ -3358,22 +3407,22 @@ function CheckoutPage() {
   const currentIdx = CHECKOUT_STEPS.findIndex(s => s.key === state.step);
 
   const StepHeader = () => (
-    <div className="glass-card" style={{ borderRadius:14,padding:"18px 16px",marginBottom:24 }}>
-      <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap" }}>
+    <div className="glass-card checkout-step-card">
+      <div className="checkout-step-list">
         {CHECKOUT_STEPS.map((s,i) => {
           const Icon = s.icon;
           const done = i < currentIdx || state.step === "done";
           const active = i === currentIdx;
           return (
-            <div key={s.key} style={{ display:"flex",alignItems:"center",gap:8,flex:1,minWidth:90 }}>
+            <div key={s.key} className="checkout-step-item">
               <div style={{ width:30,height:30,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",background:done?"linear-gradient(135deg,#00cc66,#006633)":active?"linear-gradient(135deg,#FF1F45,#cc001a)":"rgba(255,255,255,.05)",border:done||active?"none":"1px solid rgba(255,255,255,.12)",color:"white",flexShrink:0 }}>
                 {done ? <Check size={14} /> : <Icon size={13} />}
               </div>
-              <div>
+              <div className="checkout-step-copy">
                 <div style={{ fontFamily:"'Orbitron',sans-serif",fontSize:8,color:done||active?"white":"#555",letterSpacing:"1.5px" }}>STEP {i+1}</div>
                 <div style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:11,color:done?"#00cc66":active?"#FF1F45":"#777",fontWeight:600 }}>{s.label.toUpperCase()}</div>
               </div>
-              {i < CHECKOUT_STEPS.length-1 && <div style={{ flex:1,height:1,background:i<currentIdx?"linear-gradient(90deg,#00cc66,#FF1F45)":"rgba(255,255,255,.08)",minWidth:20 }} />}
+              {i < CHECKOUT_STEPS.length-1 && <div className="checkout-step-line" style={{ flex:1,height:1,background:i<currentIdx?"linear-gradient(90deg,#00cc66,#FF1F45)":"rgba(255,255,255,.08)",minWidth:20 }} />}
             </div>
           );
         })}
@@ -3382,7 +3431,7 @@ function CheckoutPage() {
   );
 
   const OrderSummary = () => (
-    <div className="glass-card" style={{ borderRadius:14,padding:20,position:"sticky",top:86 }}>
+    <div className="glass-card checkout-summary">
       <h3 style={{ fontFamily:"'Orbitron',sans-serif",fontSize:12,color:"white",letterSpacing:"1px",marginBottom:14,display:"flex",alignItems:"center",gap:8 }}>
         <ShoppingCart size={15} color="#FF1F45" /> ORDER SUMMARY
       </h3>
@@ -3412,7 +3461,7 @@ function CheckoutPage() {
   return (
     <>
     <Navbar />
-    <section className="section-pad" style={{ padding:"112px 0 96px",background:"#050505",position:"relative",minHeight:"100vh" }}>
+    <section className="section-pad checkout-shell" style={{ padding:"112px 0 96px",background:"#050505",position:"relative",minHeight:"100vh" }}>
       <div className="cyber-grid" style={{ position:"absolute",inset:0,opacity:.4 }} />
       <div className="section-inner" style={{ maxWidth:1280,margin:"0 auto",padding:"0 32px",position:"relative",zIndex:1 }}>
         <Reveal>
@@ -3428,9 +3477,9 @@ function CheckoutPage() {
           <div className="glass-red" style={{ borderRadius:10,padding:12,fontFamily:"'Space Grotesk',sans-serif",fontSize:12,color:"#FFC0C8",marginBottom:18 }}>{error}</div>
         )}
 
-        <div style={{ display:"grid",gridTemplateColumns:state.step==="done"?"1fr":"minmax(0,1fr) 360px",gap:24,alignItems:"start" }}>
+        <div className={`checkout-shell-grid${state.step === "done" ? " checkout-done" : ""}`}>
           {/* Step content */}
-          <div className="glass-card" style={{ borderRadius:14,padding:24,minHeight:380 }}>
+          <div className="glass-card checkout-card">
             {state.step === "cart" && (
               <div>
                 <h3 style={{ fontFamily:"'Orbitron',sans-serif",fontSize:14,color:"white",marginBottom:16,display:"flex",alignItems:"center",gap:8 }}><ShoppingCart size={16} color="#FF1F45" /> Your Cart</h3>
@@ -3443,18 +3492,18 @@ function CheckoutPage() {
                 ) : (
                   <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
                     {cartRows.map(({product,qty}) => (
-                      <div key={product.id} className="glass" style={{ borderRadius:10,padding:12,display:"grid",gridTemplateColumns:"60px 1fr auto auto",gap:14,alignItems:"center" }}>
+                      <div key={product.id} className="glass checkout-cart-row">
                         <img src={product.img} alt={product.name} style={{ width:60,height:50,objectFit:"cover",borderRadius:6 }} />
                         <div style={{ minWidth:0 }}>
                           <div style={{ fontFamily:"'Orbitron',sans-serif",fontSize:10,color:"white",marginBottom:2,overflow:"hidden",textOverflow:"ellipsis" }}>{product.name}</div>
                           <div style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:10,color:"#777" }}>{product.brand} · {CATEGORY_LABELS[product.category]}</div>
                         </div>
-                        <div style={{ display:"flex",alignItems:"center",gap:6 }}>
+                        <div className="checkout-qty-controls" style={{ display:"flex",alignItems:"center",gap:6 }}>
                           <button className="glass-pill glass-pill-outline" onClick={() => dispatch({ type:"load", cart:{ ...state.cart, [product.id]: Math.max(0, qty-1) } })} style={{ width:28,height:28,padding:0,fontSize:0 }}><Minus size={11} /></button>
                           <span style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:12,color:"#CFCFCF",minWidth:18,textAlign:"center" }}>{qty}</span>
                           <button className="glass-pill glass-pill-outline" onClick={() => dispatch({ type:"load", cart:{ ...state.cart, [product.id]: qty+1 } })} style={{ width:28,height:28,padding:0,fontSize:0 }}><Plus size={11} /></button>
                         </div>
-                        <div style={{ fontFamily:"'Rajdhani',sans-serif",fontSize:14,color:"#FF1F45",fontWeight:700,minWidth:90,textAlign:"right" }}>₹{(product.price*qty).toLocaleString("en-IN")}</div>
+                        <div className="checkout-line-price" style={{ fontFamily:"'Rajdhani',sans-serif",fontSize:14,color:"#FF1F45",fontWeight:700,minWidth:90,textAlign:"right" }}>₹{(product.price*qty).toLocaleString("en-IN")}</div>
                       </div>
                     ))}
                   </div>
@@ -3465,7 +3514,7 @@ function CheckoutPage() {
             {state.step === "address" && (
               <div>
                 <h3 style={{ fontFamily:"'Orbitron',sans-serif",fontSize:14,color:"white",marginBottom:16,display:"flex",alignItems:"center",gap:8 }}><MapPin size={16} color="#FF1F45" /> Delivery Address</h3>
-                <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:12 }}>
+                <div className="checkout-address-grid">
                   <AuthField label="Full Name" value={state.address.name} onChange={v=>dispatch({type:"setAddress",address:{name:v}})} />
                   <AuthField label="Phone Number" value={state.address.phone} onChange={v=>dispatch({type:"setAddress",address:{phone:v}})} />
                   <AuthField label="Email" value={state.address.email} onChange={v=>dispatch({type:"setAddress",address:{email:v}})} />
@@ -3574,7 +3623,7 @@ function CheckoutPage() {
                   })}
                 </div>
                 {state.payment.method === "card" && (
-                  <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:12 }}>
+                  <div className="checkout-payment-grid">
                     <div style={{ gridColumn:"1 / -1" }}><AuthField label="Card Number" value={state.payment.details?.split("|")[0] ?? ""} onChange={v => dispatch({type:"setPayment",payment:{details:`${v}|${state.payment.details?.split("|")[1] ?? ""}|${state.payment.details?.split("|")[2] ?? ""}`}})} placeholder="•••• •••• •••• 4242" /></div>
                     <AuthField label="Expiry (MM/YY)" value={state.payment.details?.split("|")[1] ?? ""} onChange={v => dispatch({type:"setPayment",payment:{details:`${state.payment.details?.split("|")[0] ?? ""}|${v}|${state.payment.details?.split("|")[2] ?? ""}`}})} placeholder="12/28" />
                     <AuthField label="CVV" type="password" value={state.payment.details?.split("|")[2] ?? ""} onChange={v => dispatch({type:"setPayment",payment:{details:`${state.payment.details?.split("|")[0] ?? ""}|${state.payment.details?.split("|")[1] ?? ""}|${v}`}})} placeholder="•••" />
@@ -3593,7 +3642,7 @@ function CheckoutPage() {
                     Paytm and Amazon Pay wallets are supported.
                   </div>
                 )}
-                <div style={{ marginTop:18,padding:12,background:"rgba(0,204,102,.06)",border:"1px solid rgba(0,204,102,.2)",borderRadius:10,display:"flex",alignItems:"center",gap:10 }}>
+                <div className="checkout-security" style={{ marginTop:18,padding:12,background:"rgba(0,204,102,.06)",border:"1px solid rgba(0,204,102,.2)",borderRadius:10,display:"flex",alignItems:"center",gap:10 }}>
                   <ShieldCheck size={16} color="#00cc66" />
                   <span style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:11,color:"#00cc66" }}>256-bit SSL encrypted · PCI-DSS compliant · 100% secure checkout</span>
                 </div>
@@ -3603,7 +3652,7 @@ function CheckoutPage() {
             {state.step === "review" && (
               <div>
                 <h3 style={{ fontFamily:"'Orbitron',sans-serif",fontSize:14,color:"white",marginBottom:16,display:"flex",alignItems:"center",gap:8 }}><Eye size={16} color="#FF1F45" /> Review Your Order</h3>
-                <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:18 }}>
+                <div className="checkout-review-grid">
                   <div>
                     <div style={{ fontFamily:"'Orbitron',sans-serif",fontSize:9,color:"#777",letterSpacing:"1.5px",marginBottom:6 }}>SHIP TO</div>
                     <div className="glass" style={{ borderRadius:9,padding:12,fontFamily:"'Space Grotesk',sans-serif",fontSize:12,color:"#CFCFCF",lineHeight:1.7 }}>
@@ -3689,7 +3738,7 @@ function CheckoutPage() {
 
             {/* Footer nav */}
             {state.step !== "done" && (
-              <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:24,paddingTop:18,borderTop:"1px solid rgba(255,255,255,.06)",flexWrap:"wrap",gap:10 }}>
+              <div className="checkout-footer-nav" style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:24,paddingTop:18,borderTop:"1px solid rgba(255,255,255,.06)",flexWrap:"wrap",gap:10 }}>
                 <button onClick={() => { setError(null); dispatch({type:"back"}); }} className="glass-pill glass-pill-outline" style={{ padding:"10px 16px",fontSize:10 }} disabled={state.step === "cart"}>
                   <ChevronLeft size={12} /> Back
                 </button>
