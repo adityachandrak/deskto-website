@@ -3039,14 +3039,17 @@ function AuthPage({ mode, role }: { mode: AuthMode; role: AuthRole }) {
 // ─────────────── CHECKOUT ───────────────
 type CheckoutStep = "cart" | "address" | "delivery" | "coupon" | "payment" | "review" | "done";
 type CheckoutStatus = "draft" | "PAID" | "PENDING" | "FAILED" | "RESERVED" | "SHIPPED" | "DELIVERED" | "CANCELLED";
-type PaymentMethod = "upi" | "card" | "netbanking" | "wallet" | "cod";
+type PaymentMethod = "upi" | "card" | "netbanking" | "wallet" | "cod" | "pay_later" | "store_confirmation";
 type DeliveryMethod = "ship" | "pickup";
+type DeliveryZone = "STORE_PICKUP" | "SAME_CITY" | "SAME_DISTRICT" | "SAME_STATE" | "OTHER_STATE";
+type ProductSizeCategory = "SMALL" | "MEDIUM" | "HEAVY";
+type DeliveryChargeStatus = "FIXED" | "MANUAL_QUOTE";
 
 type CheckoutState = {
   step: CheckoutStep;
   cart: Record<number, number>;
   address: { name:string; phone:string; email:string; line1:string; line2:string; city:string; state:string; pincode:string; country:string };
-  delivery: { method: DeliveryMethod; storeId?: string };
+  delivery: { method: DeliveryMethod; zone: DeliveryZone; storeId?: string };
   coupon: { code: string; discountPct: number; flatOff?: number; minSubtotal?: number } | null;
   payment: { method: PaymentMethod; details?: string; processing: boolean; error?: string };
   orderId: string | null;
@@ -3086,6 +3089,28 @@ const STORES = [
   { id:"MUM-BKC", name:"DESKTO BKC, Mumbai" },
 ];
 
+const DELIVERY_HEAVY_WARNING = "For assembled PC, monitor, cabinet, and fragile products, final delivery charge will be confirmed by admin after packaging and courier check.";
+
+const DELIVERY_OPTIONS: {
+  zone: DeliveryZone;
+  method: DeliveryMethod;
+  label: string;
+  description: string;
+  estimatedDeliveryTime: string;
+  icon: any;
+}[] = [
+  { zone:"STORE_PICKUP", method:"pickup", label:"Store Pickup", description:"Customer will collect the product from shop.", estimatedDeliveryTime:"Same day", icon:MapPin },
+  { zone:"SAME_CITY", method:"ship", label:"Same City Delivery", description:"Delivery within the same city.", estimatedDeliveryTime:"Same day / 1 day", icon:Truck },
+  { zone:"SAME_DISTRICT", method:"ship", label:"Same District Delivery", description:"Delivery within the same district.", estimatedDeliveryTime:"1-2 days", icon:Truck },
+  { zone:"SAME_STATE", method:"ship", label:"Same State Delivery", description:"Delivery to another district in the same state.", estimatedDeliveryTime:"2-4 days", icon:Truck },
+  { zone:"OTHER_STATE", method:"ship", label:"Other State Delivery", description:"Delivery to another state in India.", estimatedDeliveryTime:"4-7 days", icon:Truck },
+];
+
+const DELIVERY_ZONE_LABELS: Record<DeliveryZone, string> = DELIVERY_OPTIONS.reduce((acc, option) => {
+  acc[option.zone] = option.label;
+  return acc;
+}, {} as Record<DeliveryZone, string>);
+
 function validateAddress(a: CheckoutState["address"]): string | null {
   if (!a.name.trim() || a.name.trim().length < 2) return "Enter your full name.";
   if (normalizePhone(a.phone).length < 10) return "Enter a valid 10-digit phone.";
@@ -3120,6 +3145,73 @@ function cartDiscount(subtotal: number, coupon: CheckoutState["coupon"]): number
 
 function cartGst(subtotal: number, discount: number): number {
   return Math.round((subtotal - discount) * 0.18);
+}
+
+function getProductSizeCategory(product: Product): ProductSizeCategory {
+  const extended = product as Product & { description?: string; isFragile?: boolean; weightKg?: number };
+  const text = `${product.name} ${product.category} ${extended.description || ""}`.toLowerCase();
+
+  if (
+    text.includes("monitor") ||
+    text.includes("cabinet") ||
+    text.includes("assembled pc") ||
+    text.includes("gaming pc") ||
+    text.includes("desktop") ||
+    text.includes("server") ||
+    extended.isFragile === true ||
+    Number(extended.weightKg || 0) > 5
+  ) {
+    return "HEAVY";
+  }
+
+  if (
+    text.includes("laptop") ||
+    text.includes("gpu") ||
+    text.includes("graphics card") ||
+    text.includes("motherboard") ||
+    text.includes("psu") ||
+    text.includes("printer")
+  ) {
+    return "MEDIUM";
+  }
+
+  return "SMALL";
+}
+
+function getCartProductSizeCategory(rows: { product: Product; qty: number }[]): ProductSizeCategory {
+  if (rows.some(row => getProductSizeCategory(row.product) === "HEAVY")) return "HEAVY";
+  if (rows.some(row => getProductSizeCategory(row.product) === "MEDIUM")) return "MEDIUM";
+  return "SMALL";
+}
+
+function calculateDeliveryCharge(zone: DeliveryZone, productSizeCategory: ProductSizeCategory): {
+  deliveryCharge: number | null;
+  deliveryChargeStatus: DeliveryChargeStatus;
+  deliveryNote: string;
+} {
+  const charges: Record<DeliveryZone, Record<ProductSizeCategory, number | null>> = {
+    STORE_PICKUP: { SMALL:0, MEDIUM:0, HEAVY:0 },
+    SAME_CITY: { SMALL:49, MEDIUM:99, HEAVY:249 },
+    SAME_DISTRICT: { SMALL:99, MEDIUM:149, HEAVY:399 },
+    SAME_STATE: { SMALL:149, MEDIUM:299, HEAVY:null },
+    OTHER_STATE: { SMALL:249, MEDIUM:449, HEAVY:null },
+  };
+
+  const charge = charges[zone][productSizeCategory];
+
+  if (charge === null) {
+    return {
+      deliveryCharge: null,
+      deliveryChargeStatus: "MANUAL_QUOTE",
+      deliveryNote: "Final delivery charge will be confirmed by admin after packaging and courier check.",
+    };
+  }
+
+  return {
+    deliveryCharge: charge,
+    deliveryChargeStatus: "FIXED",
+    deliveryNote: "Delivery charge calculated successfully.",
+  };
 }
 
 function cartGrandTotal(cart: Record<number,number>, coupon: CheckoutState["coupon"], deliveryMethod: DeliveryMethod): number {
@@ -3180,7 +3272,7 @@ const INITIAL_CHECKOUT_STATE: CheckoutState = {
   step:"cart",
   cart:{},
   address:{ name:"", phone:"", email:"", line1:"", line2:"", city:"", state:"", pincode:"", country:"India" },
-  delivery:{ method:"ship" },
+  delivery:{ method:"ship", zone:"SAME_CITY" },
   coupon:null,
   payment:{ method:"upi", processing:false },
   orderId:null,
@@ -3258,8 +3350,23 @@ function CheckoutPage() {
   const subtotal = cartRows.reduce((sum, row) => sum + row.product.price * row.qty, 0);
   const discount = cartDiscount(subtotal, state.coupon);
   const gst = cartGst(subtotal, discount);
-  const shipping = state.delivery.method === "ship" ? (subtotal > 50000 ? 0 : 499) : 0;
+  const productSizeCategory = getCartProductSizeCategory(cartRows);
+  const deliveryOption = DELIVERY_OPTIONS.find(option => option.zone === state.delivery.zone) || DELIVERY_OPTIONS[1];
+  const deliveryQuote = calculateDeliveryCharge(state.delivery.zone, productSizeCategory);
+  const shipping = deliveryQuote.deliveryCharge ?? 0;
+  const isManualDeliveryQuote = deliveryQuote.deliveryChargeStatus === "MANUAL_QUOTE";
   const total = subtotal - discount + gst + shipping;
+  const deliverySummaryLabel = deliveryQuote.deliveryChargeStatus === "MANUAL_QUOTE"
+    ? "To be confirmed"
+    : deliveryQuote.deliveryCharge === 0
+      ? "FREE"
+      : `₹${deliveryQuote.deliveryCharge.toLocaleString("en-IN")}`;
+
+  useEffect(() => {
+    if (!isManualDeliveryQuote) return;
+    if (state.payment.method === "pay_later" || state.payment.method === "store_confirmation") return;
+    dispatch({ type:"setPayment", payment:{ method:"pay_later", details:"" } });
+  }, [isManualDeliveryQuote, state.payment.method]);
 
   const goNext = () => {
     setError(null);
@@ -3291,6 +3398,15 @@ function CheckoutPage() {
       const placeOrderAsync = async () => {
         const firstAddress = store.addresses.find(a => a.id === `${user.id}-checkout`) || store.addresses.find(a => a.id.startsWith(`${user.id}-`));
         const localId = `ORD-${Date.now().toString(36).toUpperCase()}`;
+        const deliveryMetadata = {
+          deliveryMethod: state.delivery.method,
+          deliveryZone: state.delivery.zone,
+          productSizeCategory,
+          deliveryCharge: deliveryQuote.deliveryCharge,
+          deliveryChargeStatus: deliveryQuote.deliveryChargeStatus,
+          deliveryNote: deliveryQuote.deliveryNote,
+          estimatedDeliveryTime: deliveryOption.estimatedDeliveryTime,
+        };
         const baseOrder = {
           customerId: user.id,
           customerName: state.address.name || user.name,
@@ -3313,7 +3429,13 @@ function CheckoutPage() {
           couponCode: state.coupon?.code,
           paymentMethod: state.payment.method,
           deliveryMethod: state.delivery.method,
-          shippingAddress: { ...state.address },
+          deliveryZone: state.delivery.zone,
+          productSizeCategory,
+          deliveryCharge: deliveryQuote.deliveryCharge,
+          deliveryChargeStatus: deliveryQuote.deliveryChargeStatus,
+          deliveryNote: deliveryQuote.deliveryNote,
+          estimatedDeliveryTime: deliveryOption.estimatedDeliveryTime,
+          shippingAddress: { ...state.address, ...deliveryMetadata },
           addressId: firstAddress?.id || `${user.id}-checkout`,
           status: "placed" as const,
         };
@@ -3369,8 +3491,16 @@ function CheckoutPage() {
                 state: state.address.state,
                 pincode: state.address.pincode,
                 country: state.address.country,
+                ...deliveryMetadata,
               },
-              notes: `deliveryMethod=${state.delivery.method}; coupon=${state.coupon?.code || ""}`,
+              deliveryMethod: state.delivery.method,
+              deliveryZone: state.delivery.zone,
+              productSizeCategory,
+              deliveryCharge: deliveryQuote.deliveryCharge,
+              deliveryChargeStatus: deliveryQuote.deliveryChargeStatus,
+              deliveryNote: deliveryQuote.deliveryNote,
+              estimatedDeliveryTime: deliveryOption.estimatedDeliveryTime,
+              notes: `deliveryMethod=${state.delivery.method}; deliveryZone=${state.delivery.zone}; productSizeCategory=${productSizeCategory}; deliveryChargeStatus=${deliveryQuote.deliveryChargeStatus}; coupon=${state.coupon?.code || ""}`,
             });
           } catch (err) {
             console.error("[checkout] backend order create failed:", err);
@@ -3385,7 +3515,7 @@ function CheckoutPage() {
         });
         dispatch({ type:"placeOrder", orderId: serverOrder?.orderNumber || localId });
 
-        if (state.payment.method === "cod") {
+        if (state.payment.method === "cod" || state.payment.method === "pay_later" || state.payment.method === "store_confirmation") {
           dispatch({ type:"setPayment", payment:{ processing:false } });
         } else {
           dispatch({ type:"markPaid" });
@@ -3452,8 +3582,16 @@ function CheckoutPage() {
         <div style={{ display:"flex",justifyContent:"space-between" }}><span>Subtotal</span><span>₹{subtotal.toLocaleString("en-IN")}</span></div>
         {discount > 0 && <div style={{ display:"flex",justifyContent:"space-between",color:"#00cc66" }}><span>Discount{state.coupon ? ` (${state.coupon.code})` : ""}</span><span>−₹{discount.toLocaleString("en-IN")}</span></div>}
         <div style={{ display:"flex",justifyContent:"space-between" }}><span>GST (18%)</span><span>₹{gst.toLocaleString("en-IN")}</span></div>
-        <div style={{ display:"flex",justifyContent:"space-between" }}><span>Shipping</span><span>{shipping === 0 ? <span style={{color:"#00cc66"}}>FREE</span> : `₹${shipping.toLocaleString("en-IN")}`}</span></div>
+        <div style={{ display:"flex",justifyContent:"space-between",gap:12 }}>
+          <span>Delivery</span>
+          <span style={{ color:deliveryQuote.deliveryChargeStatus === "MANUAL_QUOTE" ? "#FFC0C8" : deliveryQuote.deliveryCharge === 0 ? "#00cc66" : "white", textAlign:"right" }}>{deliverySummaryLabel}</span>
+        </div>
         <div style={{ display:"flex",justifyContent:"space-between",color:"white",fontWeight:700,marginTop:6,paddingTop:6,borderTop:"1px solid rgba(255,255,255,.08)",fontSize:14 }}><span>Total</span><span>₹{total.toLocaleString("en-IN")}</span></div>
+        {isManualDeliveryQuote && (
+          <div style={{ marginTop:8,paddingTop:8,borderTop:"1px solid rgba(255,255,255,.08)",color:"#FFC0C8",fontSize:11,lineHeight:1.5 }}>
+            Final payable amount may change after admin confirms delivery charge.
+          </div>
+        )}
       </div>
     </div>
   );
@@ -3531,33 +3669,60 @@ function CheckoutPage() {
             {state.step === "delivery" && (
               <div>
                 <h3 style={{ fontFamily:"'Orbitron',sans-serif",fontSize:14,color:"white",marginBottom:16,display:"flex",alignItems:"center",gap:8 }}><Truck size={16} color="#FF1F45" /> Delivery Method</h3>
-                <div style={{ display:"flex",flexDirection:"column",gap:12 }}>
-                  {[
-                    { v:"ship", label:"Home Delivery", sub:subtotal > 50000 ? "Free shipping on orders above ₹50,000" : "Standard delivery in 3-5 business days · ₹499", icon:Truck },
-                    { v:"pickup", label:"Store Pickup", sub:"Pick up from a DESKTO store near you — Free", icon:MapPin },
-                  ].map(opt => {
+                <div className="glass" style={{ borderRadius:10,padding:12,marginBottom:14,fontFamily:"'Space Grotesk',sans-serif",fontSize:12,color:"#CFCFCF",lineHeight:1.6 }}>
+                  Cart size category: <strong style={{ color:"white" }}>{productSizeCategory}</strong>. Small covers RAM, SSD, mouse, keyboard and accessories. Medium covers laptops, GPU, motherboard, PSU and printers. Heavy covers monitors, cabinets, assembled PCs and fragile items.
+                </div>
+                <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:12 }}>
+                  {DELIVERY_OPTIONS.map(opt => {
                     const Icon = opt.icon;
-                    const active = state.delivery.method === opt.v;
+                    const quote = calculateDeliveryCharge(opt.zone, productSizeCategory);
+                    const active = state.delivery.zone === opt.zone;
+                    const priceLabel = quote.deliveryChargeStatus === "MANUAL_QUOTE"
+                      ? "Manual Quote"
+                      : quote.deliveryCharge === 0
+                        ? "FREE"
+                        : `₹${quote.deliveryCharge.toLocaleString("en-IN")}`;
                     return (
-                      <button key={opt.v} onClick={() => dispatch({type:"setDelivery",delivery:{method:opt.v as DeliveryMethod}})}
-                        className={active ? "glass-pill glass-pill-primary" : "glass-pill glass-pill-outline"}
-                        style={{ padding:"14px 18px",justifyContent:"flex-start",textAlign:"left" }}>
-                        <Icon size={16} />
-                        <span style={{ display:"flex",flexDirection:"column",alignItems:"flex-start",gap:2 }}>
-                          <span style={{ fontFamily:"'Orbitron',sans-serif",fontSize:11,letterSpacing:"1px" }}>{opt.label}</span>
-                          <span style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:10,color:"#CFCFCF",fontWeight:400,letterSpacing:0,textTransform:"none" }}>{opt.sub}</span>
+                      <button key={opt.zone} onClick={() => dispatch({type:"setDelivery",delivery:{method:opt.method,zone:opt.zone,storeId:opt.zone === "STORE_PICKUP" ? state.delivery.storeId : undefined}})}
+                        className="glass"
+                        style={{
+                          width:"100%",
+                          minHeight:142,
+                          padding:14,
+                          borderRadius:10,
+                          textAlign:"left",
+                          cursor:"pointer",
+                          border:active ? "1px solid rgba(255,31,69,.85)" : "1px solid rgba(255,255,255,.1)",
+                          boxShadow:active ? "0 0 22px rgba(255,31,69,.28), inset 0 0 18px rgba(255,31,69,.08)" : "none",
+                          background:active ? "rgba(255,31,69,.08)" : "rgba(255,255,255,.035)",
+                          color:"white",
+                          display:"flex",
+                          flexDirection:"column",
+                          gap:10,
+                        }}>
+                        <span style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10 }}>
+                          <span style={{ display:"flex",alignItems:"center",gap:8,minWidth:0 }}>
+                            <Icon size={16} color="#FF1F45" />
+                            <span style={{ fontFamily:"'Orbitron',sans-serif",fontSize:11,letterSpacing:"1px",lineHeight:1.35 }}>{opt.label}</span>
+                          </span>
+                          <span style={{ fontFamily:"'Rajdhani',sans-serif",fontSize:15,color:quote.deliveryChargeStatus === "MANUAL_QUOTE" ? "#FFC0C8" : quote.deliveryCharge === 0 ? "#00cc66" : "#FF1F45",fontWeight:800,whiteSpace:"nowrap" }}>{priceLabel}</span>
                         </span>
+                        <span style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:11,color:"#CFCFCF",lineHeight:1.55 }}>{opt.description}</span>
+                        <span style={{ marginTop:"auto",fontFamily:"'Space Grotesk',sans-serif",fontSize:10,color:"#888" }}>Estimated: {quote.deliveryChargeStatus === "MANUAL_QUOTE" ? "Admin will confirm" : opt.estimatedDeliveryTime}</span>
                       </button>
                     );
                   })}
                 </div>
+                {(productSizeCategory === "HEAVY" || isManualDeliveryQuote) && (
+                  <div className="glass-red" style={{ borderRadius:10,padding:12,marginTop:14,fontFamily:"'Space Grotesk',sans-serif",fontSize:12,color:"#FFC0C8",lineHeight:1.6 }}>
+                    {DELIVERY_HEAVY_WARNING}
+                  </div>
+                )}
                 {state.delivery.method === "pickup" && (
                   <div style={{ marginTop:16 }}>
-                    <AuthField label="Select Pickup Store" value={state.delivery.storeId ?? ""} onChange={v => {
-                      // Not great as freeform — convert to a real select below
-                    }} placeholder="Choose from list below" />
+                    <label style={{ display:"block",fontFamily:"'Orbitron',sans-serif",fontSize:9,color:"#777",letterSpacing:"1.5px",marginBottom:8 }}>SELECT PICKUP STORE</label>
                     <select value={state.delivery.storeId ?? ""} onChange={e => dispatch({type:"setDelivery",delivery:{storeId:e.target.value}})}
-                      style={{ width:"100%",marginTop:8,background:"#151515",border:"1px solid rgba(255,255,255,.12)",borderRadius:8,padding:"11px 12px",fontFamily:"'Space Grotesk',sans-serif",fontSize:13,color:"white",outline:"none" }}>
+                      style={{ width:"100%",background:"#151515",border:"1px solid rgba(255,255,255,.12)",borderRadius:8,padding:"11px 12px",fontFamily:"'Space Grotesk',sans-serif",fontSize:13,color:"white",outline:"none" }}>
                       <option value="">— Choose a store —</option>
                       {STORES.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                     </select>
@@ -3599,14 +3764,22 @@ function CheckoutPage() {
             {state.step === "payment" && (
               <div>
                 <h3 style={{ fontFamily:"'Orbitron',sans-serif",fontSize:14,color:"white",marginBottom:16,display:"flex",alignItems:"center",gap:8 }}><CreditCard size={16} color="#FF1F45" /> Payment Method</h3>
+                {isManualDeliveryQuote && (
+                  <div className="glass-red" style={{ borderRadius:10,padding:12,marginBottom:14,fontFamily:"'Space Grotesk',sans-serif",fontSize:12,color:"#FFC0C8",lineHeight:1.6 }}>
+                    Final payable amount may change after admin confirms delivery charge. Online full payment is disabled until the delivery charge is confirmed.
+                  </div>
+                )}
                 <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:10,marginBottom:18 }}>
-                  {[
+                  {(isManualDeliveryQuote ? [
+                    { v:"pay_later", label:"Pay Later / Admin Confirmation", sub:"Admin confirms final delivery charge", icon:Clock },
+                    { v:"store_confirmation", label:"Store Contact Confirmation", sub:"DESKTO team will contact you", icon:Phone },
+                  ] : [
                     { v:"upi", label:"UPI", sub:"GPay, PhonePe, Paytm", icon:Smartphone },
                     { v:"card", label:"Credit / Debit Card", sub:"Visa, Mastercard, RuPay", icon:CreditCard },
                     { v:"netbanking", label:"Net Banking", sub:"All major banks", icon:Banknote },
                     { v:"wallet", label:"Wallet", sub:"Paytm, Amazon Pay", icon:Wallet },
                     { v:"cod", label:"Cash on Delivery", sub:"Pay when you receive", icon:Banknote },
-                  ].map(opt => {
+                  ]).map(opt => {
                     const Icon = opt.icon;
                     const active = state.payment.method === opt.v;
                     return (
@@ -3642,6 +3815,11 @@ function CheckoutPage() {
                     Paytm and Amazon Pay wallets are supported.
                   </div>
                 )}
+                {(state.payment.method === "pay_later" || state.payment.method === "store_confirmation") && (
+                  <div style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:12,color:"#CFCFCF",padding:"12px",background:"rgba(255,255,255,.03)",borderRadius:8,lineHeight:1.6 }}>
+                    DESKTO will confirm packaging and courier cost before collecting the final payable amount.
+                  </div>
+                )}
                 <div className="checkout-security" style={{ marginTop:18,padding:12,background:"rgba(0,204,102,.06)",border:"1px solid rgba(0,204,102,.2)",borderRadius:10,display:"flex",alignItems:"center",gap:10 }}>
                   <ShieldCheck size={16} color="#00cc66" />
                   <span style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:11,color:"#00cc66" }}>256-bit SSL encrypted · PCI-DSS compliant · 100% secure checkout</span>
@@ -3667,8 +3845,11 @@ function CheckoutPage() {
                     <div style={{ fontFamily:"'Orbitron',sans-serif",fontSize:9,color:"#777",letterSpacing:"1.5px",marginBottom:6 }}>DELIVERY</div>
                     <div className="glass" style={{ borderRadius:9,padding:12,fontFamily:"'Space Grotesk',sans-serif",fontSize:12,color:"#CFCFCF",lineHeight:1.7 }}>
                       {state.delivery.method === "ship"
-                        ? <><Truck size={12} color="#FF1F45" /> Home delivery · 3-5 business days</>
-                        : <><MapPin size={12} color="#FF1F45" /> Store pickup · {STORES.find(s => s.id === state.delivery.storeId)?.name ?? "—"}</>}
+                        ? <><Truck size={12} color="#FF1F45" /> {deliveryOption.label} · {isManualDeliveryQuote ? "Admin will confirm" : deliveryOption.estimatedDeliveryTime}</>
+                        : <><MapPin size={12} color="#FF1F45" /> Store Pickup · {STORES.find(s => s.id === state.delivery.storeId)?.name ?? "—"}</>}
+                      <br />
+                      Product size: {productSizeCategory} · Delivery: {deliverySummaryLabel}
+                      {isManualDeliveryQuote && <><br /><span style={{ color:"#FFC0C8" }}>Final payable amount may change after admin confirms delivery charge.</span></>}
                     </div>
                   </div>
                   <div style={{ gridColumn:"1 / -1" }}>

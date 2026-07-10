@@ -18,6 +18,7 @@ import { StatusBadge } from "./components/dashboard/StatusBadge";
 import { SectionCard } from "./components/dashboard/SectionCard";
 import { DataTable, type Column } from "./components/dashboard/DataTable";
 import { EmptyState } from "./components/dashboard/EmptyState";
+import { isAuthenticated as isApiAuthenticated, ordersApi } from "./lib/api";
 import { mediaBlobUrl, mediaKind, mediaMime, mediaName, mediaRef, openMediaFile, hasValidRef, isMediaFile, revokeMediaBlobUrl } from "./lib/mediaStore";
 import type {
   DashboardStore, Order, Repair, Rental, PCBuild, Assembly, SupportTicket,
@@ -43,6 +44,13 @@ const servicePaymentText = (r: ServiceRequest | Repair | PCBuild) => {
 
 const PIE_COLORS = ["#FF1F45", "#00cc66", "#00b4ff", "#ff6b00", "#a855f7", "#ffd700"];
 const AUTH_STORAGE_KEY = "deskto-auth-demo-state";
+const DELIVERY_ZONE_LABELS: Record<string, string> = {
+  STORE_PICKUP: "Store Pickup",
+  SAME_CITY: "Same City Delivery",
+  SAME_DISTRICT: "Same District Delivery",
+  SAME_STATE: "Same State Delivery",
+  OTHER_STATE: "Other State Delivery",
+};
 const REPAIR_STATUS_OPTIONS = [
   ["submitted", "Request Submitted"],
   ["received", "Request Received"],
@@ -1794,11 +1802,12 @@ export function AdminInventory({ store }: { store: DashboardStore }) {
 
 // ─── Orders ───────────────────────────────────────────────────────────────
 
-export function AdminOrders({ store, updateOrderStatus }: { store: DashboardStore; updateOrderStatus: any }) {
+export function AdminOrders({ store, updateOrderStatus, patchOrder }: { store: DashboardStore; updateOrderStatus: any; patchOrder: (orderId: string, patch: Partial<Order>) => void }) {
   const STATUS_OPTIONS: Order["status"][] = ["placed", "verified", "packing", "shipped", "delivered", "cancelled"];
   const [filter, setFilter] = useState<Order["status"] | "all">("all");
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState<Order | null>(null);
+  const [deliveryChargeDrafts, setDeliveryChargeDrafts] = useState<Record<string, string>>({});
   
   const orders = [...store.orders].sort((a, b) => b.createdAt - a.createdAt);
   const filtered = orders.filter(o => {
@@ -1811,6 +1820,12 @@ export function AdminOrders({ store, updateOrderStatus }: { store: DashboardStor
   const active = open ? store.orders.find(o => o.id === open.id) || open : null;
   const customerName = (order: Order) => order.customerName || readDemoUsers().find(u => u.id === order.customerId)?.name || "Customer";
   const customerContact = (order: Order) => order.customerPhone || order.customerEmail || readDemoUsers().find(u => u.id === order.customerId)?.email || order.customerId;
+  const deliveryLabel = (order: Order) => DELIVERY_ZONE_LABELS[order.deliveryZone || ""] || (order.deliveryMethod === "pickup" ? "Store Pickup" : "Home Delivery");
+  const deliveryChargeLabel = (order: Order) => order.deliveryChargeStatus === "MANUAL_QUOTE"
+    ? "Manual Quote"
+    : (order.deliveryCharge ?? order.shipping ?? 0) === 0
+      ? "FREE"
+      : inr(order.deliveryCharge ?? order.shipping ?? 0);
   const setStatus = (order: Order, status: Order["status"]) => {
     if (!order?.id || typeof order.id !== "string" || order.id.trim() === "") {
       toast.error("Cannot update status: order has no ID");
@@ -1819,6 +1834,42 @@ export function AdminOrders({ store, updateOrderStatus }: { store: DashboardStor
     }
     updateOrderStatus(order.id, status);
     toast.success(`Order ${order.id.slice(-8).toUpperCase()} synced to ${status}`);
+  };
+  const confirmDeliveryCharge = async (order: Order) => {
+    const raw = deliveryChargeDrafts[order.id] ?? "";
+    const charge = Number(raw);
+    if (!Number.isFinite(charge) || charge < 0) {
+      toast.error("Enter a valid delivery charge");
+      return;
+    }
+
+    const nextTotal = (order.subtotal || 0) - (order.discount || 0) + (order.gst || 0) + charge;
+    const nextShippingAddress = order.shippingAddress ? {
+      ...order.shippingAddress,
+      deliveryCharge: charge,
+      deliveryChargeStatus: "FIXED" as const,
+      deliveryNote: "Delivery charge confirmed by admin.",
+    } : order.shippingAddress;
+
+    patchOrder(order.id, {
+      deliveryCharge: charge,
+      deliveryChargeStatus: "FIXED",
+      deliveryNote: "Delivery charge confirmed by admin.",
+      shipping: charge,
+      total: nextTotal,
+      shippingAddress: nextShippingAddress,
+    });
+    setDeliveryChargeDrafts(prev => ({ ...prev, [order.id]: "" }));
+    toast.success("Delivery charge confirmed");
+
+    if (isApiAuthenticated()) {
+      try {
+        await ordersApi.updateDeliveryCharge(order.id, charge);
+      } catch (err) {
+        console.warn("[admin] failed to sync delivery charge:", err);
+        toast.warning("Saved locally, but backend sync failed");
+      }
+    }
   };
 
   const totalRevenue = filtered.reduce((sum, o) => sum + o.total, 0);
@@ -1872,8 +1923,8 @@ export function AdminOrders({ store, updateOrderStatus }: { store: DashboardStor
             { key: "customer", label: "Customer", render: o => <div><strong style={{ color: "white" }}>{customerName(o)}</strong><br /><span style={{ color: "#777", fontSize: 11 }}>{customerContact(o)}</span></div> },
             { key: "items", label: "Items", render: o => <div><strong style={{ color: "white" }}>{o.items.length} item{o.items.length > 1 ? "s" : ""}</strong><br /><span style={{ color: "#777", fontSize: 11 }}>{o.items[0]?.name}{o.items.length > 1 ? ` +${o.items.length - 1}` : ""}</span></div> },
             { key: "fulfillment", label: "Delivery", render: o => <div>
-                <strong style={{ color: "white" }}>{o.deliveryMethod === "pickup" ? "Store Pickup" : "Home Delivery"}</strong><br />
-                <span style={{ color: "#777", fontSize: 11 }}>{o.shippingAddress && o.deliveryMethod !== "pickup" ? `${o.shippingAddress.city}, ${o.shippingAddress.state}` : o.paymentMethod?.toUpperCase() || "Payment"}</span>
+                <strong style={{ color: "white" }}>{deliveryLabel(o)}</strong><br />
+                <span style={{ color: o.deliveryChargeStatus === "MANUAL_QUOTE" ? "#FFC0C8" : "#777", fontSize: 11 }}>{deliveryChargeLabel(o)} · {o.productSizeCategory || "SMALL"}</span>
               </div> 
             },
             { key: "total", label: "Total", align: "right", render: o => inr(o.total) },
@@ -1913,6 +1964,39 @@ export function AdminOrders({ store, updateOrderStatus }: { store: DashboardStor
                 <button className="glass-pill glass-pill-primary" onClick={() => { const next = ({ placed: "verified", verified: "packing", packing: "shipped", shipped: "delivered" } as Partial<Record<Order["status"], Order["status"]>>)[active.status]; if (next) setStatus(active, next); }}>Advance Order</button>
               </div>
             </SectionCard>
+            <SectionCard title="Delivery Pricing" padded={false}>
+              <div style={{ padding: 14, display: "grid", gap: 10, fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, color: "#CFCFCF" }}>
+                {[
+                  ["Selected method", deliveryLabel(active)],
+                  ["Delivery zone", active.deliveryZone || (active.deliveryMethod === "pickup" ? "STORE_PICKUP" : "Not captured")],
+                  ["Product size", active.productSizeCategory || "SMALL"],
+                  ["Delivery charge", deliveryChargeLabel(active)],
+                  ["Charge status", active.deliveryChargeStatus || "FIXED"],
+                  ["Estimated time", active.estimatedDeliveryTime || "Not captured"],
+                ].map(([label, value]) => (
+                  <div key={label} style={{ display: "flex", justifyContent: "space-between", gap: 12, borderBottom: "1px solid rgba(255,255,255,.06)", paddingBottom: 8 }}>
+                    <span style={{ color: "#888" }}>{label}</span>
+                    <strong style={{ color: "white", textAlign: "right" }}>{value}</strong>
+                  </div>
+                ))}
+                {active.deliveryNote && <div className="glass-red" style={{ borderRadius: 8, padding: 10, color: "#FFC0C8", lineHeight: 1.5 }}>{active.deliveryNote}</div>}
+                {active.deliveryChargeStatus === "MANUAL_QUOTE" && (
+                  <div style={{ display: "grid", gap: 8, marginTop: 4 }}>
+                    <label style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 9, color: "#777", letterSpacing: "1px" }}>FINAL DELIVERY CHARGE</label>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      <input
+                        value={deliveryChargeDrafts[active.id] ?? ""}
+                        onChange={e => setDeliveryChargeDrafts(prev => ({ ...prev, [active.id]: e.target.value }))}
+                        inputMode="numeric"
+                        placeholder="Enter amount"
+                        style={{ flex: 1, minWidth: 160, background: "#0d0d0d", color: "white", border: "1px solid rgba(255,255,255,.12)", borderRadius: 8, padding: "10px 12px", fontFamily: "'Space Grotesk', sans-serif", fontSize: 13, outline: "none" }}
+                      />
+                      <button className="glass-pill glass-pill-primary" onClick={() => confirmDeliveryCharge(active)} style={{ padding: "10px 14px", fontSize: 10 }}>Save Charge</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </SectionCard>
             <SectionCard title="Items" padded={false}>
               <div style={{ padding: 14 }}>
                 {active.items.map(item => (
@@ -1921,14 +2005,19 @@ export function AdminOrders({ store, updateOrderStatus }: { store: DashboardStor
                     <span style={{ color: "white" }}>{inr(item.price * item.qty)}</span>
                   </div>
                 ))}
-                <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 12, fontFamily: "'Orbitron', sans-serif", fontSize: 14, color: "white" }}><span>Total</span><span>{inr(active.total)}</span></div>
+                <div style={{ display: "grid", gap: 6, paddingTop: 12, fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, color: "#CFCFCF" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}><span>Subtotal</span><span>{inr(active.subtotal || 0)}</span></div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}><span>GST</span><span>{inr(active.gst || 0)}</span></div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}><span>Delivery</span><span>{deliveryChargeLabel(active)}</span></div>
+                  <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 8, borderTop: "1px solid rgba(255,255,255,.08)", fontFamily: "'Orbitron', sans-serif", fontSize: 14, color: "white" }}><span>Total</span><span>{inr(active.total)}</span></div>
+                </div>
               </div>
             </SectionCard>
             <SectionCard title="Customer & Fulfillment" padded={false}>
               <div style={{ padding: 14, fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, color: "#CFCFCF", lineHeight: 1.8 }}>
                 <strong style={{ color: "white" }}>{customerName(active)}</strong><br />
                 {customerContact(active)}<br />
-                {active.deliveryMethod === "pickup" ? "Store Pickup" : "Home Delivery"} · {active.paymentMethod?.toUpperCase() || "Payment pending"}<br />
+                {deliveryLabel(active)} · {active.paymentMethod?.toUpperCase() || "Payment pending"}<br />
                 {active.shippingAddress && active.deliveryMethod !== "pickup" && <>{active.shippingAddress.line1}{active.shippingAddress.line2 ? `, ${active.shippingAddress.line2}` : ""}<br />{active.shippingAddress.city}, {active.shippingAddress.state} {active.shippingAddress.pincode}</>}
               </div>
             </SectionCard>

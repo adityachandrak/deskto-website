@@ -5,6 +5,15 @@ import { validationResult, body, param } from 'express-validator';
 
 const router = Router();
 
+function normalizeDeliveryChargeStatus(value: unknown): 'FIXED' | 'MANUAL_QUOTE' {
+  return value === 'MANUAL_QUOTE' ? 'MANUAL_QUOTE' : 'FIXED';
+}
+
+function parseMoney(value: unknown, fallback = 0): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
 // Get My Orders
 router.get('/my', authenticate, async (req: AuthRequest, res: Response) => {
   try {
@@ -21,7 +30,7 @@ router.get('/my', authenticate, async (req: AuthRequest, res: Response) => {
 
     const ordersResult = await query(
       `SELECT id, order_number, status, subtotal, tax_amount, shipping_amount,
-              total_amount, payment_status, payment_method, created_at, updated_at
+              total_amount, payment_status, payment_method, shipping_address, created_at, updated_at
        FROM orders
        ${whereClause}
        ORDER BY created_at DESC
@@ -45,6 +54,7 @@ router.get('/my', authenticate, async (req: AuthRequest, res: Response) => {
         totalAmount: parseFloat(o.total_amount),
         paymentStatus: o.payment_status,
         paymentMethod: o.payment_method,
+        shippingAddress: o.shipping_address,
         createdAt: o.created_at,
         updatedAt: o.updated_at
       })),
@@ -85,7 +95,7 @@ router.get('/',
       const ordersResult = await query(
         `SELECT o.id, o.order_number, o.status, o.subtotal, o.tax_amount,
                 o.shipping_amount, o.total_amount, o.payment_status, o.payment_method,
-                o.created_at, o.updated_at, o.user_id,
+                o.shipping_address, o.created_at, o.updated_at, o.user_id,
                 u.email AS user_email, u.first_name AS user_first_name, u.last_name AS user_last_name
          FROM orders o
          LEFT JOIN users u ON u.id = o.user_id
@@ -111,6 +121,7 @@ router.get('/',
           totalAmount: parseFloat(o.total_amount),
           paymentStatus: o.payment_status,
           paymentMethod: o.payment_method,
+          shippingAddress: o.shipping_address,
           createdAt: o.created_at,
           updatedAt: o.updated_at,
           user: o.user_id ? {
@@ -242,8 +253,29 @@ router.post('/',
         subtotal += parseFloat(p.price) * item.quantity;
       }
 
+      const deliveryChargeStatus = normalizeDeliveryChargeStatus(req.body.deliveryChargeStatus || shippingAddress?.deliveryChargeStatus);
+      const requestedDeliveryCharge = req.body.deliveryCharge ?? shippingAddress?.deliveryCharge;
+      const shippingAmount = deliveryChargeStatus === 'MANUAL_QUOTE'
+        ? 0
+        : Math.max(0, parseMoney(requestedDeliveryCharge, subtotal > 5000 ? 0 : 500));
+      const deliveryZone = req.body.deliveryZone || shippingAddress?.deliveryZone || (req.body.deliveryMethod === 'pickup' ? 'STORE_PICKUP' : 'SAME_CITY');
+      const productSizeCategory = req.body.productSizeCategory || shippingAddress?.productSizeCategory || 'SMALL';
+      const deliveryNote = req.body.deliveryNote || shippingAddress?.deliveryNote || (
+        deliveryChargeStatus === 'MANUAL_QUOTE'
+          ? 'Final delivery charge will be confirmed by admin after packaging and courier check.'
+          : 'Delivery charge calculated successfully.'
+      );
+      const enrichedShippingAddress = {
+        ...shippingAddress,
+        deliveryMethod: req.body.deliveryMethod || shippingAddress?.deliveryMethod || (deliveryZone === 'STORE_PICKUP' ? 'pickup' : 'ship'),
+        deliveryZone,
+        productSizeCategory,
+        deliveryCharge: deliveryChargeStatus === 'MANUAL_QUOTE' ? null : shippingAmount,
+        deliveryChargeStatus,
+        deliveryNote,
+        estimatedDeliveryTime: req.body.estimatedDeliveryTime || shippingAddress?.estimatedDeliveryTime || null,
+      };
       const taxAmount = subtotal * 0.18; // 18% GST
-      const shippingAmount = subtotal > 5000 ? 0 : 500; // Free shipping above 5000
       const totalAmount = subtotal + taxAmount + shippingAmount;
 
       // Create order. The live `orders` table requires `customer_name`/`email`/`phone`
@@ -265,7 +297,7 @@ router.post('/',
          RETURNING id, order_number, status, total_amount, created_at`,
         [orderNumber, req.user!.id, custName, custEmail, custPhone,
          subtotal, taxAmount, shippingAmount, totalAmount,
-         shippingAddress, mergedNotes]
+         enrichedShippingAddress, mergedNotes]
       );
 
       const order = orderResult.rows[0];
@@ -297,11 +329,81 @@ router.post('/',
         orderNumber: order.order_number,
         status: order.status,
         totalAmount: parseFloat(order.total_amount),
+        shippingAmount,
+        shippingAddress: enrichedShippingAddress,
         createdAt: order.created_at
       });
     } catch (error) {
       console.error('Create order error:', error);
       res.status(500).json({ error: 'Failed to create order' });
+    }
+  }
+);
+
+// Confirm manual delivery charge (Admin/Staff)
+router.patch('/:id/delivery-charge',
+  authenticate,
+  authorize('admin', 'staff'),
+  [
+    param('id').notEmpty().withMessage('Order ID or number is required'),
+    body('deliveryCharge').isFloat({ min: 0 }).withMessage('Delivery charge must be 0 or more')
+  ],
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+
+      const { id } = req.params;
+      const deliveryCharge = Math.max(0, parseMoney(req.body.deliveryCharge));
+
+      const existingResult = await query(
+        `SELECT id, order_number, subtotal, tax_amount, discount_amount, shipping_address
+           FROM orders
+          WHERE id::text = $1 OR order_number = $1`,
+        [id]
+      );
+
+      if (existingResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Order not found' });
+      }
+
+      const existing = existingResult.rows[0];
+      const subtotal = parseMoney(existing.subtotal);
+      const taxAmount = parseMoney(existing.tax_amount);
+      const discountAmount = parseMoney(existing.discount_amount);
+      const totalAmount = subtotal - discountAmount + taxAmount + deliveryCharge;
+      const shippingAddress = {
+        ...(existing.shipping_address || {}),
+        deliveryCharge,
+        deliveryChargeStatus: 'FIXED',
+        deliveryNote: 'Delivery charge confirmed by admin.',
+      };
+
+      const result = await query(
+        `UPDATE orders
+            SET shipping_amount = $1,
+                total_amount = $2,
+                shipping_address = $3,
+                updated_at = NOW()
+          WHERE id = $4
+          RETURNING id, order_number, shipping_amount, total_amount, shipping_address, updated_at`,
+        [deliveryCharge, totalAmount, shippingAddress, existing.id]
+      );
+
+      const order = result.rows[0];
+      res.json({
+        id: order.id,
+        orderNumber: order.order_number,
+        shippingAmount: parseFloat(order.shipping_amount),
+        totalAmount: parseFloat(order.total_amount),
+        shippingAddress: order.shipping_address,
+        updatedAt: order.updated_at,
+      });
+    } catch (error) {
+      console.error('Update delivery charge error:', error);
+      res.status(500).json({ error: 'Failed to update delivery charge' });
     }
   }
 );

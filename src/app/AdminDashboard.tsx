@@ -107,6 +107,7 @@ export default function AdminDashboard({ user, initialTab }: Props) {
     store,
     addLog,
     updateOrderStatus,
+    patchOrder,
     updateRepairStatus,
     patchRepair,
     patchPCBuild,
@@ -174,7 +175,7 @@ export default function AdminDashboard({ user, initialTab }: Props) {
       case "brands":            return <AdminBrands />;
       case "inventory":         return <AdminInventory store={store} />;
       case "builder":           return <AdminCustomBuilder store={store} patchCustomBuilderConfig={patchCustomBuilderConfig} publishBuilderConfig={publishBuilderConfig} addBuilderComponent={addBuilderComponent} updateBuilderComponent={updateBuilderComponent} removeBuilderComponent={removeBuilderComponent} reorderBuilderComponents={reorderBuilderComponents} updateBuildPurpose={updateBuildPurpose} addBuildPurpose={addBuildPurpose} removeBuildPurpose={removeBuildPurpose} updatePricingRules={updatePricingRules} updateContentConfig={updateContentConfig} updateDefaultPreset={updateDefaultPreset} getBuilderMetrics={getBuilderMetrics} />;
-      case "orders":            return <AdminOrders store={store} updateOrderStatus={updateOrderStatus} />;
+      case "orders":            return <AdminOrders store={store} updateOrderStatus={updateOrderStatus} patchOrder={patchOrder} />;
       case "repairs":           return <AdminRepairs store={store} updateRepairStatus={updateRepairStatus} patchRepair={patchRepair} />;
       case "upgrades":          return <AdminUpgrades store={store} patchServiceRequest={patchServiceRequest} />;
       case "software":          return <AdminSoftwareServices store={store} patchServiceRequest={patchServiceRequest} />;

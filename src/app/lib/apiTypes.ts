@@ -101,8 +101,22 @@ export interface CreateOrderInput {
     state: string;
     pincode: string;        // backend stores as `postalCode`
     country: string;
+    deliveryMethod?: "ship" | "pickup";
+    deliveryZone?: "STORE_PICKUP" | "SAME_CITY" | "SAME_DISTRICT" | "SAME_STATE" | "OTHER_STATE";
+    productSizeCategory?: "SMALL" | "MEDIUM" | "HEAVY";
+    deliveryCharge?: number | null;
+    deliveryChargeStatus?: "FIXED" | "MANUAL_QUOTE";
+    deliveryNote?: string;
+    estimatedDeliveryTime?: string;
   };
   billingAddress?: Record<string, unknown>;
+  deliveryMethod?: "ship" | "pickup";
+  deliveryZone?: "STORE_PICKUP" | "SAME_CITY" | "SAME_DISTRICT" | "SAME_STATE" | "OTHER_STATE";
+  productSizeCategory?: "SMALL" | "MEDIUM" | "HEAVY";
+  deliveryCharge?: number | null;
+  deliveryChargeStatus?: "FIXED" | "MANUAL_QUOTE";
+  deliveryNote?: string;
+  estimatedDeliveryTime?: string;
   notes?: string;
 }
 
@@ -145,6 +159,13 @@ export interface ApiWishlistItem {
 
 export function apiOrderToFrontend(o: ApiOrder): Order {
   const createdAt = typeof o.createdAt === "string" ? new Date(o.createdAt).getTime() : Date.now();
+  const shippingAddress = (o.shippingAddress || {}) as Record<string, unknown>;
+  const deliveryMethod = shippingAddress.deliveryMethod === "pickup" || shippingAddress.deliveryZone === "STORE_PICKUP" ? "pickup" : "ship";
+  const deliveryCharge = typeof shippingAddress.deliveryCharge === "number"
+    ? shippingAddress.deliveryCharge
+    : shippingAddress.deliveryCharge === null
+      ? null
+      : o.shippingAmount;
   return {
     id: o.orderNumber,                       // keep the human-friendly id in UI
     customerId: "",
@@ -164,7 +185,13 @@ export function apiOrderToFrontend(o: ApiOrder): Order {
     shipping: o.shippingAmount,
     discount: o.discountAmount,
     paymentMethod: o.paymentMethod,
-    deliveryMethod: o.shippingAddress ? "ship" : "pickup",
+    deliveryMethod,
+    deliveryZone: shippingAddress.deliveryZone as Order["deliveryZone"] | undefined,
+    productSizeCategory: shippingAddress.productSizeCategory as Order["productSizeCategory"] | undefined,
+    deliveryCharge,
+    deliveryChargeStatus: shippingAddress.deliveryChargeStatus as Order["deliveryChargeStatus"] | undefined,
+    deliveryNote: typeof shippingAddress.deliveryNote === "string" ? shippingAddress.deliveryNote : undefined,
+    estimatedDeliveryTime: typeof shippingAddress.estimatedDeliveryTime === "string" ? shippingAddress.estimatedDeliveryTime : undefined,
     shippingAddress: o.shippingAddress as Order["shippingAddress"],
     status: (["placed", "verified", "packing", "shipped", "delivered", "cancelled"].includes(o.status)
       ? o.status
