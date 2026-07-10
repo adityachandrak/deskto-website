@@ -5,6 +5,74 @@ import { validationResult, body, param } from 'express-validator';
 
 const router = Router();
 
+function serviceToResponse(s: any) {
+  const deviceInfo = s.device_info || {};
+  return {
+    id: s.id,
+    serviceNumber: s.service_number,
+    serviceType: s.service_type,
+    status: s.status,
+    title: s.title,
+    description: s.description,
+    deviceInfo,
+    customerName: s.customer_name || deviceInfo.customerName || deviceInfo.name || null,
+    customerEmail: s.customer_email || deviceInfo.customerEmail || deviceInfo.email || null,
+    customerPhone: s.customer_phone || deviceInfo.customerPhone || deviceInfo.phone || deviceInfo.contact || null,
+    estimatedCost: s.estimated_cost ? parseFloat(s.estimated_cost) : null,
+    finalCost: s.final_cost ? parseFloat(s.final_cost) : null,
+    technicianId: s.technician_id,
+    createdAt: s.created_at,
+    updatedAt: s.updated_at
+  };
+}
+
+// Public quick enquiry from homepage contact form. This intentionally does not
+// require authentication because first-time visitors use it before signing in.
+router.post('/quick-enquiry',
+  [
+    body('name').trim().isLength({ min: 2 }).withMessage('Name is required'),
+    body('contact').trim().isLength({ min: 5 }).withMessage('Phone or email is required'),
+    body('serviceNeeded').trim().isLength({ min: 2 }).withMessage('Service needed is required'),
+    body('requirements').optional().isString()
+  ],
+  async (req: Request, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+
+      const name = String(req.body.name || '').trim();
+      const contact = String(req.body.contact || '').trim();
+      const serviceNeeded = String(req.body.serviceNeeded || '').trim();
+      const requirements = String(req.body.requirements || '').trim();
+      const serviceNumber = `ENQ-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+      const hasEmail = contact.includes('@');
+      const deviceInfo = {
+        source: 'homepage-quick-enquiry',
+        customerName: name,
+        contact,
+        customerEmail: hasEmail ? contact : undefined,
+        customerPhone: hasEmail ? undefined : contact,
+        serviceNeeded
+      };
+
+      const result = await query(
+        `INSERT INTO services
+         (service_number, user_id, service_type, status, title, description, device_info)
+         VALUES ($1, NULL, 'support', 'submitted', $2, $3, $4)
+         RETURNING *`,
+        [serviceNumber, `Quick Enquiry: ${serviceNeeded}`, requirements || serviceNeeded, deviceInfo]
+      );
+
+      res.status(201).json(serviceToResponse(result.rows[0]));
+    } catch (error) {
+      console.error('Quick enquiry error:', error);
+      res.status(500).json({ error: 'Failed to submit enquiry' });
+    }
+  }
+);
+
 // Get My Services
 router.get('/my', authenticate, async (req: AuthRequest, res: Response) => {
   try {
@@ -43,18 +111,7 @@ router.get('/my', authenticate, async (req: AuthRequest, res: Response) => {
     );
 
     res.json({
-      services: servicesResult.rows.map(s => ({
-        id: s.id,
-        serviceNumber: s.service_number,
-        serviceType: s.service_type,
-        status: s.status,
-        title: s.title,
-        description: s.description,
-        estimatedCost: s.estimated_cost ? parseFloat(s.estimated_cost) : null,
-        finalCost: s.final_cost ? parseFloat(s.final_cost) : null,
-        createdAt: s.created_at,
-        updatedAt: s.updated_at
-      })),
+      services: servicesResult.rows.map(serviceToResponse),
       pagination: {
         page: Number(page),
         limit: Number(limit),
@@ -67,6 +124,63 @@ router.get('/my', authenticate, async (req: AuthRequest, res: Response) => {
     res.status(500).json({ error: 'Failed to fetch services' });
   }
 });
+
+// Admin/Staff: list all services and public enquiries.
+router.get('/',
+  authenticate,
+  authorize('admin', 'staff'),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const { page = 1, limit = 20, status, serviceType } = req.query;
+      const offset = (Number(page) - 1) * Number(limit);
+
+      let whereClause = '';
+      const params: any[] = [];
+      let paramIndex = 1;
+
+      if (status) {
+        whereClause += `${whereClause ? ' AND' : 'WHERE'} s.status = $${paramIndex}`;
+        params.push(status);
+        paramIndex++;
+      }
+
+      if (serviceType) {
+        whereClause += `${whereClause ? ' AND' : 'WHERE'} s.service_type = $${paramIndex}`;
+        params.push(serviceType);
+        paramIndex++;
+      }
+
+      const servicesResult = await query(
+        `SELECT s.*, u.first_name || COALESCE(' ' || u.last_name, '') AS customer_name,
+                u.email AS customer_email, u.phone AS customer_phone
+         FROM services s
+         LEFT JOIN users u ON u.id = s.user_id
+         ${whereClause}
+         ORDER BY s.created_at DESC
+         LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
+        [...params, Number(limit), offset]
+      );
+
+      const countResult = await query(
+        `SELECT COUNT(*) FROM services s ${whereClause}`,
+        params
+      );
+
+      res.json({
+        services: servicesResult.rows.map(serviceToResponse),
+        pagination: {
+          page: Number(page),
+          limit: Number(limit),
+          total: parseInt(countResult.rows[0].count),
+          totalPages: Math.ceil(parseInt(countResult.rows[0].count) / Number(limit))
+        }
+      });
+    } catch (error) {
+      console.error('Get all services error:', error);
+      res.status(500).json({ error: 'Failed to fetch services' });
+    }
+  }
+);
 
 // Get Service by Number
 router.get('/:serviceNumber',
@@ -95,20 +209,7 @@ router.get('/:serviceNumber',
       }
 
       const s = result.rows[0];
-      res.json({
-        id: s.id,
-        serviceNumber: s.service_number,
-        serviceType: s.service_type,
-        status: s.status,
-        title: s.title,
-        description: s.description,
-        deviceInfo: s.device_info,
-        estimatedCost: s.estimated_cost ? parseFloat(s.estimated_cost) : null,
-        finalCost: s.final_cost ? parseFloat(s.final_cost) : null,
-        technicianId: s.technician_id,
-        createdAt: s.created_at,
-        updatedAt: s.updated_at
-      });
+      res.json(serviceToResponse(s));
     } catch (error) {
       console.error('Get service error:', error);
       res.status(500).json({ error: 'Failed to fetch service' });

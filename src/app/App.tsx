@@ -1,4 +1,4 @@
-import { Component, type ReactNode, useState, useEffect, useRef, useCallback, useReducer, useMemo } from "react";
+import { Component, type FormEvent, type ReactNode, useState, useEffect, useRef, useCallback, useReducer, useMemo } from "react";
 import { motion, useInView, useScroll, useTransform } from "motion/react";
 import { useWishlist } from "@/app/lib/wishlist";
 import ProductDetailPage from "@/app/ProductDetailPage";
@@ -9,7 +9,7 @@ import { Toaster } from "@/app/components/ui/sonner";
 import { BrandMark } from "@/app/components/BrandMark";
 import { toast } from "sonner";
 import { AUTH_STATE_CHANGED_EVENT, logout, useCurrentUser, login as apiLogin, register as apiRegister } from "@/app/lib/currentUser";
-import { ordersApi, isAuthenticated as isApiAuthenticated } from "@/app/lib/api";
+import { ordersApi, servicesApi, isAuthenticated as isApiAuthenticated } from "@/app/lib/api";
 import CustomerDashboard from "@/app/CustomerDashboard";
 import StaffDashboard from "@/app/StaffDashboard";
 import AdminDashboard from "@/app/AdminDashboard";
@@ -2220,6 +2220,58 @@ function FAQSection() {
 
 // ─────────────── LOCATION ───────────────
 function LocationSection() {
+  const { addServiceRequest } = useDashboardData();
+  const [enquiry, setEnquiry] = useState({ name: "", contact: "", serviceNeeded: "", requirements: "" });
+  const [submittingEnquiry, setSubmittingEnquiry] = useState(false);
+  const setEnquiryField = (key: keyof typeof enquiry, value: string) => {
+    setEnquiry(prev => ({ ...prev, [key]: value }));
+  };
+  const saveLocalEnquiry = (serviceNumber?: string) => {
+    const contact = enquiry.contact.trim();
+    const isEmail = contact.includes("@");
+    return addServiceRequest({
+      id: serviceNumber,
+      kind: "support",
+      customerId: contact || `quick-enquiry-${Date.now()}`,
+      customerName: enquiry.name.trim(),
+      contactEmail: isEmail ? contact : "",
+      contactPhone: isEmail ? "" : contact,
+      title: `Quick Enquiry: ${enquiry.serviceNeeded.trim()}`,
+      deviceType: "Enquiry",
+      category: enquiry.serviceNeeded.trim(),
+      requirements: enquiry.requirements.trim() || enquiry.serviceNeeded.trim(),
+      serviceMethod: "Quick Enquiry",
+      priority: "Normal",
+      status: "submitted",
+    });
+  };
+  const submitEnquiry = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const payload = {
+      name: enquiry.name.trim(),
+      contact: enquiry.contact.trim(),
+      serviceNeeded: enquiry.serviceNeeded.trim(),
+      requirements: enquiry.requirements.trim(),
+    };
+    if (payload.name.length < 2) return toast.error("Please enter your name.");
+    if (payload.contact.length < 5) return toast.error("Please enter a phone number or email.");
+    if (payload.serviceNeeded.length < 2) return toast.error("Please enter the service needed.");
+
+    setSubmittingEnquiry(true);
+    try {
+      const created = await servicesApi.createQuickEnquiry(payload);
+      saveLocalEnquiry(created.serviceNumber);
+      toast.success(`Enquiry ${created.serviceNumber} submitted. We will contact you shortly.`);
+      setEnquiry({ name: "", contact: "", serviceNeeded: "", requirements: "" });
+    } catch (err) {
+      console.warn("[quick-enquiry] backend submit failed; saved locally:", err);
+      const local = saveLocalEnquiry();
+      toast.warning(`Could not reach the server. Enquiry saved locally as ${local.id}; please call us if you need an urgent response.`);
+      setEnquiry({ name: "", contact: "", serviceNeeded: "", requirements: "" });
+    } finally {
+      setSubmittingEnquiry(false);
+    }
+  };
   return (
     <section id="contact" className="section-pad" style={{ padding:"80px 0",background:"linear-gradient(135deg,#0a0005,#050505)",position:"relative" }}>
       <div style={{ position:"absolute",inset:0,background:"radial-gradient(ellipse at 30% 50%,rgba(42,0,8,.5) 0%,transparent 60%)",pointerEvents:"none" }} />
@@ -2254,24 +2306,28 @@ function LocationSection() {
             </div>
           </Reveal>
           <Reveal dir="right">
-            <div className="glass-card" style={{ borderRadius:18,padding:26,border:"1px solid rgba(255,255,255,.07)" }}>
+            <form onSubmit={submitEnquiry} className="glass-card" style={{ borderRadius:18,padding:26,border:"1px solid rgba(255,255,255,.07)" }}>
               <h3 style={{ fontFamily:"'Orbitron',sans-serif",fontSize:13,fontWeight:800,color:"white",marginBottom:18,letterSpacing:"1px" }}>QUICK ENQUIRY</h3>
               <div style={{ display:"flex",flexDirection:"column",gap:11 }}>
-                {["Your Name","Phone / Email","Service Needed"].map(ph=>(
-                  <input key={ph} placeholder={ph}
+                {[
+                  { key:"name", placeholder:"Your Name", autoComplete:"name" },
+                  { key:"contact", placeholder:"Phone / Email", autoComplete:"email" },
+                  { key:"serviceNeeded", placeholder:"Service Needed", autoComplete:"off" },
+                ].map(field=>(
+                  <input key={field.key} placeholder={field.placeholder} value={enquiry[field.key as keyof typeof enquiry]} autoComplete={field.autoComplete} onChange={e => setEnquiryField(field.key as keyof typeof enquiry, e.target.value)}
                     style={{ width:"100%",background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:9,padding:"11px 14px",fontFamily:"'Space Grotesk',sans-serif",fontSize:13,color:"white",outline:"none",transition:"border-color .3s",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)" }}
                     onFocus={e=>(e.currentTarget.style.borderColor="rgba(255,31,69,.5)")}
                     onBlur={e=>(e.currentTarget.style.borderColor="rgba(255,255,255,.08)")} />
                 ))}
-                <textarea placeholder="Tell us about your requirements..." rows={3}
+                <textarea placeholder="Tell us about your requirements..." rows={3} value={enquiry.requirements} onChange={e => setEnquiryField("requirements", e.target.value)}
                   style={{ width:"100%",background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:9,padding:"11px 14px",fontFamily:"'Space Grotesk',sans-serif",fontSize:13,color:"white",outline:"none",resize:"none",transition:"border-color .3s",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)" }}
                   onFocus={e=>(e.currentTarget.style.borderColor="rgba(255,31,69,.5)")}
                   onBlur={e=>(e.currentTarget.style.borderColor="rgba(255,255,255,.08)")} />
-                <button className="glass-pill glass-pill-primary glass-pill-block">
-                  Send Enquiry
+                <button type="submit" className="glass-pill glass-pill-primary glass-pill-block" disabled={submittingEnquiry} style={{ opacity:submittingEnquiry ? .65 : 1 }}>
+                  {submittingEnquiry ? "Sending..." : "Send Enquiry"}
                 </button>
               </div>
-            </div>
+            </form>
           </Reveal>
         </div>
       </div>

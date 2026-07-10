@@ -6174,7 +6174,9 @@ export function useDashboardData() {
         const ordersPromise = role === "customer"
           ? ordersApi.getMy({ limit: 50 })
           : ordersApi.getAll({ limit: 50 });
-        const servicesPromise = servicesApi.getMy({ limit: 50 }).catch(() => ({ services: [], pagination: { page: 1, limit: 50, total: 0, totalPages: 0 } }));
+        const servicesPromise = role === "customer"
+          ? servicesApi.getMy({ limit: 50 })
+          : servicesApi.getAll({ limit: 100 }).catch(() => servicesApi.getMy({ limit: 50 }));
 
         const [ordersRes, servicesRes] = await Promise.all([ordersPromise, servicesPromise]);
         if (cancelled) return;
@@ -6191,7 +6193,7 @@ export function useDashboardData() {
 
           if (role === "customer") {
             next.orders = apiOrders;
-            next.services = apiServices;
+            next.serviceRequests = apiServices;
           } else {
             // Admin/staff: keep local mock + add API orders not already in the
             // local store.
@@ -6202,12 +6204,12 @@ export function useDashboardData() {
             ];
             next.orders = merged;
 
-            const localServiceNumbers = new Set(prev.services.map((s: ServiceRequest) => s.id));
+            const localServiceNumbers = new Set((prev.serviceRequests || []).map((s: ServiceRequest) => s.id));
             const mergedServices = [
               ...apiServices.filter((s: ServiceRequest) => !localServiceNumbers.has(s.id)),
-              ...prev.services,
+              ...(prev.serviceRequests || []),
             ];
-            next.services = mergedServices;
+            next.serviceRequests = mergedServices;
           }
           saveStore(next);
           return next;
