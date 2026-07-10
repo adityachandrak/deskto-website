@@ -3733,6 +3733,66 @@ export function AdminMarketplace({ store }: { store: DashboardStore }) {
 
 // ─── CRM ──────────────────────────────────────────────────────────────────
 
+function isQuickEnquiry(request: ServiceRequest) {
+  return request.serviceMethod === "Quick Enquiry"
+    || request.deviceType === "Enquiry"
+    || request.id.startsWith("ENQ-")
+    || String(request.title || "").toLowerCase().startsWith("quick enquiry:");
+}
+
+export function AdminQuickEnquiries({ store }: { store: DashboardStore }) {
+  const rows = (store.serviceRequests || [])
+    .filter(isQuickEnquiry)
+    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+  return (
+    <SectionCard
+      title="Quick Enquiries"
+      subtitle="Website contact enquiries synced from the customer-facing quick enquiry form"
+      padded={rows.length > 0}
+    >
+      {rows.length === 0 ? (
+        <EmptyState
+          icon={<MessageSquare size={24} />}
+          title="No quick enquiries yet"
+          hint="New customer enquiries will appear here automatically after submission."
+        />
+      ) : (
+        <DataTable
+          rowKey={r => r.id}
+          data={rows}
+          columns={[
+            { key: "id", label: "Enquiry", render: r => (
+              <div>
+                <div style={{ fontFamily: "'Orbitron', sans-serif", color: "white", fontSize: 10 }}>#{r.id}</div>
+                <div style={{ color: "#777", fontSize: 10, marginTop: 3 }}>{formatDate(r.createdAt)} {formatTime(r.createdAt)}</div>
+              </div>
+            ) },
+            { key: "customer", label: "Customer", render: r => (
+              <div>
+                <div style={{ color: "white", fontWeight: 700 }}>{r.customerName || "Website Visitor"}</div>
+                <div style={{ color: "#888", fontSize: 11, marginTop: 3 }}>{r.contactPhone || r.contactEmail || r.customerId || "No contact"}</div>
+              </div>
+            ) },
+            { key: "service", label: "Service Needed", render: r => (
+              <div>
+                <div style={{ color: "white" }}>{r.category || r.title || "General enquiry"}</div>
+                <div style={{ color: "#777", fontSize: 10, marginTop: 3 }}>{r.deviceType || "Enquiry"} · {r.serviceMethod || "Quick Enquiry"}</div>
+              </div>
+            ) },
+            { key: "requirements", label: "Requirements", render: r => (
+              <span style={{ display: "inline-block", maxWidth: 380, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                {r.requirements || r.title || "No details provided"}
+              </span>
+            ) },
+            { key: "status", label: "Status", render: r => <StatusBadge status={r.status} /> },
+          ]}
+        />
+      )}
+    </SectionCard>
+  );
+}
+
 // ─── Customers ────────────────────────────────────────────────────────────
 
 interface DemoUser { id: string; name: string; email: string; role: string; status: string; createdAt: string; }
