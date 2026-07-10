@@ -256,6 +256,13 @@ export const ordersApi = {
         postalCode: input.shippingAddress.pincode,
       },
       billingAddress: input.billingAddress,
+      deliveryMethod: input.deliveryMethod,
+      deliveryZone: input.deliveryZone,
+      productSizeCategory: input.productSizeCategory,
+      deliveryCharge: input.deliveryCharge,
+      deliveryChargeStatus: input.deliveryChargeStatus,
+      deliveryNote: input.deliveryNote,
+      estimatedDeliveryTime: input.estimatedDeliveryTime,
       notes: input.notes,
     };
     return apiFetch(`/orders`, { method: "POST", json: payload });
@@ -268,6 +275,16 @@ export const ordersApi = {
     return apiFetch(`/orders/${encodeURIComponent(orderId.trim())}/status`, {
       method: "PATCH",
       json: { status },
+    });
+  },
+
+  async updateDeliveryCharge(orderId: string, deliveryCharge: number): Promise<{ id: string; orderNumber: string; shippingAmount: number; totalAmount: number; shippingAddress?: Record<string, unknown> }> {
+    if (!orderId || typeof orderId !== "string" || orderId.trim() === "") {
+      throw new ApiError(400, "Order ID is required to update delivery charge", { orderId });
+    }
+    return apiFetch(`/orders/${encodeURIComponent(orderId.trim())}/delivery-charge`, {
+      method: "PATCH",
+      json: { deliveryCharge },
     });
   },
 };

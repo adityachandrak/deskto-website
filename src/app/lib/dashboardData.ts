@@ -190,6 +190,12 @@ export interface Order {
   couponCode?: string;
   paymentMethod?: string;
   deliveryMethod?: "ship" | "pickup";
+  deliveryZone?: "STORE_PICKUP" | "SAME_CITY" | "SAME_DISTRICT" | "SAME_STATE" | "OTHER_STATE";
+  productSizeCategory?: "SMALL" | "MEDIUM" | "HEAVY";
+  deliveryCharge?: number | null;
+  deliveryChargeStatus?: "FIXED" | "MANUAL_QUOTE";
+  deliveryNote?: string;
+  estimatedDeliveryTime?: string;
   shippingAddress?: {
     name: string;
     phone: string;
@@ -200,6 +206,13 @@ export interface Order {
     state: string;
     pincode: string;
     country: string;
+    deliveryMethod?: "ship" | "pickup";
+    deliveryZone?: "STORE_PICKUP" | "SAME_CITY" | "SAME_DISTRICT" | "SAME_STATE" | "OTHER_STATE";
+    productSizeCategory?: "SMALL" | "MEDIUM" | "HEAVY";
+    deliveryCharge?: number | null;
+    deliveryChargeStatus?: "FIXED" | "MANUAL_QUOTE";
+    deliveryNote?: string;
+    estimatedDeliveryTime?: string;
   };
   status: OrderStatus;
   deliveryStatus?: "pending" | "ready" | "dispatched" | "delivered" | "cancelled";
@@ -4934,6 +4947,18 @@ export function useDashboardData() {
     }
   }, [addLog, autoNotifyStatusChange]);
 
+  const patchOrder = useCallback((orderId: string, patch: Partial<Order>) => {
+    setStore(prev => {
+      const next = {
+        ...prev,
+        orders: prev.orders.map(o => o.id === orderId ? { ...o, ...patch, updatedAt: Date.now() } : o),
+      };
+      saveStore(next);
+      return next;
+    });
+    addLog("order_update", `Order ${orderId} updated`);
+  }, [addLog]);
+
   const addOrder = useCallback((input: AddOrderInput) => {
     const createdAt = input.createdAt || Date.now();
     const orderId = input.id || rid("ord");
@@ -6230,6 +6255,7 @@ export function useDashboardData() {
     addLog,
     addOrder,
     updateOrderStatus,
+    patchOrder,
     updateRepairStatus,
     addRepairRequest,
     patchRepair,
