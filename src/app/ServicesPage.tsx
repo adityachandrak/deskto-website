@@ -12,6 +12,7 @@ import { SERVICES, Service, ServicePricingTier } from "@/app/lib/services";
 import { useCurrentUser } from "@/app/lib/currentUser";
 import { useDashboardData } from "@/app/lib/dashboardData";
 import type { GamingHubItem, ServiceAddress, ServicePaymentInfo } from "@/app/lib/dashboardData";
+import { homepageContentApi } from "@/app/lib/api";
 import { saveMediaFile } from "@/app/lib/mediaStore";
 
 const WHATSAPP = "+919876543210";
@@ -2481,11 +2482,69 @@ function GamingHubArticlePage({ item, related, track, patchGamingHubItem }: {
 function GamingHubPage({ service, postSlug }: { service: Service; postSlug?: string | null }) {
   const { store, trackGamingHubMetric, patchGamingHubItem } = useDashboardData();
   const [selected, setSelected] = useState("All");
+  // Article fetch from API — used as fallback when the local store doesn't
+  // contain a published item that the homepage/API is referencing. Without
+  // this, an anonymous visitor landing on /services/gaming-hub/<slug> would
+  // see "Not found" because the local store is only hydrated for
+  // authenticated admins. The API is the public source of truth.
+  const [apiArticle, setApiArticle] = useState<GamingHubItem | null>(null);
+  const [apiArticleLoading, setApiArticleLoading] = useState<boolean>(false);
+  const [apiArticleMissing, setApiArticleMissing] = useState<boolean>(false);
+  useEffect(() => {
+    if (!postSlug) { setApiArticle(null); setApiArticleMissing(false); return; }
+    let cancelled = false;
+    setApiArticleLoading(true);
+    setApiArticleMissing(false);
+    homepageContentApi.getBySlug(postSlug)
+      .then((row) => {
+        if (cancelled) return;
+        if (!row) { setApiArticle(null); setApiArticleMissing(true); return; }
+        // Adapt the API row into a GamingHubItem so the article page can render it.
+        const adapted: GamingHubItem = {
+          id: row.id,
+          type: row.type as GamingHubItem["type"],
+          title: row.title,
+          slug: row.slug,
+          category: row.category || "",
+          shortDescription: row.shortDescription || "",
+          body: row.body || "",
+          intro: row.intro || "",
+          specs: row.specs || "",
+          benchmarkData: row.benchmarkData || "",
+          tags: row.tags || [],
+          pros: row.pros || [],
+          cons: row.cons || [],
+          tips: row.tips || [],
+          offerDetails: row.offerDetails || "",
+          discount: row.discount || "",
+          ctaText: row.ctaText || "",
+          ctaHref: row.ctaHref || "",
+          coverImage: row.coverImage || "",
+          thumbnailImage: row.thumbnailImage || "",
+          bannerImage: row.bannerImage || "",
+          gallery: row.gallery || [],
+          status: (row.status as GamingHubItem["status"]) || "published",
+          publishDate: row.publishDate ? new Date(row.publishDate).getTime() : Date.now(),
+          updatedAt: Date.now(),
+          views: 0, reads: 0, shares: 0,
+          whatsappClicks: 0, callClicks: 0, offerClicks: 0, ctaClicks: 0,
+          comments: [],
+        } as unknown as GamingHubItem;
+        setApiArticle(adapted);
+      })
+      .catch(() => { if (!cancelled) setApiArticleMissing(true); })
+      .finally(() => { if (!cancelled) setApiArticleLoading(false); });
+    return () => { cancelled = true; };
+  }, [postSlug]);
+
   const allPublished = (store.gamingHub || []).filter(item => item.status === "published");
   const published = allPublished.filter(item => item.showOnHub);
   // Resolve a direct article link against ALL published items (not only those
   // flagged to show in the hub listing) so homepage "Details" links always open.
-  const target = postSlug ? allPublished.find(item => item.slug === postSlug) : null;
+  const localTarget = postSlug ? allPublished.find(item => item.slug === postSlug) : null;
+  // Prefer local row; if missing, fall back to API row so anonymous visitors
+  // opening /services/gaming-hub/<slug> still see the article.
+  const target = localTarget || apiArticle;
   const visible = published.filter(item => gamingCategoryMatches(item, selected));
   const news = published.filter(item => item.showInLatestNews || ["gaming-news", "latest-hardware", "gaming-tip"].includes(item.type)).slice(0, 3);
   const builds = published.filter(item => item.showInSignatureMachines || item.type === "featured-build").slice(0, 3);
@@ -2494,6 +2553,17 @@ function GamingHubPage({ service, postSlug }: { service: Service; postSlug?: str
   const faqs = published.filter(item => item.type === "faq").slice(0, 6);
 
   if (postSlug) {
+    if (apiArticleLoading && !target) {
+      // Brief loading state while we fetch the article from the API.
+      return (
+        <div style={{ background: "#050505", color: "white", minHeight: "100vh", paddingBottom: 70 }}>
+          <Navbar />
+          <section style={{ maxWidth: 1180, margin: "0 auto", padding: "120px 20px", textAlign: "center" }}>
+            <p style={{ fontFamily: "'Space Grotesk', sans-serif", color: "#aaa" }}>Loading article…</p>
+          </section>
+        </div>
+      );
+    }
     if (!target) return <NotFoundView />;
     return <GamingHubArticlePage item={target} related={published.filter(item => item.id !== target.id)} track={trackGamingHubMetric} patchGamingHubItem={patchGamingHubItem} />;
   }
