@@ -339,3 +339,218 @@ export const wishlistApi = {
 
 // Re-export so existing imports keep working
 export type { ApiOrder, ApiProduct, ApiService, ApiWishlistItem, AuthResponse };
+
+// ──────────────────────────────────────────────────────────────────────────
+//  Homepage CMS API
+//  Admin uses /api/admin/homepage-content/* (JWT, role=admin).
+//  Public customer homepage reads /api/public/homepage-content (no auth, no cache).
+//  All data lives in the MySQL `gaming_hub` table — see backend.js.
+// ──────────────────────────────────────────────────────────────────────────
+
+export type HomepageContentType =
+  | "featured-build"
+  | "offer"
+  | "gaming-news"
+  | "testimonial"
+  | "faq";
+
+export type HomepageContentStatus = "draft" | "published" | "scheduled" | "archived";
+
+export interface HomepageContentItem {
+  id: string;
+  type: HomepageContentType;
+  slug: string;
+  title: string;
+  category?: string | null;
+  shortDescription?: string | null;
+  body?: string | null;
+  intro?: string | null;
+  specs?: string | null;
+  benchmarkData?: string | null;
+  tags?: string[];
+  pros?: string[];
+  cons?: string[];
+  tips?: string[];
+  offerDetails?: string | null;
+  discount?: string | null;
+  ctaText?: string | null;
+  ctaHref?: string | null;
+  coverImage?: string | null;
+  coverImageKey?: string | null;
+  thumbnailImage?: string | null;
+  thumbnailImageKey?: string | null;
+  bannerImage?: string | null;
+  bannerImageKey?: string | null;
+  gallery?: string[];
+  imageUrls?: string[];
+  order?: number;
+  displayOrder?: number;
+  status?: HomepageContentStatus;
+  publishDate?: string | null;
+  publishedAt?: string | null;
+  updatedAt?: string;
+  createdAt?: string;
+}
+
+export type HomepageContentSlot = "cover" | "thumbnail" | "banner" | "gallery";
+
+export interface HomepageContentImageUpload {
+  uploadUrl: string;
+  objectKey: string;
+  cdnUrl: string;
+  publicUrl: string;
+  bucket: string;
+  slot: string;
+  contentType: string;
+  expiresIn: number;
+  maxBytes: number;
+}
+
+// Input shape accepted by create/update. Backend snake_cases/normalizes.
+export type HomepageContentInput = Partial<
+  Omit<HomepageContentItem,
+    "id" | "createdAt" | "updatedAt" | "publishedAt" | "coverImage" | "thumbnailImage" | "bannerImage" | "imageUrls" | "displayOrder"
+  > & {
+    coverImageKey?: string;
+    thumbnailImageKey?: string;
+    bannerImageKey?: string;
+    publishDate?: string | number | null;
+  }
+>;
+
+export const homepageContentApi = {
+  // ── Public reads ───────────────────────────────────────────────────────
+  async list(params?: { type?: HomepageContentType }): Promise<HomepageContentItem[]> {
+    const qs = params?.type
+      ? `?type=${encodeURIComponent(params.type)}`
+      : "";
+    return apiFetch<HomepageContentItem[]>(`/public/homepage-content${qs}`, {
+      cache: "no-store",
+    });
+  },
+
+  async getBySlug(slug: string): Promise<HomepageContentItem> {
+    return apiFetch<HomepageContentItem>(
+      `/public/homepage-content/${encodeURIComponent(slug)}`,
+      { cache: "no-store" },
+    );
+  },
+
+  // ── Admin reads / mutations ────────────────────────────────────────────
+  async adminList(params?: { type?: HomepageContentType; status?: HomepageContentStatus }): Promise<HomepageContentItem[]> {
+    const sp = new URLSearchParams();
+    if (params?.type) sp.set("type", params.type);
+    if (params?.status) sp.set("status", params.status);
+    const qs = sp.toString();
+    return apiFetch<HomepageContentItem[]>(`/admin/homepage-content${qs ? `?${qs}` : ""}`);
+  },
+
+  async adminGet(id: string): Promise<HomepageContentItem> {
+    return apiFetch<HomepageContentItem>(`/admin/homepage-content/${encodeURIComponent(id)}`);
+  },
+
+  async create(input: HomepageContentInput): Promise<HomepageContentItem> {
+    return apiFetch<HomepageContentItem>(`/admin/homepage-content`, {
+      method: "POST",
+      json: input,
+    });
+  },
+
+  async update(id: string, patch: HomepageContentInput): Promise<HomepageContentItem> {
+    return apiFetch<HomepageContentItem>(`/admin/homepage-content/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      json: patch,
+    });
+  },
+
+  async publish(id: string): Promise<HomepageContentItem> {
+    return apiFetch<HomepageContentItem>(
+      `/admin/homepage-content/${encodeURIComponent(id)}/publish`,
+      { method: "PATCH" },
+    );
+  },
+
+  async unpublish(id: string): Promise<HomepageContentItem> {
+    return apiFetch<HomepageContentItem>(
+      `/admin/homepage-content/${encodeURIComponent(id)}/unpublish`,
+      { method: "PATCH" },
+    );
+  },
+
+  async reorder(items: { id: string; displayOrder: number }[]): Promise<{ success: boolean; updated: number }> {
+    return apiFetch(`/admin/homepage-content/reorder`, {
+      method: "PATCH",
+      json: { items },
+    });
+  },
+
+  async delete(id: string): Promise<{ success: boolean }> {
+    return apiFetch(`/admin/homepage-content/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    });
+  },
+
+  // ── S3 image upload (3-step) ───────────────────────────────────────────
+  async createImageUploadUrl(
+    id: string,
+    args: { fileName: string; contentType: string; slot?: HomepageContentSlot },
+  ): Promise<HomepageContentImageUpload> {
+    return apiFetch<HomepageContentImageUpload>(
+      `/admin/homepage-content/${encodeURIComponent(id)}/images/upload-url`,
+      { method: "POST", json: args },
+    );
+  },
+
+  async uploadImageToS3(uploadUrl: string, file: File): Promise<void> {
+    const res = await fetch(uploadUrl, {
+      method: "PUT",
+      headers: { "Content-Type": file.type || "application/octet-stream" },
+      body: file,
+      credentials: "omit",
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new ApiError(res.status, `S3 upload failed: ${text || res.statusText}`);
+    }
+  },
+
+  async completeImageAttach(
+    id: string,
+    args: { objectKey: string; slot?: HomepageContentSlot; galleryIndex?: number },
+  ): Promise<HomepageContentItem> {
+    return apiFetch<HomepageContentItem>(
+      `/admin/homepage-content/${encodeURIComponent(id)}/images/complete`,
+      { method: "POST", json: args },
+    );
+  },
+
+  /**
+   * High-level helper: presign → PUT to S3 → complete.
+   * Returns the freshly-attached item. Throws ApiError on any failure.
+   */
+  async uploadAndAttach(
+    id: string,
+    file: File,
+    slot: HomepageContentSlot = "cover",
+    galleryIndex?: number,
+  ): Promise<HomepageContentItem> {
+    const presign = await this.createImageUploadUrl(id, {
+      fileName: file.name,
+      contentType: file.type || "image/jpeg",
+      slot,
+    });
+    if (file.size > presign.maxBytes) {
+      throw new ApiError(
+        413,
+        `Image is ${file.size} bytes; maximum allowed is ${presign.maxBytes} bytes.`,
+      );
+    }
+    await this.uploadImageToS3(presign.uploadUrl, file);
+    return this.completeImageAttach(id, {
+      objectKey: presign.objectKey,
+      slot,
+      galleryIndex,
+    });
+  },
+};
+

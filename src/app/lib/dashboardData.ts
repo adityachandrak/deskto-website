@@ -10,6 +10,7 @@ import {
   ordersApi,
   productsApi,
   servicesApi,
+  homepageContentApi,
   isAuthenticated as isApiAuthenticated,
   getAccessToken,
 } from "./api";
@@ -6258,6 +6259,56 @@ export function useDashboardData() {
     }
 
     hydrateFromBackend();
+    // Also hydrate the gamingHub (admin homepage CMS) from the real backend
+    // so the admin list always reflects MySQL, not the localStorage seed.
+    if (isApiAuthenticated() && getAccessToken()) {
+      Promise.all([
+        homepageContentApi.adminList({}).catch(() => []),
+      ]).then(([cmsRows]) => {
+        if (cancelled || !Array.isArray(cmsRows)) return;
+        setStore(prev => {
+          const apiById = new Map(cmsRows.map(r => [r.id, r]));
+          // Keep local-only rows (no real UUID id) and overlay API rows.
+          const merged = (prev.gamingHub || []).map(local => {
+            const api = apiById.get(local.id);
+            return api ? { ...local, ...api, id: api.id || local.id, updatedAt: Date.now() } : local;
+          });
+          // Add any new API rows that aren't in local store yet.
+          const localIds = new Set(merged.map(r => r.id));
+          for (const r of cmsRows) {
+            if (!localIds.has(r.id)) {
+              merged.unshift({
+                id: r.id,
+                type: r.type,
+                title: r.title || '',
+                slug: r.slug || '',
+                category: r.category || '',
+                shortDescription: r.shortDescription || '',
+                body: r.body || '',
+                status: (r.status || 'draft') as GamingHubStatus,
+                coverImage: r.coverImage || '',
+                thumbnailImage: r.thumbnailImage || '',
+                bannerImage: r.bannerImage || '',
+                gallery: r.gallery || [],
+                tags: r.tags || [],
+                pros: r.pros || [],
+                cons: r.cons || [],
+                tips: r.tips || [],
+                order: r.displayOrder || 0,
+                publishDate: r.publishDate ? new Date(r.publishDate).getTime() : Date.now(),
+                updatedAt: Date.now(),
+                views: 0, reads: 0, shares: 0,
+                whatsappClicks: 0, callClicks: 0, offerClicks: 0, ctaClicks: 0,
+                comments: [],
+              });
+            }
+          }
+          const next = { ...prev, gamingHub: merged };
+          saveStore(next);
+          return next;
+        });
+      }).catch(() => { /* silent */ });
+    }
     const onAuth = () => hydrateFromBackend();
     const onFocus = () => hydrateFromBackend();
     const interval = window.setInterval(() => hydrateFromBackend(), 30000);
