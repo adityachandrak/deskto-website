@@ -18,7 +18,9 @@ import { StatusBadge } from "./components/dashboard/StatusBadge";
 import { SectionCard } from "./components/dashboard/SectionCard";
 import { DataTable, type Column } from "./components/dashboard/DataTable";
 import { EmptyState } from "./components/dashboard/EmptyState";
-import { isAuthenticated as isApiAuthenticated, ordersApi } from "./lib/api";
+import { isAuthenticated as isApiAuthenticated, ordersApi, homepageContentApi } from "./lib/api";
+import type { HomepageContentItem, HomepageContentType as ApiHomepageContentType, HomepageContentStatus } from "./lib/api";
+import { ApiError } from "./lib/api";
 import { mediaBlobUrl, mediaKind, mediaMime, mediaName, mediaRef, openMediaFile, hasValidRef, isMediaFile, revokeMediaBlobUrl } from "./lib/mediaStore";
 import type {
   DashboardStore, Order, Repair, Rental, PCBuild, Assembly, SupportTicket,
@@ -1049,6 +1051,158 @@ function emptyGamingDraft(): Partial<GamingHubItem> {
   };
 }
 
+// ─── CMS publish backend bridge ────────────────────────────────────────────
+// The CMS publish flow lives in `backend/src/routes/homepageContent.ts` and
+// exposes /api/admin/homepage-content* + /api/public/homepage-content*. The
+// admin tabs call `homepageContentApi.{create,update,publish,unpublish}` here
+// and fire `notifyCmsRefetch(type)` on success so the public homepage
+// (`usePublishedHomepageItems` in App.tsx) re-fetches on every change. Without
+// this bridge the admin's "Publish" button would only mutate the local React
+// store — which is exactly the cross-device visibility bug the user reported.
+
+const GAMING_TO_API_TYPE: Record<string, ApiHomepageContentType> = {
+  "featured-build": "featured-build",
+  "offer": "offer",
+  "gaming-news": "gaming-news",
+  "testimonial": "testimonial",
+  "faq": "faq",
+};
+
+function apiTypeFor(gaming: string | undefined | null): ApiHomepageContentType {
+  if (!gaming) return "gaming-news";
+  return GAMING_TO_API_TYPE[gaming] || "gaming-news";
+}
+
+// Global pub/sub so any admin save/delete/archive can tell the public homepage
+// hooks (which live in App.tsx) to re-fetch. Without subscribers the homepage
+// would only ever see the API state at page load.
+type CmsRefetchListener = (type: ApiHomepageContentType) => void;
+const cmsRefetchListeners = new Set<CmsRefetchListener>();
+
+export function subscribeCmsRefetch(listener: CmsRefetchListener) {
+  cmsRefetchListeners.add(listener);
+  return () => cmsRefetchListeners.delete(listener);
+}
+
+export function notifyCmsRefetch(type: ApiHomepageContentType) {
+  for (const fn of cmsRefetchListeners) {
+    try { fn(type); } catch { /* listener errors must never break the admin flow */ }
+  }
+}
+
+// Map a GamingHubItem draft → backend input shape. Drops fields the DB
+// doesn't store (views, comments, etc). Always omits id unless present.
+export function serializeGamingHubToApi(item: Partial<GamingHubItem>): import("./lib/api").HomepageContentInput {
+  // HomepageContentInput's type omits coverImage/thumbnailImage/bannerImage
+  // (replaced with the *Key variants), but the backend's CMS_COLUMN_MAP
+  // accepts both `coverImage` and `coverImageKey` (see
+  // backend/src/routes/homepageContent.ts), and the API layer's apiFetch
+  // serializes the input as JSON without type-stripping — so passing the
+  // resolved URLs is fine here.
+  const input = {
+    type: apiTypeFor(item.type),
+    title: item.title || "",
+    slug: item.slug || "",
+    category: item.category,
+    shortDescription: item.shortDescription,
+    body: item.body,
+    intro: item.intro,
+    specs: item.specs,
+    benchmarkData: item.benchmarkData,
+    tags: item.tags,
+    pros: item.pros,
+    cons: item.cons,
+    tips: item.tips,
+    offerDetails: item.offerDetails,
+    discount: item.discount,
+    ctaText: item.ctaText,
+    ctaHref: item.ctaHref,
+    coverImage: item.coverImage,
+    thumbnailImage: item.thumbnailImage,
+    bannerImage: item.bannerImage,
+    gallery: Array.isArray(item.gallery) ? item.gallery.slice(0, 5) : undefined,
+    order: item.order ?? 0,
+    displayOrder: item.order ?? 0,
+    showOnGamingHub: item.showOnHub,
+    showInCategory: item.showInCategory,
+    isFeatured: item.featured,
+    isTrending: item.trending,
+    isLatestNews: item.showInLatestNews,
+    isExclusiveOffer: item.showInExclusiveOffers,
+    isSignatureMachine: item.showInSignatureMachines,
+    metaTitle: item.metaTitle,
+    metaDescription: item.metaDescription,
+    keywords: item.keywords,
+    publishDate: typeof item.publishDate === "number" && item.publishDate > 0
+      ? new Date(item.publishDate).toISOString()
+      : null,
+    // status is set explicitly via .publish() / .unpublish() so we never
+    // smuggle it into create/update input.
+  } as unknown as import("./lib/api").HomepageContentInput;
+  // Strip undefined keys — backend ignores them anyway but keeps payload small.
+  for (const k of Object.keys(input) as (keyof import("./lib/api").HomepageContentInput)[]) {
+    if ((input as any)[k] === undefined) delete (input as any)[k];
+  }
+  return input;
+}
+
+function errorMessage(e: unknown): string {
+  if (e instanceof ApiError) return `${e.status}: ${e.message}`;
+  if (e instanceof Error) return e.message;
+  return String(e || "Unknown error");
+}
+
+// Save (create or update) a CMS item, optionally publish, return the
+// canonical server record. The caller can pass an optimistic local patch so
+// the admin list updates instantly while the API call is in flight.
+export async function saveCmsItem(
+  draft: Partial<GamingHubItem>,
+  targetStatus: GamingHubStatus,
+  existingId?: string,
+): Promise<HomepageContentItem> {
+  const input = serializeGamingHubToApi(draft);
+  if (!input.title) throw new Error("Title is required");
+  let saved: HomepageContentItem;
+  if (existingId) {
+    saved = await homepageContentApi.update(existingId, input);
+  } else {
+    saved = await homepageContentApi.create(input);
+  }
+  if (targetStatus === "published" && saved.status !== "published") {
+    saved = await homepageContentApi.publish(saved.id);
+  } else if (targetStatus !== "published" && saved.status === "published") {
+    // Admin saved a published item as draft/archived — unpublish it.
+    saved = await homepageContentApi.unpublish(saved.id);
+  }
+  notifyCmsRefetch(saved.type);
+  return saved;
+}
+
+export async function deleteCmsItem(id: string, type: ApiHomepageContentType): Promise<void> {
+  await homepageContentApi.delete(id);
+  notifyCmsRefetch(type);
+}
+
+export async function toggleArchiveCmsItem(
+  id: string,
+  currentStatus: string | undefined,
+  type: ApiHomepageContentType,
+): Promise<HomepageContentItem> {
+  const archived = currentStatus === "archived";
+  const updated = archived
+    ? await homepageContentApi.publish(id)
+    : await homepageContentApi.unpublish(id);
+  notifyCmsRefetch(type);
+  return updated;
+}
+
+// Mark a row as "local only" (id is not a real UUID). We skip the API call so
+// old seed rows from defaultGamingHubItems() aren't re-created on every edit.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export function isLocalOnlyGamingHubId(id: string | undefined | null): boolean {
+  return !!id && !UUID_RE.test(id);
+}
+
 function validateGamingHubItem(item: Partial<GamingHubItem>, publish: boolean, lenient = false) {
   if (!item.title?.trim()) return "Title is required.";
   // Homepage content forms (Featured Builds, Offers, News, etc.) only need a
@@ -1211,7 +1365,7 @@ export function AdminGamingHub({ store, addGamingHubItem, patchGamingHubItem, de
   const filtered = items.filter(item => `${item.title || ""} ${item.category || ""} ${item.status || ""}`.toLowerCase().includes(search.toLowerCase()));
   const totalViews = items.reduce((sum, item) => sum + (item.views || 0), 0);
   const pendingComments = items.reduce((sum, item) => sum + (item.comments || []).filter(comment => comment.status === "pending").length, 0);
-  const save = (status: GamingHubStatus) => {
+  const save = async (status: GamingHubStatus) => {
     if (!editing) return;
     const prepared = {
       ...emptyGamingDraft(),
@@ -1226,10 +1380,30 @@ export function AdminGamingHub({ store, addGamingHubItem, patchGamingHubItem, de
     } as GamingHubItem;
     const error = validateGamingHubItem(prepared, status === "published");
     if (error) return toast.error(error);
-    if (prepared.id) patchGamingHubItem(prepared.id, prepared);
-    else addGamingHubItem(prepared);
-    toast.success(status === "published" ? "Gaming Hub content published" : "Gaming Hub content saved");
-    setEditing(null);
+    const existingId = !isLocalOnlyGamingHubId(prepared.id) ? prepared.id : undefined;
+    try {
+      const saved = await saveCmsItem(prepared, status, existingId);
+      // Push the canonical server record back into the local store so the
+      // admin list reflects the new id/slug/status immediately.
+      patchGamingHubItem(saved.id, {
+        ...prepared,
+        id: saved.id,
+        slug: saved.slug,
+        title: saved.title,
+        category: saved.category,
+        status: saved.status as GamingHubStatus,
+        coverImage: saved.coverImage || prepared.coverImage,
+        thumbnailImage: saved.thumbnailImage || prepared.thumbnailImage,
+        bannerImage: saved.bannerImage || prepared.bannerImage,
+        gallery: (saved.gallery || prepared.gallery || []).slice(0, 5),
+        updatedAt: Date.now(),
+        publishDate: saved.publishDate ? new Date(saved.publishDate).getTime() : prepared.publishDate,
+      } as Partial<GamingHubItem>);
+      toast.success(status === "published" ? "Gaming Hub content published" : "Gaming Hub content saved");
+      setEditing(null);
+    } catch (e) {
+      toast.error(errorMessage(e) || "Save failed");
+    }
   };
   const moderateComment = (item: GamingHubItem, commentId: string, status: "approved" | "rejected") => {
     patchGamingHubItem(item.id, { comments: (item.comments || []).map(comment => comment.id === commentId ? { ...comment, status } : comment) });
@@ -1307,7 +1481,7 @@ function TypeFilteredAdmin({
 }) {
   const [editing, setEditing] = useState<Partial<GamingHubItem> | null>(null);
   const items = (store.gamingHub || []).filter(item => item.type === typeFilter).sort((a, b) => (a.order || 0) - (b.order || 0));
-  const save = (status: GamingHubStatus) => {
+  const save = async (status: GamingHubStatus) => {
     if (!editing) return;
     const prepared = {
       ...emptyGamingDraft(),
@@ -1323,10 +1497,28 @@ function TypeFilteredAdmin({
     } as GamingHubItem;
     const error = validateGamingHubItem(prepared, status === "published", true);
     if (error) return toast.error(error);
-    if (prepared.id) patchGamingHubItem(prepared.id, prepared);
-    else addGamingHubItem(prepared);
-    toast.success(`${title} ${status === "published" ? "published" : "saved"}`);
-    setEditing(null);
+    const existingId = !isLocalOnlyGamingHubId(prepared.id) ? prepared.id : undefined;
+    try {
+      const saved = await saveCmsItem(prepared, status, existingId);
+      patchGamingHubItem(saved.id, {
+        ...prepared,
+        id: saved.id,
+        slug: saved.slug,
+        title: saved.title,
+        category: saved.category,
+        status: saved.status as GamingHubStatus,
+        coverImage: saved.coverImage || prepared.coverImage,
+        thumbnailImage: saved.thumbnailImage || prepared.thumbnailImage,
+        bannerImage: saved.bannerImage || prepared.bannerImage,
+        gallery: (saved.gallery || prepared.gallery || []).slice(0, 5),
+        updatedAt: Date.now(),
+        publishDate: saved.publishDate ? new Date(saved.publishDate).getTime() : prepared.publishDate,
+      } as Partial<GamingHubItem>);
+      toast.success(`${title} ${status === "published" ? "published" : "saved"}`);
+      setEditing(null);
+    } catch (e) {
+      toast.error(errorMessage(e) || "Save failed");
+    }
   };
   return (
     <div style={{ display: "grid", gap: 16 }}>
