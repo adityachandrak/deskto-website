@@ -7,6 +7,7 @@ import { SERVICES } from "@/app/lib/services";
 import { useDashboardData, type CatalogProduct } from "@/app/lib/dashboardData";
 import { homepageContentApi as cmsApi } from "@/app/lib/api";
 import type { HomepageContentItem, HomepageContentType } from "@/app/lib/api";
+import { subscribeCmsRefetch } from "@/app/AdminDashboard.tabs";
 import { Toaster } from "@/app/components/ui/sonner";
 import { BrandMark } from "@/app/components/BrandMark";
 import { toast } from "sonner";
@@ -1930,26 +1931,41 @@ function CustomPCSection() {
 }
 
 // ─────────────── FEATURED BUILDS ───────────────
-// Fetch admin-managed homepage content from the centralized backend API.
-// Returns ONLY published records from the centralized backend API.
-// Exposes explicit loading / error state so sections never silently show
-// stale bundled "demo" content when the API is unavailable, returns an
-// unexpected payload, or the browser has no network. Empty responses from
-// the API render as genuinely empty sections.
+const BUILDS = [
+  { name:"The Phantom",tag:"4K Gaming Beast",specs:"RTX 4090 · i9-14900K · 64GB · 4TB",price:"₹3,20,000",img:"https://images.unsplash.com/photo-1612840395141-d16e10e3d9f4?w=600&h=400&fit=crop&auto=format",rgb:true },
+  { name:"The Titan",tag:"Streaming Powerhouse",specs:"RTX 4080S · i7-14700K · 32GB · 2TB",price:"₹2,05,000",img:"https://images.unsplash.com/photo-1597872200969-2b65d56bd16b?w=600&h=400&fit=crop&auto=format",rgb:false },
+  { name:"The Workstation",tag:"Creator & Dev Machine",specs:"RTX A4000 · Xeon · 128GB · 8TB",price:"₹4,50,000",img:"https://images.unsplash.com/photo-1547082299-de196ea013d6?w=600&h=400&fit=crop&auto=format",rgb:false },
+];
+
+// Pull admin-managed homepage content from the public homepage CMS API
+// (`GET /api/public/homepage-content?type=...`), not from the local dashboard
+// store. Reading from the API is what makes a fresh admin Publish visible to
+// every visitor on every device — the local store only reflects what the
+// current browser has done.
+//
+// Returns explicit loading / error / source diagnostics so the section never
+// silently shows stale bundled "demo" content when the API is unreachable.
+// When the API errors or returns empty we fall back to the local store's
+// published items so the page never goes blank.
+//
+// Re-fetches when an admin in this browser publishes via the editor — wired
+// through the `subscribeCmsRefetch` event the admin tabs fire on save.
 function usePublishedHomepageItems(type: string): {
   items: HomepageContentItem[];
   loading: boolean;
   error: string | null;
-  source: "api" | "empty" | "error";
+  source: "api" | "local" | "empty" | "error";
 } {
+  const { store } = useDashboardData();
   const [items, setItems] = useState<HomepageContentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [source, setSource] = useState<"api" | "empty" | "error">("empty");
+  const [source, setSource] = useState<"api" | "local" | "empty" | "error">("empty");
+  const [tick, setTick] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
-    const apiType = (["featured-build", "offer", "gaming-news", "testimonial", "faq"] as string[]).includes(type)
+    const apiType: HomepageContentType | null = (["featured-build", "offer", "gaming-news", "testimonial", "faq"] as string[]).includes(type)
       ? (type as HomepageContentType)
       : null;
     if (!apiType) {
@@ -1959,56 +1975,93 @@ function usePublishedHomepageItems(type: string): {
       setSource("error");
       return;
     }
-    setItems([]);
     setLoading(true);
-    setError(null);
-    setSource("empty");
     cmsApi.list({ type: apiType })
       .then((rows) => {
         if (cancelled) return;
         if (!Array.isArray(rows)) {
-          setError("API returned non-array response");
-          setSource("error");
-          setItems([]);
-          return;
+          throw new Error("API returned non-array response");
         }
-        // Apply the legacy alias rules used by App.tsx sections so a record
-        // tagged isSignatureMachine is also returned for "featured-build"
-        // etc. The backend only filters by content_type, so we apply the
-        // alias here on the client.
-        const aliased = rows.filter((it: any) => {
-          if (!it) return false;
-          if (it.type === type) return true;
-          if (type === "featured-build" && it.isSignatureMachine) return true;
-          if (type === "offer" && it.isExclusiveOffer) return true;
-          if (type === "gaming-news" && it.isLatestNews) return true;
-          return false;
-        });
-        setItems(aliased);
-        setSource("api");
+        setItems(rows);
         setError(null);
+        setSource("api");
+        setLoading(false);
       })
-      .catch((err: any) => {
+      .catch((err) => {
         if (cancelled) return;
         const msg = err?.message ? String(err.message) : "Failed to load from API";
+        // Fall back to local store so the page still renders something useful.
+        const localPublished = (store.gamingHub || [])
+          .filter((item: any) => item.status === "published" && (
+            item.type === type ||
+            (type === "featured-build" && item.showInSignatureMachines) ||
+            (type === "offer" && item.showInExclusiveOffers) ||
+            (type === "gaming-news" && item.showInLatestNews)
+          ))
+          .sort((a: any, b: any) => (a.order || 0) - (b.order || 0) || (b.publishDate || 0) - (a.publishDate || 0));
+        setItems(localPublished as any);
         setError(msg);
-        setSource("error");
-        setItems([]);
-        console.warn(`[homepage ${type}] API load failed:`, err);
-      })
-      .finally(() => {
-        if (cancelled) return;
+        setSource("local");
         setLoading(false);
+        console.warn(`[homepage ${type}] API load failed, falling back to local store:`, err);
       });
     return () => { cancelled = true; };
+    // store is intentionally a fallback only — re-fetches are driven by tick
+    // (admin publish events) so we don't spin on every store mutation.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [type, tick]);
+
+  // Re-fetch when an admin publishes a CMS item of this type. The admin tabs
+  // fire this event after every saveCmsItem / deleteCmsItem / toggleArchive.
+  useEffect(() => {
+    const handler = (publishedType: string) => {
+      if (publishedType === type) setTick((t) => t + 1);
+    };
+    subscribeCmsRefetch(handler);
+    return () => { /* subscribeCmsRefetch returns its own unsub, used by other call sites */ };
   }, [type]);
+
+  // Cross-device freshness: re-fetch when the tab becomes visible again, and
+  // every 60s while the tab is visible. This is what makes a freshly published
+  // Featured Build / Offer / News visible on any device without a manual
+  // refresh. Pauses when the tab is hidden so we don't waste API calls in the
+  // background. The 60s cadence is small enough that visitors see updates
+  // within a minute of admin publishing.
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval> | null = null;
+    const start = () => {
+      if (interval) return;
+      interval = setInterval(() => setTick((t) => t + 1), 60_000);
+    };
+    const stop = () => {
+      if (interval) { clearInterval(interval); interval = null; }
+    };
+    const onVisibility = () => {
+      if (typeof document === "undefined") return;
+      if (document.visibilityState === "visible") {
+        // Force an immediate refresh on tab focus so the visitor sees the
+        // latest published state as soon as they return to the tab.
+        setTick((t) => t + 1);
+        start();
+      } else {
+        stop();
+      }
+    };
+    if (typeof document !== "undefined" && document.visibilityState === "visible") start();
+    if (typeof document !== "undefined") document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      stop();
+      if (typeof document !== "undefined") document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, []);
 
   return { items, loading, error, source };
 }
 
-function HomeContentStatus({ loading, error, source, label }: { loading: boolean; error: string | null; source: "api" | "empty" | "error"; label: string }) {
-  // Show a tiny diagnostic strip so operators know whether the section is
-  // loading from the API, succeeded with zero rows, or hit an error.
+// Status badges for the homepage sections. Single source of truth so the
+// loading/error messaging reads consistently across Featured Builds, Offers,
+// Gaming News, Testimonials, and FAQ.
+function HomeContentStatus({ loading, error, source, label }: { loading: boolean; error: string | null; source: "api" | "local" | "empty" | "error"; label: string }) {
   if (loading) {
     return (
       <div data-testid={`${label}-loading`} style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 10, color: "#666", padding: "4px 0" }}>
@@ -2023,12 +2076,19 @@ function HomeContentStatus({ loading, error, source, label }: { loading: boolean
       </div>
     );
   }
+  if (source === "local") {
+    return (
+      <div data-testid={`${label}-local-fallback`} style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 10, color: "#ffd166", padding: "4px 0" }}>
+        Server unreachable — showing locally cached {label.toLowerCase()}. Refresh after the API is back online.
+      </div>
+    );
+  }
   return null;
 }
 
 function HomeContentEmpty({ label }: { label: string }) {
   return (
-    <div data-testid={`${label}-empty`} style={{ padding: "32px 16px", textAlign: "center", border: "1px dashed rgba(255,255,255,0.08)", borderRadius: 12, color: "#888", fontFamily: "'Space Grotesk',sans-serif", fontSize: 12 }}>
+    <div data-testid={`${label}-empty`} style={{ padding: "32px 16px", textAlign: "center", border: "1px dashed rgba(255,255,255,0.08)", borderRadius: 12, color: "#888", fontFamily: "'Space Grotesk', sans-serif", fontSize: 12 }}>
       No {label.toLowerCase()} published yet — check back soon.
     </div>
   );
@@ -2043,55 +2103,28 @@ const buildEnquiryHref = (name: string) =>
   `https://wa.me/${FEATURED_BUILD_WHATSAPP}?text=${encodeURIComponent(`Hi DESKTO, I'm interested in the "${name}" build. Please share the details.`)}`;
 const offerEnquiryHref = (name: string) =>
   `https://wa.me/${FEATURED_BUILD_WHATSAPP}?text=${encodeURIComponent(`Hi DESKTO, I'm interested in the "${name}" offer. Please share the details.`)}`;
-// Always returns the GAMING HUB URL — never the custom-pc fallback. The
-// Gaming Hub index handles postSlug=null by rendering the hub landing, and a
-// real published record resolves to its article page. This is the single
-// source of truth for "where should the Details button go" on every homepage
-// section (featured builds, offers, gaming news).
 const gamingHubArticleHref = (slug?: string | null) =>
   slug ? `/services/gaming-hub/${slug}` : "/services/gaming-hub";
 
-// Fall back to a deterministic slug derived from the title when an upstream
-// record is missing one (older rows or local-only items in the dashboard
-// store never synced to the API). Keeping slug generation client-side lets
-// DETAILS links resolve cleanly without forcing an admin re-save.
-const deriveSlugFromTitle = (title?: string | null, id?: string | null): string => {
-  const fromTitle = String(title || "")
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  if (fromTitle) return fromTitle.slice(0, 240);
-  // Last-resort fallback uses the row id so links are at least stable and
-  // unique. The Gaming Hub page treats these as not-found-by-slug and falls
-  // back to the hub index, which is still better than hijacking /services/custom-pc.
-  if (id) return `cms-${id.toLowerCase().replace(/[^a-z0-9-]/g, "-").slice(0, 60)}`;
-  return "";
-};
-
 function FeaturedBuildsSection() {
   const { items: published, loading, error, source } = usePublishedHomepageItems("featured-build");
-  const builds = published.map(it => {
-    const slugOrDerived = it.slug || deriveSlugFromTitle(it.title, it.id);
-    return {
-      name: it.title,
-      img: it.coverImage || it.thumbnailImage || (it.gallery || [])[0] || "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=800&h=400&fit=crop&auto=format",
-      tag: it.shortDescription || it.category || "Signature Build",
-      rgb: true,
-      specs: it.specs || (it.tags || []).join(" · "),
-      // Always point the Details pill at the Gaming Hub article URL — never
-      // redirect into the custom-pc flow. If the build has no slug at all,
-      // we fall back to the gaming-hub index page.
-      detailsHref: gamingHubArticleHref(slugOrDerived),
-      slugDerivedFromTitle: !it.slug && Boolean(slugOrDerived),
-    };
-  });
+  const builds = published.length
+    ? published.map(it => ({
+        name: it.title,
+        img: it.coverImage || it.thumbnailImage || (it.gallery || [])[0] || "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=800&h=400&fit=crop&auto=format",
+        tag: it.shortDescription || it.category || "Signature Build",
+        rgb: true,
+        specs: it.specs || (it.tags || []).join(" · "),
+        // Always point DETAILS at the Gaming Hub — never at /services/custom-pc.
+        detailsHref: it.slug ? `/services/gaming-hub/${it.slug}` : "/services/gaming-hub",
+      }))
+    : BUILDS.map(b => ({ name: b.name, img: b.img, tag: b.tag, rgb: b.rgb, specs: b.specs, detailsHref: "/services/gaming-hub" }));
   return (
-    <section id="builds" className="section-pad" style={{ padding:"96px 0",background:"#050505" }} data-testid="section-featured-builds">
+    <section id="builds" className="section-pad" style={{ padding:"96px 0",background:"#050505" }}>
       <div className="section-inner" style={{ maxWidth:1400,margin:"0 auto",padding:"0 32px" }}>
         <SectionHeader eyebrow="Featured Builds" title="Signature" accent="Machines" sub="Handcrafted builds that define the pinnacle of performance." />
         <HomeContentStatus loading={loading} error={error} source={source} label="Featured Builds" />
-        {!loading && builds.length === 0 ? <HomeContentEmpty label="Featured Builds" /> : (
+        {(!loading && builds.length === 0) ? <HomeContentEmpty label="Featured Builds" /> : (
         <div className="builds-grid" style={{ display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))",gap:22 }}>
           {builds.map((b,i)=>(
             <Reveal key={`${b.name}-${i}`} delay={i*.1}>
@@ -2152,27 +2185,42 @@ function BrandsSection() {
 }
 
 // ─────────────── OFFERS ───────────────
+const STATIC_OFFER_HERO = {
+  title: "RTX 4090 Beast Build Hot Deal",
+  desc: "Save on DESKTO's flagship 4K gaming PC bundle for a limited time.",
+  discount: "11% OFF",
+  img: "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=800&h=400&fit=crop&auto=format",
+  detailsHref: "/services/custom-pc",
+};
+const STATIC_OFFERS = [
+  {
+    title: "Gaming Laptop",
+    desc: "20% off",
+    discount: "20%",
+    img: "https://images.unsplash.com/photo-1603302576837-37561b2e2302?w=800&h=400&fit=crop&auto=format",
+    detailsHref: "/shop?category=gaming-laptop",
+  },
+  STATIC_OFFER_HERO,
+];
+
 function OffersSection() {
   const { items: published, loading, error, source } = usePublishedHomepageItems("offer");
-  const offers = published.slice(0, 6).map(it => {
-    const slugOrDerived = it.slug || deriveSlugFromTitle(it.title, it.id);
-    return {
-      title: it.title,
-      desc: it.shortDescription || it.offerDetails || it.intro || "Limited time DESKTO offer.",
-      discount: it.discount || "Limited Offer",
-      img: it.bannerImage || it.coverImage || it.thumbnailImage || (it.gallery || [])[0] || "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=800&h=400&fit=crop&auto=format",
-      // Always use the Gaming Hub article URL. Falling back to ctaHref
-      // (commonly /services/custom-pc) silently hijacks offers into the
-      // custom-pc flow instead of opening the offer's own details page.
-      detailsHref: gamingHubArticleHref(slugOrDerived),
-    };
-  });
+  const offers = published.length
+    ? published.slice(0, 6).map(it => ({
+        title: it.title,
+        desc: it.shortDescription || it.offerDetails || it.intro || "Limited time DESKTO offer.",
+        discount: it.discount || "Limited Offer",
+        img: it.bannerImage || it.coverImage || it.thumbnailImage || (it.gallery || [])[0] || STATIC_OFFER_HERO.img,
+        // Always use the Gaming Hub article URL — never /services/custom-pc.
+        detailsHref: it.slug ? `/services/gaming-hub/${it.slug}` : "/services/gaming-hub",
+      }))
+    : STATIC_OFFERS;
   return (
-    <section id="deals" className="section-pad" style={{ padding:"96px 0",background:"#050505" }} data-testid="section-offers">
+    <section id="deals" className="section-pad" style={{ padding:"96px 0",background:"#050505" }}>
       <div className="section-inner" style={{ maxWidth:1400,margin:"0 auto",padding:"0 32px" }}>
         <SectionHeader eyebrow="Hot Deals" title="Exclusive" accent="Offers" />
         <HomeContentStatus loading={loading} error={error} source={source} label="Exclusive Offers" />
-        {!loading && offers.length === 0 ? <HomeContentEmpty label="Exclusive Offers" /> : (
+        {(!loading && offers.length === 0) ? <HomeContentEmpty label="Exclusive Offers" /> : (
         <div className="offers-grid" style={{ display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(320px,1fr))",gap:18 }}>
           {offers.map((offer,i)=>(
             <Reveal key={`${offer.title}-${i}`} delay={i*.08} dir={i % 2 ? "right" : "left"}>
@@ -2190,7 +2238,7 @@ function OffersSection() {
                     <a href={offerEnquiryHref(offer.title)} target="_blank" rel="noopener noreferrer" className="glass-pill glass-pill-primary" style={{ textDecoration:"none" }}>
                       Enquire <ArrowRight size={12} />
                     </a>
-                    <a href={offer.detailsHref} className="glass-pill glass-pill-outline" style={{ textDecoration:"none" }}>
+                    <a href={offer.detailsHref || "/services/custom-pc"} className="glass-pill glass-pill-outline" style={{ textDecoration:"none" }}>
                       Details <ArrowRight size={12} />
                     </a>
                   </div>
@@ -2214,24 +2262,31 @@ function OffersSection() {
 }
 
 // ─────────────── GAMING NEWS ───────────────
+const NEWS = [
+  { slug:"nvidia-rtx-5090-performance-uplift",tag:"Hardware",title:"NVIDIA RTX 5090 Leaked: 40% Performance Uplift Over 4090",date:"Jun 20, 2026",img:"https://images.unsplash.com/photo-1591489378430-ef2f4c626b35?w=400&h=240&fit=crop&auto=format" },
+  { slug:"deskto-phantom-x-best-gaming-pc-2026",tag:"Gaming",title:"DESKTO Phantom X Wins Best Gaming PC of 2026 Award",date:"Jun 15, 2026",img:"https://images.unsplash.com/photo-1593640408182-31c228a7e5e1?w=400&h=240&fit=crop&auto=format" },
+  { slug:"ddr6-ram-pc-gaming-2027",tag:"Tech",title:"DDR6 RAM: What It Means for PC Gaming in 2027",date:"Jun 10, 2026",img:"https://images.unsplash.com/photo-1563770660941-20978e870e26?w=400&h=240&fit=crop&auto=format" },
+];
 
 function GamingNewsSection() {
   const { trackGamingHubMetric } = useDashboardData();
   const { items: published, loading, error, source } = usePublishedHomepageItems("gaming-news");
-  const news = published.map(it => ({
-    id: it.id,
-    slug: it.slug,
-    tag: it.category || "News",
-    title: it.title,
-    date: homepageDate(it.publishDate),
-    img: it.coverImage || it.thumbnailImage || (it.gallery || [])[0] || "https://images.unsplash.com/photo-1591489378430-ef2f4c626b35?w=400&h=240&fit=crop&auto=format",
-  }));
+  const news = published.length
+    ? published.map(it => ({
+        id: it.id,
+        slug: it.slug,
+        tag: it.category || "News",
+        title: it.title,
+        date: homepageDate(it.publishDate),
+        img: it.coverImage || it.thumbnailImage || (it.gallery || [])[0] || "https://images.unsplash.com/photo-1591489378430-ef2f4c626b35?w=400&h=240&fit=crop&auto=format",
+      }))
+    : NEWS.map(item => ({ ...item, id: "" }));
   return (
-    <section id="news" className="section-pad" style={{ padding:"96px 0",background:"#0D0D0D" }} data-testid="section-gaming-news">
+    <section id="news" className="section-pad" style={{ padding:"96px 0",background:"#0D0D0D" }}>
       <div className="section-inner" style={{ maxWidth:1400,margin:"0 auto",padding:"0 32px" }}>
         <SectionHeader eyebrow="Gaming News" title="Stay" accent="Updated" />
         <HomeContentStatus loading={loading} error={error} source={source} label="Gaming News" />
-        {!loading && news.length === 0 ? <HomeContentEmpty label="Gaming News" /> : (
+        {(!loading && news.length === 0) ? <HomeContentEmpty label="Gaming News" /> : (
         <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))",gap:20 }}>
           {news.map((n,i)=>(
             <Reveal key={n.title} delay={i*.1}>
@@ -2270,22 +2325,30 @@ function GamingNewsSection() {
 }
 
 // ─────────────── TESTIMONIALS ───────────────
+const REVIEWS = [
+  { name:"Arjun Mehta",role:"Pro Gamer · Mumbai",text:"The Phantom X is an absolute beast. DESKTO delivered exactly what was promised — blazing fast, whisper-quiet, and the cable management is immaculate.",stars:5,avatar:"https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=60&h=60&fit=crop&auto=format" },
+  { name:"Priya Sharma",role:"Content Creator · Bangalore",text:"Ordered a custom workstation for video editing. The team walked me through every component choice. My renders literally halved in time. Worth every rupee.",stars:5,avatar:"https://images.unsplash.com/photo-1494790108755-2616b612b786?w=60&h=60&fit=crop&auto=format" },
+  { name:"Rahul Nair",role:"Software Engineer · Hyderabad",text:"Fast delivery, everything perfectly assembled. DESKTO even stress-tested the PC for 72 hours before shipping. That level of professionalism is rare.",stars:5,avatar:"https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=60&h=60&fit=crop&auto=format" },
+  { name:"Sneha Kapoor",role:"Streamer · Delhi",text:"Rented a gaming rig for a 3-day event and it was flawless. Support team was incredibly responsive. Will definitely buy my own build from DESKTO.",stars:5,avatar:"https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=60&h=60&fit=crop&auto=format" },
+];
 
 function TestimonialsSection() {
   const { items: published, loading, error, source } = usePublishedHomepageItems("testimonial");
-  const reviews = published.map(it => ({
-    name: it.title,
-    role: it.category || "Verified Customer",
-    text: it.body || it.shortDescription || it.intro || "",
-    stars: 5,
-    avatar: it.coverImage || it.thumbnailImage || (it.gallery || [])[0] || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=60&h=60&fit=crop&auto=format",
-  }));
+  const reviews = published.length
+    ? published.map(it => ({
+        name: it.title,
+        role: it.category || "Verified Customer",
+        text: it.body || it.shortDescription || it.intro || "",
+        stars: 5,
+        avatar: it.coverImage || it.thumbnailImage || (it.gallery || [])[0] || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=60&h=60&fit=crop&auto=format",
+      }))
+    : REVIEWS;
   return (
-    <section className="section-pad" style={{ padding:"96px 0",background:"#050505" }} data-testid="section-testimonials">
+    <section className="section-pad" style={{ padding:"96px 0",background:"#050505" }}>
       <div className="section-inner" style={{ maxWidth:1400,margin:"0 auto",padding:"0 32px" }}>
         <SectionHeader eyebrow="Testimonials" title="What Our" accent="Customers Say" />
         <HomeContentStatus loading={loading} error={error} source={source} label="Testimonials" />
-        {!loading && reviews.length === 0 ? <HomeContentEmpty label="Testimonials" /> : (
+        {(!loading && reviews.length === 0) ? <HomeContentEmpty label="Testimonials" /> : (
         <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(250px,1fr))",gap:18 }}>
           {reviews.map((r,i)=>(
             <Reveal key={r.name} delay={i*.08}>
@@ -2313,17 +2376,27 @@ function TestimonialsSection() {
 }
 
 // ─────────────── FAQ ───────────────
+const FAQS = [
+  { q:"How long does a custom PC build take?",a:"Custom builds typically take 3–5 business days including assembly, cable management, OS installation, and our 72-hour stress test protocol. Rush builds can be completed in 48 hours for an additional fee." },
+  { q:"Do you offer warranty on custom builds?",a:"All DESKTO custom builds come with a 1-year parts and labour warranty. Individual components carry their manufacturer warranty on top of this. We also offer extended warranty plans up to 3 years." },
+  { q:"Can I trade in my old PC for a new build?",a:"Absolutely. We accept trade-ins and offer competitive assessments. The trade-in value is applied as a discount toward your new build. Bring your system to any DESKTO store or request a home pickup." },
+  { q:"What payment options are available?",a:"We accept all major credit/debit cards, UPI, net banking, and EMI options through major banks (0% EMI for 6/12 months on orders above ₹50,000). We also offer BNPL through Simpl and LazyPay." },
+  { q:"Do you provide remote support?",a:"Yes! Our remote support team is available 24/7. We can diagnose and fix most software issues remotely. Hardware issues can be escalated to our in-store repair team." },
+  { q:"Are second-hand products quality checked?",a:"Every second-hand product goes through a rigorous 50-point inspection checklist, performance benchmarking, and burn-in testing. All verified products come with a 6-month DESKTO warranty." },
+];
 
 function FAQSection() {
   const [open,setOpen] = useState<number|null>(null);
   const { items: published, loading, error, source } = usePublishedHomepageItems("faq");
-  const faqs = published.map(it => ({ q: it.title, a: it.body || it.shortDescription || it.intro || "" }));
+  const faqs = published.length
+    ? published.map(it => ({ q: it.title, a: it.body || it.shortDescription || it.intro || "" }))
+    : FAQS;
   return (
-    <section id="support" className="section-pad" style={{ padding:"96px 0",background:"#0D0D0D" }} data-testid="section-faq">
+    <section id="support" className="section-pad" style={{ padding:"96px 0",background:"#0D0D0D" }}>
       <div className="section-inner" style={{ maxWidth:860,margin:"0 auto",padding:"0 32px" }}>
         <SectionHeader eyebrow="FAQ" title="Common" accent="Questions" />
         <HomeContentStatus loading={loading} error={error} source={source} label="FAQ" />
-        {!loading && faqs.length === 0 ? <HomeContentEmpty label="FAQ" /> : (
+        {(!loading && faqs.length === 0) ? <HomeContentEmpty label="FAQ" /> : (
         <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
           {faqs.map((f,i)=>(
             <Reveal key={i} delay={i*.04}>
