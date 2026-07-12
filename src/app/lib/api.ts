@@ -132,12 +132,23 @@ async function apiFetch<T = unknown>(path: string, opts: FetchOptions = {}): Pro
   }
 
   if (!res.ok) {
-    const message =
+    let message =
       (parsed && typeof parsed === "object" && "error" in (parsed as Record<string, unknown>)
         ? String((parsed as Record<string, unknown>).error)
         : (parsed && typeof parsed === "object" && "message" in (parsed as Record<string, unknown>)
           ? String((parsed as Record<string, unknown>).message)
           : `Request failed: ${res.status}`));
+    // Detect the stale-backend symptom explicitly so callers (and the toast
+    // surface) flag the actual fix rather than a cryptic 404 / 401. The
+    // Express 4 catch-all in backend/src/index.ts returns the literal
+    // string "Route not found" with status 404 for any unmounted path —
+    // including every /api/admin/homepage-content/* call when the running
+    // backend image predates the CMS work. Upstream proxies occasionally
+    // rewrite that 404 into a 401, which is why callers sometimes see
+    // "401: route not found" with no obvious cause.
+    if (res.status === 404 && message.trim().toLowerCase() === "route not found") {
+      message = "Route not found (404) — the running backend image is missing this route. Rebuild the backend image and restart the container (./scripts/rebuild-backend.sh).";
+    }
     throw new ApiError(res.status, message, parsed);
   }
 
