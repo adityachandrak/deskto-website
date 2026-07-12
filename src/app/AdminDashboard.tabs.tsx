@@ -18,7 +18,8 @@ import { StatusBadge } from "./components/dashboard/StatusBadge";
 import { SectionCard } from "./components/dashboard/SectionCard";
 import { DataTable, type Column } from "./components/dashboard/DataTable";
 import { EmptyState } from "./components/dashboard/EmptyState";
-import { isAuthenticated as isApiAuthenticated, ordersApi } from "./lib/api";
+import { isAuthenticated as isApiAuthenticated, ordersApi, homepageContentApi, ApiError as ApiClientError } from "./lib/api";
+import type { HomepageContentInput, HomepageContentItem, HomepageContentType as ApiHomepageContentType, HomepageContentStatus } from "./lib/api";
 import { mediaBlobUrl, mediaKind, mediaMime, mediaName, mediaRef, openMediaFile, hasValidRef, isMediaFile, revokeMediaBlobUrl } from "./lib/mediaStore";
 import type {
   DashboardStore, Order, Repair, Rental, PCBuild, Assembly, SupportTicket,
@@ -1054,15 +1055,67 @@ function validateGamingHubItem(item: Partial<GamingHubItem>, publish: boolean, l
   return null;
 }
 
-function readGamingImage(file: File) {
-  return new Promise<string>((resolve, reject) => {
+// Module-scope stash of pending File objects keyed by `${draftId}::${slot}::${index}`.
+// The editor stores a data-URL preview in React state, but also keeps the
+// original File here so the Save flow can re-upload it to S3 once the
+// backend record has an id.
+const pendingGamingImageFiles = new Map<string, File>();
+
+function makePendingKey(draftId: string | undefined, slot: string, index?: number): string {
+  return `${draftId || "new"}::${slot}::${index ?? 0}`;
+}
+
+function readGamingImage(file: File): Promise<{ dataUrl: string; file: File }> {
+  return new Promise((resolve, reject) => {
     const invalid = !["image/jpeg", "image/png", "image/webp"].includes(file.type) && !/\.(jpe?g|png|webp)$/i.test(file.name);
     if (invalid) reject(new Error("Only JPG, JPEG, PNG, or WEBP images are allowed"));
     const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onload = () => resolve({ dataUrl: String(reader.result || ""), file });
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+}
+
+// Flush all queued File objects to S3 for the given record. Called after a
+// successful create/update. Skips slots where the preview data-URL no
+// longer matches the in-memory file (i.e. user pasted a URL instead).
+async function flushPendingImages(
+  recordId: string,
+  draft: Partial<GamingHubItem>,
+): Promise<void> {
+  const slots: { key: keyof GamingHubItem; slot: "cover" | "thumbnail" | "banner" }[] = [
+    { key: "coverImage", slot: "cover" },
+    { key: "thumbnailImage", slot: "thumbnail" },
+    { key: "bannerImage", slot: "banner" },
+  ];
+  for (const { key, slot } of slots) {
+    const file = pendingGamingImageFiles.get(makePendingKey(draft.id, slot));
+    if (!file) continue;
+    const preview = (draft as any)[key];
+    // If the saved draft value isn't a data URL, the user pasted an external
+    // URL instead — keep it and skip upload.
+    if (typeof preview !== "string" || !preview.startsWith("data:")) continue;
+    try {
+      await homepageContentApi.uploadAndAttach(recordId, file, slot);
+    } catch (e) {
+      toast.error(`Image upload failed (${slot}): ${errorMessage(e)}`);
+    }
+    pendingGamingImageFiles.delete(makePendingKey(draft.id, slot));
+  }
+  // Gallery
+  const gallery = Array.isArray(draft.gallery) ? draft.gallery : [];
+  for (let i = 0; i < gallery.length; i += 1) {
+    const preview = gallery[i];
+    if (typeof preview !== "string" || !preview.startsWith("data:")) continue;
+    const file = pendingGamingImageFiles.get(makePendingKey(draft.id, "gallery", i));
+    if (!file) continue;
+    try {
+      await homepageContentApi.uploadAndAttach(recordId, file, "gallery", i);
+    } catch (e) {
+      toast.error(`Gallery upload failed (#${i + 1}): ${errorMessage(e)}`);
+    }
+    pendingGamingImageFiles.delete(makePendingKey(draft.id, "gallery", i));
+  }
 }
 
 function AdminGamingHubEditor({ draft, setDraft, onSave, onClose }: {
@@ -1075,9 +1128,17 @@ function AdminGamingHubEditor({ draft, setDraft, onSave, onClose }: {
   const uploadSingle = async (file: File | undefined, key: "coverImage" | "thumbnailImage" | "bannerImage") => {
     if (!file) return;
     try {
-      const img = await readGamingImage(file);
-      setDraft(prev => ({ ...prev, [key]: img, ...(key === "coverImage" && !prev.thumbnailImage ? { thumbnailImage: img } : {}) }));
-      toast.success(`${key === "coverImage" ? "Cover" : key === "thumbnailImage" ? "Thumbnail" : "Banner"} image added`);
+      const { dataUrl, file: stored } = await readGamingImage(file);
+      setDraft((prev) => {
+        const slot = key === "coverImage" ? "cover" : key === "thumbnailImage" ? "thumbnail" : "banner";
+        pendingGamingImageFiles.set(makePendingKey(prev.id, slot), stored);
+        const next: Partial<GamingHubItem> = { ...prev, [key]: dataUrl };
+        if (key === "coverImage" && !prev.thumbnailImage) {
+          next.thumbnailImage = dataUrl;
+        }
+        return next;
+      });
+      toast.success(`${key === "coverImage" ? "Cover" : key === "thumbnailImage" ? "Thumbnail" : "Banner"} image staged — click Save to upload to S3`);
     } catch (error: any) {
       toast.error(error?.message || "Image upload failed");
     }
@@ -1085,13 +1146,14 @@ function AdminGamingHubEditor({ draft, setDraft, onSave, onClose }: {
   const uploadGallery = async (index: number, file: File | undefined) => {
     if (!file) return;
     try {
-      const img = await readGamingImage(file);
-      setDraft(prev => {
+      const { dataUrl, file: stored } = await readGamingImage(file);
+      setDraft((prev) => {
+        pendingGamingImageFiles.set(makePendingKey(prev.id, "gallery", index), stored);
         const gallery = [...(prev.gallery || [])];
-        gallery[index] = img;
+        gallery[index] = dataUrl;
         return { ...prev, gallery: gallery.slice(0, 5) };
       });
-      toast.success(`Gallery image ${index + 1} added`);
+      toast.success(`Gallery image ${index + 1} staged — click Save to upload to S3`);
     } catch (error: any) {
       toast.error(error?.message || "Image upload failed");
     }
@@ -1203,7 +1265,7 @@ export function AdminGamingHub({ store, addGamingHubItem, patchGamingHubItem, de
   const filtered = items.filter(item => `${item.title || ""} ${item.category || ""} ${item.status || ""}`.toLowerCase().includes(search.toLowerCase()));
   const totalViews = items.reduce((sum, item) => sum + (item.views || 0), 0);
   const pendingComments = items.reduce((sum, item) => sum + (item.comments || []).filter(comment => comment.status === "pending").length, 0);
-  const save = (status: GamingHubStatus) => {
+  const save = async (status: GamingHubStatus) => {
     if (!editing) return;
     const prepared = {
       ...emptyGamingDraft(),
@@ -1218,11 +1280,73 @@ export function AdminGamingHub({ store, addGamingHubItem, patchGamingHubItem, de
     } as GamingHubItem;
     const error = validateGamingHubItem(prepared, status === "published");
     if (error) return toast.error(error);
-    if (prepared.id) patchGamingHubItem(prepared.id, prepared);
-    else addGamingHubItem(prepared);
-    toast.success(status === "published" ? "Gaming Hub content published" : "Gaming Hub content saved");
-    setEditing(null);
+
+    const existingId = prepared.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(prepared.id)
+      ? prepared.id
+      : undefined;
+
+    try {
+      const saved = await saveCmsItem(prepared, status, existingId);
+      // Also push the canonical server record back into local store so the
+      // analytics chips (drafts/views/etc.) stay populated immediately.
+      patchGamingHubItem(saved.id, {
+        ...prepared,
+        id: saved.id,
+        slug: saved.slug,
+        title: saved.title,
+        category: saved.category,
+        status: saved.status as GamingHubStatus,
+        coverImage: saved.coverImage || prepared.coverImage,
+        thumbnailImage: saved.thumbnailImage || prepared.thumbnailImage,
+        bannerImage: saved.bannerImage || prepared.bannerImage,
+        gallery: (saved.gallery || prepared.gallery || []).slice(0, 5),
+        updatedAt: Date.now(),
+        publishDate: saved.publishDate ? new Date(saved.publishDate).getTime() : prepared.publishDate,
+      } as Partial<GamingHubItem>);
+      // Flush any staged image Files to S3 + DB.
+      try {
+        await flushPendingImages(saved.id, prepared);
+      } catch { /* errors already toasted */ }
+      toast.success(status === "published" ? "Gaming Hub content published" : "Gaming Hub content saved");
+      setEditing(null);
+    } catch (e) {
+      toast.error(errorMessage(e) || "Save failed");
+    }
   };
+
+  const onDelete = async (item: GamingHubItem) => {
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(item.id)) {
+      // Old local-only row (no real UUID id) — just remove from localStorage.
+      deleteGamingHubItem(item.id);
+      toast.success("Removed (local only — never synced)");
+      return;
+    }
+    try {
+      await deleteCmsItem(item.id, apiTypeFor(item.type));
+      deleteGamingHubItem(item.id);
+      toast.success("Deleted");
+    } catch (e) {
+      toast.error(errorMessage(e) || "Delete failed");
+    }
+  };
+
+  const onToggleArchive = async (item: GamingHubItem) => {
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(item.id)) {
+      patchGamingHubItem(item.id, { status: item.status === "archived" ? "published" : "archived" });
+      return;
+    }
+    try {
+      const updated = await toggleArchiveCmsItem(item.id, item.status, apiTypeFor(item.type));
+      patchGamingHubItem(item.id, {
+        status: updated.status as GamingHubStatus,
+        publishDate: updated.publishDate ? new Date(updated.publishDate).getTime() : undefined,
+        updatedAt: Date.now(),
+      } as Partial<GamingHubItem>);
+    } catch (e) {
+      toast.error(errorMessage(e) || "Archive toggle failed");
+    }
+  };
+
   const moderateComment = (item: GamingHubItem, commentId: string, status: "approved" | "rejected") => {
     patchGamingHubItem(item.id, { comments: (item.comments || []).map(comment => comment.id === commentId ? { ...comment, status } : comment) });
     toast.success(`Comment ${status}`);
@@ -1257,7 +1381,7 @@ export function AdminGamingHub({ store, addGamingHubItem, patchGamingHubItem, de
             { key: "media", label: "Images", render: item => `${item.coverImage ? 1 : 0} cover + ${(item.gallery || []).filter(Boolean).length}/5` },
             { key: "analytics", label: "Analytics", render: item => <span>{item.views} views · {item.reads} reads · {item.shares} shares</span> },
             { key: "comments", label: "Comments", render: item => `${(item.comments || []).filter(c => c.status === "pending").length} pending` },
-            { key: "actions", label: "", render: item => <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}><a href={`/services/gaming-hub/${item.slug}`} target="_blank" className="glass-pill glass-pill-sm glass-pill-outline" style={{ textDecoration: "none" }}>Preview</a><button className="glass-pill glass-pill-sm glass-pill-outline" onClick={(e) => { e.stopPropagation(); setEditing(item); }}>Edit</button><button className="glass-pill glass-pill-sm glass-pill-info" onClick={(e) => { e.stopPropagation(); patchGamingHubItem(item.id, { status: item.status === "archived" ? "published" : "archived" }); }}>{item.status === "archived" ? "Restore" : "Archive"}</button><button className="glass-pill glass-pill-sm glass-pill-red" onClick={(e) => { e.stopPropagation(); deleteGamingHubItem(item.id); }}>Delete</button></div> },
+            { key: "actions", label: "", render: item => <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}><a href={`/services/gaming-hub/${item.slug}`} target="_blank" className="glass-pill glass-pill-sm glass-pill-outline" style={{ textDecoration: "none" }}>Preview</a><button className="glass-pill glass-pill-sm glass-pill-outline" onClick={(e) => { e.stopPropagation(); setEditing(item); }}>Edit</button><button className="glass-pill glass-pill-sm glass-pill-info" onClick={(e) => { e.stopPropagation(); onToggleArchive(item); }}>{item.status === "archived" ? "Restore" : "Archive"}</button><button className="glass-pill glass-pill-sm glass-pill-red" onClick={(e) => { e.stopPropagation(); if (confirm(`Delete "${item.title}"? This removes it from the live homepage.`)) onDelete(item); }}>Delete</button></div> },
           ]}
         />
       </SectionCard>
@@ -1299,7 +1423,7 @@ function TypeFilteredAdmin({
 }) {
   const [editing, setEditing] = useState<Partial<GamingHubItem> | null>(null);
   const items = (store.gamingHub || []).filter(item => item.type === typeFilter).sort((a, b) => (a.order || 0) - (b.order || 0));
-  const save = (status: GamingHubStatus) => {
+  const save = async (status: GamingHubStatus) => {
     if (!editing) return;
     const prepared = {
       ...emptyGamingDraft(),
@@ -1315,10 +1439,50 @@ function TypeFilteredAdmin({
     } as GamingHubItem;
     const error = validateGamingHubItem(prepared, status === "published", true);
     if (error) return toast.error(error);
-    if (prepared.id) patchGamingHubItem(prepared.id, prepared);
-    else addGamingHubItem(prepared);
-    toast.success(`${title} ${status === "published" ? "published" : "saved"}`);
-    setEditing(null);
+
+    const existingId = prepared.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(prepared.id)
+      ? prepared.id
+      : undefined;
+
+    try {
+      const saved = await saveCmsItem(prepared, status, existingId);
+      patchGamingHubItem(saved.id, {
+        ...prepared,
+        id: saved.id,
+        slug: saved.slug,
+        title: saved.title,
+        category: saved.category,
+        status: saved.status as GamingHubStatus,
+        coverImage: saved.coverImage || prepared.coverImage,
+        thumbnailImage: saved.thumbnailImage || prepared.thumbnailImage,
+        bannerImage: saved.bannerImage || prepared.bannerImage,
+        gallery: (saved.gallery || prepared.gallery || []).slice(0, 5),
+        updatedAt: Date.now(),
+        publishDate: saved.publishDate ? new Date(saved.publishDate).getTime() : prepared.publishDate,
+      } as Partial<GamingHubItem>);
+      try {
+        await flushPendingImages(saved.id, prepared);
+      } catch { /* errors already toasted */ }
+      toast.success(`${title} ${status === "published" ? "published" : "saved"}`);
+      setEditing(null);
+    } catch (e) {
+      toast.error(errorMessage(e) || "Save failed");
+    }
+  };
+
+  const onDelete = async (item: GamingHubItem) => {
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(item.id)) {
+      deleteGamingHubItem(item.id);
+      toast.success("Removed (local only — never synced)");
+      return;
+    }
+    try {
+      await deleteCmsItem(item.id, apiTypeFor(item.type));
+      deleteGamingHubItem(item.id);
+      toast.success("Deleted");
+    } catch (e) {
+      toast.error(errorMessage(e) || "Delete failed");
+    }
   };
   return (
     <div style={{ display: "grid", gap: 16 }}>
@@ -1344,7 +1508,7 @@ function TypeFilteredAdmin({
                 </div>
                 <div style={{ display: "flex", gap: 6 }}>
                   <button className="glass-pill glass-pill-sm glass-pill-outline" onClick={(e) => { e.stopPropagation(); setEditing(item); }}>Edit</button>
-                  <button className="glass-pill glass-pill-sm glass-pill-red" onClick={(e) => { e.stopPropagation(); if (confirm("Delete this item?")) { deleteGamingHubItem(item.id); toast.success("Deleted"); } }}>Delete</button>
+                  <button className="glass-pill glass-pill-sm glass-pill-red" onClick={(e) => { e.stopPropagation(); if (confirm(`Delete "${item.title}"? This removes it from the live homepage.`)) onDelete(item); }}>Delete</button>
                 </div>
               </div>
             ))}
@@ -1361,6 +1525,160 @@ export const AdminExclusiveOffers = (props: Omit<Parameters<typeof TypeFilteredA
 export const AdminGamingNews = (props: Omit<Parameters<typeof TypeFilteredAdmin>[0], "typeFilter">) => <TypeFilteredAdmin {...props} typeFilter="gaming-news" title="Gaming News" helpText="Publish gaming news articles that appear in the Latest News section." />;
 export const AdminTestimonials = (props: Omit<Parameters<typeof TypeFilteredAdmin>[0], "typeFilter">) => <TypeFilteredAdmin {...props} typeFilter="testimonial" title="Testimonials" helpText="Add customer testimonials that appear on the homepage. Include customer name, review text, and photo." />;
 export const AdminFAQ = (props: Omit<Parameters<typeof TypeFilteredAdmin>[0], "typeFilter">) => <TypeFilteredAdmin {...props} typeFilter="faq" title="FAQ" helpText="Create FAQ items for the homepage. Add question and answer pairs to help customers." />;
+
+// ─── CMS API helpers (Phase 7) ───────────────────────────────────────────
+//
+// These helpers bridge the older GamingHubItem (localStorage-only) shape
+// with the backend's HomepageContentInput/Item. They keep the existing
+// field names (coverImage / gallery / order / etc.) but only emit fields
+// the backend stores. Analytics fields (views, comments, etc.) remain
+// in localStorage and are never sent over the wire.
+//
+// The admin tabs call these from their save() flows; after every mutation
+// they invoke refetchCmsList(type) so the UI re-renders with canonical
+// server data and the cross-device requirement is satisfied.
+
+type CmsRefetchListener = (type: ApiHomepageContentType) => void;
+const cmsRefetchListeners = new Set<CmsRefetchListener>();
+export function subscribeCmsRefetch(listener: CmsRefetchListener) {
+  cmsRefetchListeners.add(listener);
+  return () => cmsRefetchListeners.delete(listener);
+}
+function notifyCmsRefetch(type: ApiHomepageContentType) {
+  for (const fn of cmsRefetchListeners) {
+    try { fn(type); } catch { /* ignore */ }
+  }
+}
+
+const GAMING_TO_API_TYPE: Record<string, ApiHomepageContentType> = {
+  "featured-build": "featured-build",
+  "offer": "offer",
+  "gaming-news": "gaming-news",
+  "testimonial": "testimonial",
+  "faq": "faq",
+};
+
+function apiTypeFor(gaming: string | undefined | null): ApiHomepageContentType {
+  if (!gaming) return "gaming-news";
+  return GAMING_TO_API_TYPE[gaming] || "gaming-news";
+}
+
+// Map a GamingHubItem draft → backend input shape. Drops fields the DB
+// doesn't store (views, comments, etc). Always omits id unless present.
+export function serializeGamingHubToApi(item: Partial<GamingHubItem>): HomepageContentInput {
+  const input: HomepageContentInput = {
+    type: apiTypeFor(item.type),
+    title: item.title || "",
+    slug: item.slug || "",
+    category: item.category,
+    shortDescription: item.shortDescription,
+    body: item.body,
+    intro: item.intro,
+    specs: item.specs,
+    benchmarkData: item.benchmarkData,
+    tags: item.tags,
+    pros: item.pros,
+    cons: item.cons,
+    tips: item.tips,
+    offerDetails: item.offerDetails,
+    discount: item.discount,
+    ctaText: item.ctaText,
+    ctaHref: item.ctaHref,
+    coverImage: item.coverImage,
+    thumbnailImage: item.thumbnailImage,
+    bannerImage: item.bannerImage,
+    gallery: Array.isArray(item.gallery) ? item.gallery.slice(0, 5) : undefined,
+    order: item.order ?? 0,
+    displayOrder: item.order ?? 0,
+    showOnGamingHub: item.showOnHub,
+    showInCategory: item.showInCategory,
+    isFeatured: item.featured,
+    isTrending: item.trending,
+    isLatestNews: item.showInLatestNews,
+    isExclusiveOffer: item.showInExclusiveOffers,
+    isSignatureMachine: item.showInSignatureMachines,
+    metaTitle: item.metaTitle,
+    metaDescription: item.metaDescription,
+    keywords: item.keywords,
+    publishDate: typeof item.publishDate === "number" && item.publishDate > 0
+      ? new Date(item.publishDate).toISOString()
+      : null,
+    // status is set explicitly via .publish() / .unpublish() so we never
+    // smuggle it into create/update input.
+  };
+  // Strip undefined keys — backend ignores them anyway but keeps payload small.
+  for (const k of Object.keys(input) as (keyof HomepageContentInput)[]) {
+    if (input[k] === undefined) delete input[k];
+  }
+  return input;
+}
+
+function errorMessage(e: unknown): string {
+  if (e instanceof ApiClientError) {
+    // Detect the "stale backend" symptom: the public homepage CMS routes
+    // (`/api/admin/homepage-content/*`) live behind Express 4 router mounts.
+    // When a backend image is built from a commit that pre-dates the CMS
+    // work, those mounts never register, so the catch-all 404 handler
+    // replies `{ error: "Route not found" }` with status 404 — or, when a
+    // 404 is interpreted as auth-protected upstream, status 401. Either
+    // way the admin sees a confusing "401: Route not found" toast. Surface
+    // the actual fix (rebuild + restart the backend) rather than the raw
+    // status code.
+    const msg = (e.message || "").toLowerCase();
+    if (msg.includes("route not found") || (e.status === 404 && msg === "route not found")) {
+      return "Backend is missing the CMS routes (Route not found). Rebuild the backend image (`./scripts/rebuild-backend.sh`) and restart the container.";
+    }
+    if (e.status === 502 && msg.includes("route not reachable")) {
+      return "Backend not reachable. Is the API container running? Try `./scripts/rebuild-backend.sh`.";
+    }
+    return `${e.status}: ${e.message}`;
+  }
+  if (e instanceof Error) return e.message;
+  return String(e || "Unknown error");
+}
+
+// Save (create or update) a CMS item, optionally publish, return the
+// canonical server record. Caller is responsible for refreshing the UI.
+export async function saveCmsItem(
+  draft: Partial<GamingHubItem>,
+  targetStatus: GamingHubStatus,
+  existingId?: string,
+): Promise<HomepageContentItem> {
+  const input = serializeGamingHubToApi(draft);
+  if (!input.title) throw new Error("Title is required");
+  let saved: HomepageContentItem;
+  if (existingId) {
+    saved = await homepageContentApi.update(existingId, input);
+  } else {
+    saved = await homepageContentApi.create(input);
+  }
+  if (targetStatus === "published" && saved.status !== "published") {
+    saved = await homepageContentApi.publish(saved.id);
+  } else if (targetStatus !== "published" && saved.status === "published") {
+    // Admin saved a published item as draft/archived — unpublish it.
+    saved = await homepageContentApi.unpublish(saved.id);
+  }
+  notifyCmsRefetch(saved.type);
+  return saved;
+}
+
+export async function deleteCmsItem(id: string, type: ApiHomepageContentType): Promise<void> {
+  await homepageContentApi.delete(id);
+  notifyCmsRefetch(type);
+}
+
+export async function toggleArchiveCmsItem(
+  id: string,
+  currentStatus: string | undefined,
+  type: ApiHomepageContentType,
+): Promise<HomepageContentItem> {
+  const archived = currentStatus === "archived";
+  const updated = archived
+    ? await homepageContentApi.publish(id)
+    : await homepageContentApi.unpublish(id);
+  notifyCmsRefetch(type);
+  return updated;
+}
 
 // ─── Categories ───────────────────────────────────────────────────────────
 

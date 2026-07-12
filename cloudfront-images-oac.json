@@ -1,0 +1,7 @@
+{
+  "Name": "deskto-product-images-oac",
+  "Description": "CloudFront OAC for Deskto private product image bucket",
+  "SigningProtocol": "sigv4",
+  "SigningBehavior": "always",
+  "OriginAccessControlOriginType": "s3"
+}

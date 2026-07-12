@@ -5,6 +5,7 @@ import {
   TrendingUp, Bell, Settings, History, RefreshCcw, BarChart3, Zap, Gamepad2, Star, HelpCircle, MessageSquare,
 } from "lucide-react";
 import { DashboardLayout } from "./components/dashboard/DashboardLayout";
+import { BackendStatusBanner } from "./components/BackendStatusBanner";
 import { useDashboardData } from "./lib/dashboardData";
 import type { AuthUser } from "./lib/currentUser";
 import type { NavGroup } from "./components/dashboard/DashboardSidebar";
@@ -219,6 +220,7 @@ export default function AdminDashboard({ user, initialTab }: Props) {
       pageTitle={tabMeta.label}
       unreadCount={unread}
     >
+      <BackendStatusBanner />
       <AdminTabErrorBoundary active={normalizedTab}>
         {renderTab()}
       </AdminTabErrorBoundary>

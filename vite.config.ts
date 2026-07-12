@@ -31,6 +31,25 @@ export default defineConfig({
     },
   },
 
+  // Proxy /api/* requests to the backend during dev so the SPA can reach the
+  // CMS, Auth, Products, Orders, etc. endpoints without deploying the
+  // backend separately. Production nginx does the same thing (see
+  // nginx.conf). Without this proxy the SPA's /api/* requests land on
+  // Vite's SPA fallback (which returns index.html) and the
+  // 'API route not reachable' guard fires.
+  server: {
+    proxy: {
+      '/api': {
+        target: process.env.VITE_API_PROXY_TARGET || 'http://localhost:3001',
+        changeOrigin: true,
+      },
+      '/health': {
+        target: process.env.VITE_API_PROXY_TARGET || 'http://localhost:3001',
+        changeOrigin: true,
+      },
+    },
+  },
+
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ['**/*.svg', '**/*.csv'],
 })

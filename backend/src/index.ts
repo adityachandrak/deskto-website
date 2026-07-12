@@ -46,18 +46,33 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Safe version diagnostic — never returns secrets. Operators compare this
+// against the deployed git commit to verify the running image is the
+// intended build.
+app.get('/api/version', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.json({
+    service: 'deskto-backend',
+    version: process.env.GIT_COMMIT || process.env.BUILD_VERSION || 'unknown',
+    environment: process.env.NODE_ENV || 'development',
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // API Routes
 import authRoutes from './routes/auth';
 import productRoutes from './routes/products';
 import orderRoutes from './routes/orders';
 import serviceRoutes from './routes/services';
 import backupRoutes from './routes/backup';
+import homepageContentRoutes from './routes/homepageContent';
 
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/services', serviceRoutes);
 app.use('/api', backupRoutes);
+app.use('/api', homepageContentRoutes);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

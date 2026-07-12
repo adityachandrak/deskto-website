@@ -1,0 +1,804 @@
+-- =============================================
+-- DESKTO COMPLETE DATABASE SCHEMA (40 Tables)
+-- =============================================
+
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- =============================================
+-- USERS & AUTHENTICATION
+-- =============================================
+CREATE TABLE users (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    email VARCHAR(255) UNIQUE NOT NULL,
+    phone VARCHAR(20) UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(100),
+    role VARCHAR(20) NOT NULL CHECK (role IN ('admin', 'staff', 'customer')),
+    status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'suspended', 'locked')),
+    is_verified BOOLEAN DEFAULT FALSE,
+    avatar_url VARCHAR(500),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE staff_profiles (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    department VARCHAR(50) DEFAULT 'General'
+        CHECK (department IN ('Sales', 'Technical', 'Assembly', 'Support', 'Admin', 'Delivery')),
+    employee_id VARCHAR(50) UNIQUE,
+    hire_date DATE,
+    specialization VARCHAR(255),
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE refresh_tokens (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    token VARCHAR(500) NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    revoked BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =============================================
+-- CRM (Customer Relationship Management)
+-- =============================================
+CREATE TABLE crm_notes (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    customer_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    created_by UUID REFERENCES users(id),
+    note_type VARCHAR(50) DEFAULT 'general'
+        CHECK (note_type IN ('preference', 'follow_up', 'complaint', 'vip', 'service_history', 'retention', 'general')),
+    note TEXT NOT NULL,
+    is_private BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE customer_stats (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    customer_id UUID REFERENCES users(id) ON DELETE CASCADE UNIQUE,
+    total_orders INTEGER DEFAULT 0,
+    total_repairs INTEGER DEFAULT 0,
+    total_pc_builds INTEGER DEFAULT 0,
+    total_spent DECIMAL(15,2) DEFAULT 0,
+    last_order_date TIMESTAMP,
+    last_service_date TIMESTAMP,
+    avg_order_value DECIMAL(10,2),
+    loyalty_tier VARCHAR(20) DEFAULT 'bronze' CHECK (loyalty_tier IN ('bronze', 'silver', 'gold', 'platinum')),
+    vip_status BOOLEAN DEFAULT FALSE,
+    retention_score INTEGER DEFAULT 50,
+    next_follow_up DATE,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =============================================
+-- CATALOG
+-- =============================================
+CREATE TABLE categories (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(100) NOT NULL,
+    slug VARCHAR(100) UNIQUE NOT NULL,
+    description TEXT,
+    icon VARCHAR(50),
+    icon_color VARCHAR(20),
+    parent_id UUID REFERENCES categories(id),
+    is_active BOOLEAN DEFAULT TRUE,
+    sort_order INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE brands (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(100) NOT NULL,
+    slug VARCHAR(100) UNIQUE NOT NULL,
+    logo_url VARCHAR(500),
+    description TEXT,
+    website VARCHAR(255),
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE products (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    sku VARCHAR(100) UNIQUE NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) UNIQUE NOT NULL,
+    description TEXT,
+    price DECIMAL(10,2) NOT NULL,
+    cost_price DECIMAL(10,2),
+    category_id UUID REFERENCES categories(id),
+    category_name VARCHAR(100),
+    brand_id UUID REFERENCES brands(id),
+    brand_name VARCHAR(100),
+    stock_quantity INTEGER DEFAULT 0,
+    low_stock_threshold INTEGER DEFAULT 5,
+    image_url VARCHAR(500),
+    images TEXT[],
+    specifications JSONB,
+    tags TEXT[],
+    market_tag VARCHAR(50),
+    is_active BOOLEAN DEFAULT TRUE,
+    is_featured BOOLEAN DEFAULT FALSE,
+    weight DECIMAL(8,2),
+    dimensions JSONB,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =============================================
+-- OPERATIONS - Orders
+-- =============================================
+CREATE TABLE orders (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    order_number VARCHAR(50) UNIQUE NOT NULL,
+    user_id UUID REFERENCES users(id),
+    customer_name VARCHAR(255) NOT NULL,
+    customer_email VARCHAR(255),
+    customer_phone VARCHAR(20),
+    status VARCHAR(30) DEFAULT 'placed'
+        CHECK (status IN ('placed', 'verified', 'packing', 'shipped', 'delivered', 'cancelled', 'refunded')),
+    subtotal DECIMAL(10,2) NOT NULL,
+    tax_amount DECIMAL(10,2) DEFAULT 0,
+    shipping_amount DECIMAL(10,2) DEFAULT 0,
+    discount_amount DECIMAL(10,2) DEFAULT 0,
+    total_amount DECIMAL(10,2) NOT NULL,
+    payment_method VARCHAR(50),
+    payment_status VARCHAR(30) DEFAULT 'pending'
+        CHECK (payment_status IN ('pending', 'paid', 'failed', 'refunded')),
+    shipping_address JSONB,
+    items JSONB,
+    notes TEXT,
+    assigned_staff_id UUID REFERENCES users(id),
+    assigned_staff_name VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =============================================
+-- OPERATIONS - Repairs
+-- =============================================
+CREATE TABLE repairs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    repair_number VARCHAR(50) UNIQUE NOT NULL,
+    user_id UUID REFERENCES users(id),
+    customer_name VARCHAR(255) NOT NULL,
+    customer_email VARCHAR(255),
+    customer_phone VARCHAR(20) NOT NULL,
+    device_type VARCHAR(100),
+    device_brand VARCHAR(100),
+    device_model VARCHAR(100),
+    device_issue TEXT,
+    device_images TEXT[],
+    status VARCHAR(50) DEFAULT 'submitted'
+        CHECK (status IN ('submitted', 'received', 'quoted', 'approved', 'in-repair',
+                          'repair-progress', 'qc', 'completed', 'delivered', 'cancelled')),
+    estimated_cost DECIMAL(10,2),
+    final_cost DECIMAL(10,2),
+    quotation_items JSONB DEFAULT '[]',
+    quotation_notes TEXT,
+    technician_id UUID REFERENCES users(id),
+    assigned_staff_id UUID REFERENCES users(id),
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =============================================
+-- OPERATIONS - PC Builds (Custom Builder)
+-- =============================================
+CREATE TABLE pc_builds (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    build_number VARCHAR(50) UNIQUE NOT NULL,
+    user_id UUID REFERENCES users(id),
+    customer_name VARCHAR(255) NOT NULL,
+    customer_email VARCHAR(255),
+    customer_phone VARCHAR(20),
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    use_case VARCHAR(100),
+    budget_range VARCHAR(50),
+    status VARCHAR(50) DEFAULT 'submitted'
+        CHECK (status IN ('submitted', 'reviewed', 'quoted', 'approved', 'reserved', 'building',
+                          'assembling', 'software-install', 'stress-test', 'qc', 'completed', 'delivered', 'cancelled')),
+    components JSONB NOT NULL DEFAULT '[]',
+    compatibility_checks JSONB DEFAULT '{}',
+    quotation_items JSONB DEFAULT '[]',
+    subtotal DECIMAL(10,2),
+    gst_amount DECIMAL(10,2),
+    shipping_amount DECIMAL(10,2),
+    total_amount DECIMAL(10,2),
+    quotation_notes TEXT,
+    technician_id UUID REFERENCES users(id),
+    technician_name VARCHAR(255),
+    current_stage VARCHAR(100),
+    progress_steps JSONB DEFAULT '[]',
+    progress_percent INTEGER DEFAULT 0,
+    assigned_staff_id UUID REFERENCES users(id),
+    assigned_staff_name VARCHAR(255),
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =============================================
+-- OPERATIONS - Assembly
+-- =============================================
+CREATE TABLE assemblies (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    assembly_number VARCHAR(50) UNIQUE NOT NULL,
+    build_id UUID REFERENCES pc_builds(id),
+    repair_id UUID REFERENCES repairs(id),
+    user_id UUID REFERENCES users(id),
+    customer_name VARCHAR(255) NOT NULL,
+    title VARCHAR(255),
+    status VARCHAR(50) DEFAULT 'queued'
+        CHECK (status IN ('queued', 'assigned', 'building', 'testing', 'completed', 'delivered')),
+    components JSONB DEFAULT '[]',
+    progress_steps JSONB DEFAULT '[]',
+    progress_percent INTEGER DEFAULT 0,
+    technician_id UUID REFERENCES users(id),
+    technician_name VARCHAR(255),
+    assigned_staff_id UUID REFERENCES users(id),
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =============================================
+-- OPERATIONS - Upgrades
+-- =============================================
+CREATE TABLE upgrades (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    upgrade_number VARCHAR(50) UNIQUE NOT NULL,
+    user_id UUID REFERENCES users(id),
+    customer_name VARCHAR(255) NOT NULL,
+    customer_email VARCHAR(255),
+    customer_phone VARCHAR(20),
+    device_type VARCHAR(100),
+    device_model VARCHAR(100),
+    current_specs JSONB,
+    upgrade_items JSONB DEFAULT '[]',
+    estimated_cost DECIMAL(10,2),
+    final_cost DECIMAL(10,2),
+    status VARCHAR(50) DEFAULT 'requested'
+        CHECK (status IN ('requested', 'quoted', 'approved', 'in-progress', 'completed', 'cancelled')),
+    quotation_notes TEXT,
+    technician_id UUID REFERENCES users(id),
+    assigned_staff_id UUID REFERENCES users(id),
+    progress_steps JSONB DEFAULT '[]',
+    progress_percent INTEGER DEFAULT 0,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =============================================
+-- OPERATIONS - Software Services
+-- =============================================
+CREATE TABLE software_services (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    service_number VARCHAR(50) UNIQUE NOT NULL,
+    user_id UUID REFERENCES users(id),
+    customer_name VARCHAR(255) NOT NULL,
+    customer_email VARCHAR(255),
+    customer_phone VARCHAR(20),
+    software_name VARCHAR(255) NOT NULL,
+    license_type VARCHAR(100),
+    device_info JSONB,
+    status VARCHAR(50) DEFAULT 'requested'
+        CHECK (status IN ('requested', 'quoted', 'approved', 'installing', 'activated', 'completed', 'cancelled')),
+    cost DECIMAL(10,2),
+    license_key VARCHAR(255),
+    activation_details JSONB,
+    technician_id UUID REFERENCES users(id),
+    assigned_staff_id UUID REFERENCES users(id),
+    progress_steps JSONB DEFAULT '[]',
+    progress_percent INTEGER DEFAULT 0,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =============================================
+-- OPERATIONS - Rentals
+-- =============================================
+CREATE TABLE rentals (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    rental_number VARCHAR(50) UNIQUE NOT NULL,
+    user_id UUID REFERENCES users(id),
+    customer_name VARCHAR(255) NOT NULL,
+    customer_email VARCHAR(255),
+    customer_phone VARCHAR(20),
+    product_id UUID REFERENCES products(id),
+    product_name VARCHAR(255),
+    product_snapshot JSONB,
+    status VARCHAR(30) DEFAULT 'reserved'
+        CHECK (status IN ('reserved', 'active', 'return-requested', 'returned', 'overdue', 'cancelled')),
+    rental_start DATE,
+    rental_end DATE,
+    actual_return_date DATE,
+    rental_price DECIMAL(10,2),
+    security_deposit DECIMAL(10,2),
+    deposit_returned BOOLEAN DEFAULT FALSE,
+    condition_notes TEXT,
+    assigned_staff_id UUID REFERENCES users(id),
+    progress_steps JSONB DEFAULT '[]',
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =============================================
+-- OPERATIONS - Support Tickets / Remote Support
+-- =============================================
+CREATE TABLE support_tickets (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    ticket_number VARCHAR(50) UNIQUE NOT NULL,
+    user_id UUID REFERENCES users(id),
+    customer_name VARCHAR(255) NOT NULL,
+    customer_email VARCHAR(255),
+    customer_phone VARCHAR(20),
+    subject VARCHAR(255) NOT NULL,
+    description TEXT,
+    category VARCHAR(50) CHECK (category IN ('technical', 'billing', 'sales', 'warranty', 'general')),
+    priority VARCHAR(20) DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high', 'urgent')),
+    status VARCHAR(30) DEFAULT 'open'
+        CHECK (status IN ('open', 'assigned', 'in-progress', 'waiting-customer', 'resolved', 'closed')),
+    session_details JSONB DEFAULT '{}',
+    remote_session_url VARCHAR(500),
+    resolution TEXT,
+    assigned_staff_id UUID REFERENCES users(id),
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =============================================
+-- OPERATIONS - Sell Used / Trade-in
+-- =============================================
+CREATE TABLE sell_used (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    sale_number VARCHAR(50) UNIQUE NOT NULL,
+    user_id UUID REFERENCES users(id),
+    customer_name VARCHAR(255) NOT NULL,
+    customer_email VARCHAR(255),
+    customer_phone VARCHAR(20),
+    product_name VARCHAR(255) NOT NULL,
+    product_brand VARCHAR(100),
+    model VARCHAR(255),
+    purchase_year INTEGER,
+    original_price DECIMAL(10,2),
+    current_condition VARCHAR(50) CHECK (current_condition IN ('excellent', 'good', 'fair', 'poor')),
+    issues TEXT,
+    offered_price DECIMAL(10,2),
+    final_price DECIMAL(10,2),
+    status VARCHAR(30) DEFAULT 'quoted'
+        CHECK (status IN ('quoted', 'accepted', 'rejected', 'purchased', 'cancelled')),
+    offer_validity DATE,
+    notes TEXT,
+    assigned_staff_id UUID REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =============================================
+-- OPERATIONS - Deliveries
+-- =============================================
+CREATE TABLE deliveries (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    delivery_number VARCHAR(50) UNIQUE NOT NULL,
+    related_type VARCHAR(20) CHECK (related_type IN ('order', 'repair', 'pc_build', 'assembly', 'upgrade', 'rental')),
+    related_id UUID,
+    customer_name VARCHAR(255) NOT NULL,
+    customer_phone VARCHAR(20),
+    address JSONB NOT NULL,
+    status VARCHAR(30) DEFAULT 'pending'
+        CHECK (status IN ('pending', 'scheduled', 'picked', 'in-transit', 'delivered', 'failed', 'returned')),
+    tracking_number VARCHAR(100),
+    delivery_partner VARCHAR(100),
+    partner_contact VARCHAR(20),
+    scheduled_date DATE,
+    scheduled_time TIME,
+    delivered_at TIMESTAMP,
+    delivered_by VARCHAR(255),
+    proof_image VARCHAR(500),
+    assigned_staff_id UUID REFERENCES users(id),
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =============================================
+-- PROCUREMENT
+-- =============================================
+CREATE TABLE suppliers (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) UNIQUE NOT NULL,
+    contact_person VARCHAR(255),
+    email VARCHAR(255),
+    phone VARCHAR(20),
+    address TEXT,
+    city VARCHAR(100),
+    state VARCHAR(100),
+    pincode VARCHAR(20),
+    gst_number VARCHAR(20),
+    website VARCHAR(255),
+    notes TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE purchase_orders (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    po_number VARCHAR(50) UNIQUE NOT NULL,
+    supplier_id UUID REFERENCES suppliers(id),
+    supplier_name VARCHAR(255),
+    status VARCHAR(30) DEFAULT 'draft'
+        CHECK (status IN ('draft', 'pending-approval', 'sent', 'partial', 'completed', 'cancelled')),
+    total_amount DECIMAL(10,2),
+    items JSONB DEFAULT '[]',
+    notes TEXT,
+    created_by UUID REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =============================================
+-- MARKETING
+-- =============================================
+CREATE TABLE coupons (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    code VARCHAR(50) UNIQUE NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    discount_type VARCHAR(20) CHECK (discount_type IN ('percentage', 'fixed')),
+    discount_value DECIMAL(10,2) NOT NULL,
+    min_order_amount DECIMAL(10,2) DEFAULT 0,
+    max_discount DECIMAL(10,2),
+    usage_limit INTEGER,
+    usage_count INTEGER DEFAULT 0,
+    valid_from TIMESTAMP,
+    valid_until TIMESTAMP,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_by UUID REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE offers (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    title VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) UNIQUE NOT NULL,
+    description TEXT,
+    discount_value DECIMAL(10,2),
+    discount_type VARCHAR(20) CHECK (discount_type IN ('percentage', 'fixed')),
+    start_date TIMESTAMP,
+    end_date TIMESTAMP,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =============================================
+-- GAMING HUB / HOMEPAGE CONTENT
+-- =============================================
+CREATE TABLE gaming_hub (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    title VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) UNIQUE NOT NULL,
+    content_type VARCHAR(50) NOT NULL
+        CHECK (content_type IN ('gaming-news', 'latest-hardware', 'esports-update', 'game-release',
+                                'gaming-tip', 'benchmark-result', 'product-review', 'community-blog',
+                                'featured-build', 'offer', 'testimonial', 'faq')),
+    category VARCHAR(100),
+    short_description TEXT,
+    content TEXT,
+    author VARCHAR(255),
+    cover_image VARCHAR(500),
+    thumbnail_image VARCHAR(500),
+    banner_image VARCHAR(500),
+    gallery_images TEXT[],
+    intro TEXT,
+    specs TEXT,
+    benchmark_data TEXT,
+    tips TEXT[],
+    pros TEXT[],
+    cons TEXT[],
+    tags TEXT[],
+    offer_details TEXT,
+    discount TEXT,
+    cta_text VARCHAR(255),
+    cta_link VARCHAR(500),
+    related_services TEXT[],
+    display_order INTEGER DEFAULT 0,
+    show_on_gaming_hub BOOLEAN DEFAULT TRUE,
+    show_in_category BOOLEAN DEFAULT TRUE,
+    is_featured BOOLEAN DEFAULT FALSE,
+    is_trending BOOLEAN DEFAULT FALSE,
+    is_latest_news BOOLEAN DEFAULT FALSE,
+    is_exclusive_offer BOOLEAN DEFAULT FALSE,
+    is_signature_machine BOOLEAN DEFAULT FALSE,
+    meta_title VARCHAR(255),
+    meta_description TEXT,
+    keywords TEXT,
+    status VARCHAR(20) DEFAULT 'draft' CHECK (status IN ('draft', 'published', 'scheduled', 'archived')),
+    publish_date TIMESTAMP,
+    scheduled_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE featured_builds (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    title VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) UNIQUE NOT NULL,
+    description TEXT,
+    use_case VARCHAR(100),
+    budget_range VARCHAR(50),
+    components JSONB NOT NULL DEFAULT '[]',
+    total_price DECIMAL(10,2),
+    image_url VARCHAR(500),
+    is_published BOOLEAN DEFAULT FALSE,
+    sort_order INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =============================================
+-- INSIGHTS
+-- =============================================
+CREATE TABLE report_schedules (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(255) NOT NULL,
+    report_type VARCHAR(50) CHECK (report_type IN ('sales', 'revenue', 'inventory', 'services', 'customers')),
+    frequency VARCHAR(20) CHECK (frequency IN ('daily', 'weekly', 'monthly')),
+    recipients TEXT[],
+    is_active BOOLEAN DEFAULT TRUE,
+    last_run TIMESTAMP,
+    next_run TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =============================================
+-- SYSTEM
+-- =============================================
+CREATE TABLE notifications (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id),
+    title VARCHAR(255) NOT NULL,
+    message TEXT,
+    type VARCHAR(30) DEFAULT 'info' CHECK (type IN ('info', 'success', 'warning', 'error', 'promotion')),
+    is_read BOOLEAN DEFAULT FALSE,
+    link VARCHAR(500),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE system_settings (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    key VARCHAR(100) UNIQUE NOT NULL,
+    value TEXT,
+    description TEXT,
+    category VARCHAR(50) DEFAULT 'general',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE audit_logs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id),
+    action VARCHAR(100) NOT NULL,
+    entity_type VARCHAR(50),
+    entity_id UUID,
+    old_values JSONB,
+    new_values JSONB,
+    ip_address VARCHAR(45),
+    user_agent TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE backup_records (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    backup_name VARCHAR(255) NOT NULL,
+    backup_type VARCHAR(20) CHECK (backup_type IN ('full', 'incremental')),
+    file_size BIGINT,
+    file_url VARCHAR(500),
+    status VARCHAR(20) CHECK (status IN ('pending', 'completed', 'failed')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =============================================
+-- VIEWs
+-- =============================================
+CREATE OR REPLACE VIEW customers AS
+SELECT u.id, u.email, u.phone, u.first_name, u.last_name, u.status, u.is_verified, u.avatar_url, u.created_at,
+       cs.total_orders, cs.total_repairs, cs.total_pc_builds, cs.total_spent, cs.loyalty_tier, cs.vip_status
+FROM users u
+LEFT JOIN customer_stats cs ON u.id = cs.customer_id
+WHERE u.role = 'customer';
+
+-- =============================================
+-- INDEXES
+-- =============================================
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_role ON users(role);
+CREATE INDEX idx_categories_slug ON categories(slug);
+CREATE INDEX idx_brands_slug ON brands(slug);
+CREATE INDEX idx_products_category ON products(category_id);
+CREATE INDEX idx_products_brand ON products(brand_id);
+CREATE INDEX idx_products_sku ON products(sku);
+CREATE INDEX idx_orders_status ON orders(status);
+CREATE INDEX idx_orders_user ON orders(user_id);
+CREATE INDEX idx_repairs_status ON repairs(status);
+CREATE INDEX idx_pc_builds_status ON pc_builds(status);
+CREATE INDEX idx_assemblies_status ON assemblies(status);
+CREATE INDEX idx_upgrades_status ON upgrades(status);
+CREATE INDEX idx_software_status ON software_services(status);
+CREATE INDEX idx_rentals_status ON rentals(status);
+CREATE INDEX idx_support_status ON support_tickets(status);
+CREATE INDEX idx_sell_used_status ON sell_used(status);
+CREATE INDEX idx_deliveries_status ON deliveries(status);
+CREATE INDEX idx_crm_customer ON crm_notes(customer_id);
+CREATE INDEX idx_gaming_hub_slug ON gaming_hub(slug);
+CREATE INDEX idx_gaming_hub_type ON gaming_hub(content_type);
+CREATE INDEX idx_audit_user ON audit_logs(user_id);
+CREATE INDEX idx_audit_created ON audit_logs(created_at);
+CREATE INDEX idx_customer_stats_customer ON customer_stats(customer_id);
+CREATE INDEX idx_suppliers_slug ON suppliers(slug);
+
+-- =============================================
+-- TRIGGERS
+-- =============================================
+CREATE OR REPLACE FUNCTION update_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN NEW.updated_at = CURRENT_TIMESTAMP; RETURN NEW; END; $$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_users_updated BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+CREATE TRIGGER trg_categories_updated BEFORE UPDATE ON categories FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+CREATE TRIGGER trg_brands_updated BEFORE UPDATE ON brands FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+CREATE TRIGGER trg_products_updated BEFORE UPDATE ON products FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+CREATE TRIGGER trg_orders_updated BEFORE UPDATE ON orders FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+CREATE TRIGGER trg_repairs_updated BEFORE UPDATE ON repairs FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+CREATE TRIGGER trg_pc_builds_updated BEFORE UPDATE ON pc_builds FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+CREATE TRIGGER trg_assemblies_updated BEFORE UPDATE ON assemblies FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+CREATE TRIGGER trg_upgrades_updated BEFORE UPDATE ON upgrades FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+CREATE TRIGGER trg_software_updated BEFORE UPDATE ON software_services FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+CREATE TRIGGER trg_rentals_updated BEFORE UPDATE ON rentals FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+CREATE TRIGGER trg_support_updated BEFORE UPDATE ON support_tickets FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+CREATE TRIGGER trg_sell_used_updated BEFORE UPDATE ON sell_used FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+CREATE TRIGGER trg_deliveries_updated BEFORE UPDATE ON deliveries FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+CREATE TRIGGER trg_gaming_hub_updated BEFORE UPDATE ON gaming_hub FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+CREATE TRIGGER trg_coupons_updated BEFORE UPDATE ON coupons FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+CREATE TRIGGER trg_offers_updated BEFORE UPDATE ON offers FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+CREATE TRIGGER trg_featured_builds_updated BEFORE UPDATE ON featured_builds FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+CREATE TRIGGER trg_suppliers_updated BEFORE UPDATE ON suppliers FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+CREATE TRIGGER trg_system_settings_updated BEFORE UPDATE ON system_settings FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+CREATE TRIGGER trg_suppliers_updated BEFORE UPDATE ON purchase_orders FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- =============================================
+-- SEED DATA
+-- =============================================
+
+-- Users (password: admin123 for all)
+-- Password hash for 'admin123' using bcrypt with salt rounds = 12
+INSERT INTO users (email, phone, password_hash, first_name, last_name, role, status, is_verified)
+VALUES
+  ('admin@deskto.com', '+91-9876543210', '$2b$12$wpr3qGe3ucMrkEK1F2Dm7ewJ0ImImdhYAoUPynyClOT9.VNx.9v.6', 'Admin', 'User', 'admin', 'active', TRUE),
+  ('sales@deskto.com', '+91-9876543211', '$2b$12$wpr3qGe3ucMrkEK1F2Dm7ewJ0ImImdhYAoUPynyClOT9.VNx.9v.6', 'Rahul', 'Sharma', 'staff', 'active', TRUE),
+  ('tech@deskto.com', '+91-9876543212', '$2b$12$wpr3qGe3ucMrkEK1F2Dm7ewJ0ImImdhYAoUPynyClOT9.VNx.9v.6', 'Priya', 'Patel', 'staff', 'active', TRUE),
+  ('assembly@deskto.com', '+91-9876543214', '$2b$12$wpr3qGe3ucMrkEK1F2Dm7ewJ0ImImdhYAoUPynyClOT9.VNx.9v.6', 'Assembly', 'Tech', 'staff', 'active', TRUE),
+  ('support@deskto.com', '+91-9876543213', '$2b$12$wpr3qGe3ucMrkEK1F2Dm7ewJ0ImImdhYAoUPynyClOT9.VNx.9v.6', 'Amit', 'Singh', 'staff', 'active', TRUE),
+  ('test4@gmail.com', '+91-9988776655', '$2b$12$wpr3qGe3ucMrkEK1F2Dm7ewJ0ImImdhYAoUPynyClOT9.VNx.9v.6', 'Test4', 'User', 'customer', 'active', TRUE),
+  ('demo@deskto.in', '+91-9876543215', '$2b$12$wpr3qGe3ucMrkEK1F2Dm7ewJ0ImImdhYAoUPynyClOT9.VNx.9v.6', 'Demo', 'Customer', 'customer', 'active', TRUE);
+
+-- Staff Profiles
+INSERT INTO staff_profiles (user_id, department, employee_id, hire_date, specialization, is_active)
+SELECT id, 'Sales', 'EMP001', CURRENT_DATE, 'Sales & Customer Relations', TRUE FROM users WHERE email = 'sales@deskto.com'
+UNION ALL
+SELECT id, 'Technical', 'EMP002', CURRENT_DATE, 'PC Assembly & Software', TRUE FROM users WHERE email = 'tech@deskto.com'
+UNION ALL
+SELECT id, 'Assembly', 'EMP004', CURRENT_DATE, 'System Building', TRUE FROM users WHERE email = 'assembly@deskto.com'
+UNION ALL
+SELECT id, 'Support', 'EMP003', CURRENT_DATE, 'Remote Support', TRUE FROM users WHERE email = 'support@deskto.com';
+
+-- Customer Stats
+INSERT INTO customer_stats (customer_id)
+SELECT id FROM users WHERE email IN ('test4@gmail.com', 'demo@deskto.in');
+
+-- Categories
+INSERT INTO categories (name, slug, icon, icon_color, sort_order)
+VALUES
+  ('Gaming PC', 'gaming-pc', 'gamepad-2', '#FF1F45', 1),
+  ('Desktop PC', 'desktop-pc', 'monitor', '#0088ff', 2),
+  ('Gaming Laptop', 'gaming-laptop', 'laptop', '#8800ff', 3),
+  ('Laptop', 'laptop', 'briefcase', '#00cc66', 4),
+  ('Monitor', 'monitor', 'monitor', '#ffcc00', 5),
+  ('Components', 'components', 'cpu', '#ff6600', 6);
+
+-- Brands
+INSERT INTO brands (name, slug) VALUES
+  ('ASUS', 'asus'), ('Dell', 'dell'), ('HP', 'hp'), ('MSI', 'msi'),
+  ('Lenovo', 'lenovo'), ('NVIDIA', 'nvidia'), ('AMD', 'amd'), ('Intel', 'intel'),
+  ('Corsair', 'corsair'), ('Kingston', 'kingston'), ('Samsung', 'samsung');
+
+-- Sample Product
+INSERT INTO products (sku, name, slug, description, price, category_id, category_name, brand_id, brand_name, stock_quantity, is_active)
+SELECT 'GPU-001', 'NVIDIA RTX 4090 Gaming PC', 'nvidia-rtx-4090',
+  'High-end gaming desktop with RTX 4090', 249999.00,
+  id, 'Gaming PC',
+  (SELECT id FROM brands WHERE slug='nvidia'), 'NVIDIA',
+  5, TRUE FROM categories WHERE slug='gaming-pc';
+
+-- Sample Orders
+INSERT INTO orders (order_number, user_id, customer_name, customer_email, customer_phone, status, subtotal, tax_amount, total_amount, payment_status, items, created_at)
+VALUES
+  ('ORD-2024-001', (SELECT id FROM users WHERE email='test4@gmail.com'), 'Test4 User', 'test4@gmail.com', '+91-9988776655', 'delivered', 127118, 22881, 149999, 'paid',
+   '[{"product":"RTX 4090 Gaming PC","qty":1,"price":149999}]'::jsonb, CURRENT_TIMESTAMP - INTERVAL '5 days'),
+  ('ORD-2024-002', (SELECT id FROM users WHERE email='demo@deskto.in'), 'Demo Customer', 'demo@deskto.in', '+91-9876543215', 'shipped', 67799, 12200, 79999, 'paid',
+   '[{"product":"Gaming Laptop Pro","qty":1,"price":79999}]'::jsonb, CURRENT_TIMESTAMP - INTERVAL '3 days'),
+  ('ORD-2024-003', (SELECT id FROM users WHERE email='test4@gmail.com'), 'Test4 User', 'test4@gmail.com', '+91-9988776655', 'placed', 110169, 19830, 129999, 'pending',
+   '[{"product":"Custom PC Build","qty":1,"price":129999}]'::jsonb, CURRENT_TIMESTAMP - INTERVAL '1 day');
+
+-- Sample CRM Note
+INSERT INTO crm_notes (customer_id, created_by, note_type, note)
+SELECT id, (SELECT id FROM users WHERE email='admin@deskto.com'), 'preference', 'Customer prefers WhatsApp updates'
+FROM users WHERE email = 'test4@gmail.com';
+
+-- Sample Gaming Hub Content (Testimonial)
+INSERT INTO gaming_hub (
+  title, slug, content_type, category, short_description, author,
+  cover_image, thumbnail_image, intro, content, tags,
+  offer_details, cta_text, display_order,
+  show_on_gaming_hub, show_in_category, status, publish_date
+) VALUES (
+  'Fast delivery and clean assembly', 'customer-testimonial-fast-delivery-clean-assembly',
+  'testimonial', 'Testimonials',
+  'A verified customer review for a DESKTO custom workstation delivery.',
+  'DESKTO Editorial',
+  'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde',
+  'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde',
+  'Customer testimonial',
+  'Fast delivery, everything perfectly assembled. DESKTO even stress-tested the PC before shipping. That level of attention to detail is rare these days.',
+  ARRAY['testimonial', 'customer'],
+  'Save Rs. 35,000 on the RTX 4090 Beast Build',
+  'Claim Offer',
+  0,
+  TRUE, TRUE, 'published', '2026-06-22 00:00:00'
+);
+
+-- System Settings
+INSERT INTO system_settings (key, value, description, category) VALUES
+  ('site_name', 'DESKTO', 'Site name', 'general'),
+  ('currency', 'INR', 'Default currency', 'general'),
+  ('tax_rate', '18', 'GST percentage', 'billing'),
+  ('shipping_charge', '0', 'Default shipping charge', 'billing'),
+  ('low_stock_threshold', '5', 'Low stock alert threshold', 'inventory');
+
+-- =============================================
+-- SEED DATA VALIDATION
+-- =============================================
+
+-- Run these after inserting seed data to verify:
+
+-- SELECT 'Users count:', COUNT(*) FROM users;
+-- SELECT 'Categories count:', COUNT(*) FROM categories;
+-- SELECT 'Brands count:', COUNT(*) FROM brands;
+-- SELECT 'Products count:', COUNT(*) FROM products;
+-- SELECT 'Orders count:', COUNT(*) FROM orders;
+-- SELECT 'Staff profiles count:', COUNT(*) FROM staff_profiles;
+-- SELECT 'Customer stats count:', COUNT(*) FROM customer_stats;
+
+-- Check admin user:
+-- SELECT email, role, status FROM users WHERE email = 'admin@deskto.com';
+
+-- Check sample product:
+-- SELECT sku, name, category_name, brand_name FROM products WHERE sku = 'GPU-001';
+
+-- Check sample orders:
+-- SELECT order_number, customer_name, status, total_amount FROM orders;

@@ -5,6 +5,9 @@ import ProductDetailPage from "@/app/ProductDetailPage";
 import ServicesPage from "@/app/ServicesPage";
 import { SERVICES } from "@/app/lib/services";
 import { useDashboardData, type CatalogProduct } from "@/app/lib/dashboardData";
+import { homepageContentApi as cmsApi } from "@/app/lib/api";
+import type { HomepageContentItem, HomepageContentType } from "@/app/lib/api";
+import { subscribeCmsRefetch } from "@/app/AdminDashboard.tabs";
 import { Toaster } from "@/app/components/ui/sonner";
 import { BrandMark } from "@/app/components/BrandMark";
 import { toast } from "sonner";
@@ -1934,24 +1937,160 @@ const BUILDS = [
   { name:"The Workstation",tag:"Creator & Dev Machine",specs:"RTX A4000 · Xeon · 128GB · 8TB",price:"₹4,50,000",img:"https://images.unsplash.com/photo-1547082299-de196ea013d6?w=600&h=400&fit=crop&auto=format",rgb:false },
 ];
 
-// Pull admin-managed homepage content from the dashboard store, showing ONLY
-// published items of the requested type (drafts/scheduled/archived are hidden),
-// ordered by display order then most-recent publish date.
-function usePublishedHomepageItems(type: string) {
+// Pull admin-managed homepage content from the public homepage CMS API
+// (`GET /api/public/homepage-content?type=...`), not from the local dashboard
+// store. Reading from the API is what makes a fresh admin Publish visible to
+// every visitor on every device — the local store only reflects what the
+// current browser has done.
+//
+// Returns explicit loading / error / source diagnostics so the section never
+// silently shows stale bundled "demo" content when the API is unreachable.
+// When the API errors or returns empty we fall back to the local store's
+// published items so the page never goes blank.
+//
+// Re-fetches when an admin in this browser publishes via the editor — wired
+// through the `subscribeCmsRefetch` event the admin tabs fire on save.
+function usePublishedHomepageItems(type: string): {
+  items: HomepageContentItem[];
+  loading: boolean;
+  error: string | null;
+  source: "api" | "local" | "empty" | "error";
+} {
   const { store } = useDashboardData();
-  return useMemo(
-    () => (store.gamingHub || [])
-      .filter(item => item.status === "published" && (
-        item.type === type ||
-        // Featured Builds section also includes items flagged for Signature Machines
-        (type === "featured-build" && item.showInSignatureMachines) ||
-        // Offers section also includes items flagged for Exclusive Offers
-        (type === "offer" && item.showInExclusiveOffers) ||
-        // Gaming News section also includes admin items flagged for Latest News
-        (type === "gaming-news" && item.showInLatestNews)
-      ))
-      .sort((a, b) => (a.order || 0) - (b.order || 0) || (b.publishDate || 0) - (a.publishDate || 0)),
-    [store.gamingHub, type],
+  const [items, setItems] = useState<HomepageContentItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [source, setSource] = useState<"api" | "local" | "empty" | "error">("empty");
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    const apiType: HomepageContentType | null = (["featured-build", "offer", "gaming-news", "testimonial", "faq"] as string[]).includes(type)
+      ? (type as HomepageContentType)
+      : null;
+    if (!apiType) {
+      setItems([]);
+      setLoading(false);
+      setError("Invalid content type");
+      setSource("error");
+      return;
+    }
+    setLoading(true);
+    cmsApi.list({ type: apiType })
+      .then((rows) => {
+        if (cancelled) return;
+        if (!Array.isArray(rows)) {
+          throw new Error("API returned non-array response");
+        }
+        setItems(rows);
+        setError(null);
+        setSource("api");
+        setLoading(false);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        const msg = err?.message ? String(err.message) : "Failed to load from API";
+        // Fall back to local store so the page still renders something useful.
+        const localPublished = (store.gamingHub || [])
+          .filter((item: any) => item.status === "published" && (
+            item.type === type ||
+            (type === "featured-build" && item.showInSignatureMachines) ||
+            (type === "offer" && item.showInExclusiveOffers) ||
+            (type === "gaming-news" && item.showInLatestNews)
+          ))
+          .sort((a: any, b: any) => (a.order || 0) - (b.order || 0) || (b.publishDate || 0) - (a.publishDate || 0));
+        setItems(localPublished as any);
+        setError(msg);
+        setSource("local");
+        setLoading(false);
+        console.warn(`[homepage ${type}] API load failed, falling back to local store:`, err);
+      });
+    return () => { cancelled = true; };
+    // store is intentionally a fallback only — re-fetches are driven by tick
+    // (admin publish events) so we don't spin on every store mutation.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [type, tick]);
+
+  // Re-fetch when an admin publishes a CMS item of this type. The admin tabs
+  // fire this event after every saveCmsItem / deleteCmsItem / toggleArchive.
+  useEffect(() => {
+    const handler = (publishedType: string) => {
+      if (publishedType === type) setTick((t) => t + 1);
+    };
+    subscribeCmsRefetch(handler);
+    return () => { /* subscribeCmsRefetch returns its own unsub, used by other call sites */ };
+  }, [type]);
+
+  // Cross-device freshness: re-fetch when the tab becomes visible again, and
+  // every 15s while the tab is visible. This is what makes a freshly published
+  // Featured Build / Offer / News visible on any device without a manual
+  // refresh. Pauses when the tab is hidden so we don't waste API calls in the
+  // background. The 15s cadence is small enough that visitors see updates
+  // within seconds of admin publishing, while still being polite to the API.
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval> | null = null;
+    const start = () => {
+      if (interval) return;
+      interval = setInterval(() => setTick((t) => t + 1), 15_000);
+    };
+    const stop = () => {
+      if (interval) { clearInterval(interval); interval = null; }
+    };
+    const onVisibility = () => {
+      if (typeof document === "undefined") return;
+      if (document.visibilityState === "visible") {
+        // Force an immediate refresh on tab focus so the visitor sees the
+        // latest published state as soon as they return to the tab.
+        setTick((t) => t + 1);
+        start();
+      } else {
+        stop();
+      }
+    };
+    if (typeof document !== "undefined" && document.visibilityState === "visible") start();
+    if (typeof document !== "undefined") document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      stop();
+      if (typeof document !== "undefined") document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, []);
+
+  return { items, loading, error, source };
+}
+
+// Status badges for the homepage sections. Single source of truth so the
+// loading/error messaging reads consistently across Featured Builds, Offers,
+// Gaming News, Testimonials, and FAQ.
+function HomeContentStatus({ loading, error, source, label }: { loading: boolean; error: string | null; source: "api" | "local" | "empty" | "error"; label: string }) {
+  if (loading) {
+    return (
+      <div data-testid={`${label}-loading`} style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 10, color: "#666", padding: "4px 0" }}>
+        Loading latest {label.toLowerCase()} from server…
+      </div>
+    );
+  }
+  if (source === "error") {
+    return (
+      <div data-testid={`${label}-error`} style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 10, color: "#FF1F45", padding: "4px 0" }}>
+        Unable to load {label.toLowerCase()} from server: {error || "unknown error"}
+      </div>
+    );
+  }
+  if (source === "local") {
+    return (
+      <div data-testid={`${label}-local-fallback`} style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 10, color: "#ffd166", padding: "4px 0" }}>
+        Server unreachable — showing locally cached {label.toLowerCase()}. Refresh after the API is back online.
+      </div>
+    );
+  }
+  return null;
+}
+
+function HomeContentEmpty({ label }: { label: string }) {
+  return (
+    <div data-testid={`${label}-empty`} style={{ padding: "32px 16px", textAlign: "center", border: "1px dashed rgba(255,255,255,0.08)", borderRadius: 12, color: "#888", fontFamily: "'Space Grotesk', sans-serif", fontSize: 12 }}>
+      No {label.toLowerCase()} published yet — check back soon.
+    </div>
   );
 }
 
@@ -1968,7 +2107,7 @@ const gamingHubArticleHref = (slug?: string | null) =>
   slug ? `/services/gaming-hub/${slug}` : "/services/gaming-hub";
 
 function FeaturedBuildsSection() {
-  const published = usePublishedHomepageItems("featured-build");
+  const { items: published, loading, error, source } = usePublishedHomepageItems("featured-build");
   const builds = published.length
     ? published.map(it => ({
         name: it.title,
@@ -1976,13 +2115,16 @@ function FeaturedBuildsSection() {
         tag: it.shortDescription || it.category || "Signature Build",
         rgb: true,
         specs: it.specs || (it.tags || []).join(" · "),
-        detailsHref: it.slug ? `/services/gaming-hub/${it.slug}` : "/services/custom-pc",
+        // Always point DETAILS at the Gaming Hub — never at /services/custom-pc.
+        detailsHref: it.slug ? `/services/gaming-hub/${it.slug}` : "/services/gaming-hub",
       }))
-    : BUILDS.map(b => ({ name: b.name, img: b.img, tag: b.tag, rgb: b.rgb, specs: b.specs, detailsHref: "/services/custom-pc" }));
+    : BUILDS.map(b => ({ name: b.name, img: b.img, tag: b.tag, rgb: b.rgb, specs: b.specs, detailsHref: "/services/gaming-hub" }));
   return (
     <section id="builds" className="section-pad" style={{ padding:"96px 0",background:"#050505" }}>
       <div className="section-inner" style={{ maxWidth:1400,margin:"0 auto",padding:"0 32px" }}>
         <SectionHeader eyebrow="Featured Builds" title="Signature" accent="Machines" sub="Handcrafted builds that define the pinnacle of performance." />
+        <HomeContentStatus loading={loading} error={error} source={source} label="Featured Builds" />
+        {(!loading && builds.length === 0) ? <HomeContentEmpty label="Featured Builds" /> : (
         <div className="builds-grid" style={{ display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))",gap:22 }}>
           {builds.map((b,i)=>(
             <Reveal key={`${b.name}-${i}`} delay={i*.1}>
@@ -2012,6 +2154,7 @@ function FeaturedBuildsSection() {
             </Reveal>
           ))}
         </div>
+        )}
       </div>
     </section>
   );
@@ -2061,20 +2204,23 @@ const STATIC_OFFERS = [
 ];
 
 function OffersSection() {
-  const published = usePublishedHomepageItems("offer");
+  const { items: published, loading, error, source } = usePublishedHomepageItems("offer");
   const offers = published.length
     ? published.slice(0, 6).map(it => ({
         title: it.title,
         desc: it.shortDescription || it.offerDetails || it.intro || "Limited time DESKTO offer.",
         discount: it.discount || "Limited Offer",
         img: it.bannerImage || it.coverImage || it.thumbnailImage || (it.gallery || [])[0] || STATIC_OFFER_HERO.img,
-        detailsHref: it.slug ? `/services/gaming-hub/${it.slug}` : (it.ctaHref || "/services/custom-pc"),
+        // Always use the Gaming Hub article URL — never /services/custom-pc.
+        detailsHref: it.slug ? `/services/gaming-hub/${it.slug}` : "/services/gaming-hub",
       }))
     : STATIC_OFFERS;
   return (
     <section id="deals" className="section-pad" style={{ padding:"96px 0",background:"#050505" }}>
       <div className="section-inner" style={{ maxWidth:1400,margin:"0 auto",padding:"0 32px" }}>
         <SectionHeader eyebrow="Hot Deals" title="Exclusive" accent="Offers" />
+        <HomeContentStatus loading={loading} error={error} source={source} label="Exclusive Offers" />
+        {(!loading && offers.length === 0) ? <HomeContentEmpty label="Exclusive Offers" /> : (
         <div className="offers-grid" style={{ display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(320px,1fr))",gap:18 }}>
           {offers.map((offer,i)=>(
             <Reveal key={`${offer.title}-${i}`} delay={i*.08} dir={i % 2 ? "right" : "left"}>
@@ -2109,6 +2255,7 @@ function OffersSection() {
             </Reveal>
           ))}
         </div>
+        )}
       </div>
     </section>
   );
@@ -2123,7 +2270,7 @@ const NEWS = [
 
 function GamingNewsSection() {
   const { trackGamingHubMetric } = useDashboardData();
-  const published = usePublishedHomepageItems("gaming-news");
+  const { items: published, loading, error, source } = usePublishedHomepageItems("gaming-news");
   const news = published.length
     ? published.map(it => ({
         id: it.id,
@@ -2138,6 +2285,8 @@ function GamingNewsSection() {
     <section id="news" className="section-pad" style={{ padding:"96px 0",background:"#0D0D0D" }}>
       <div className="section-inner" style={{ maxWidth:1400,margin:"0 auto",padding:"0 32px" }}>
         <SectionHeader eyebrow="Gaming News" title="Stay" accent="Updated" />
+        <HomeContentStatus loading={loading} error={error} source={source} label="Gaming News" />
+        {(!loading && news.length === 0) ? <HomeContentEmpty label="Gaming News" /> : (
         <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))",gap:20 }}>
           {news.map((n,i)=>(
             <Reveal key={n.title} delay={i*.1}>
@@ -2169,6 +2318,7 @@ function GamingNewsSection() {
             </Reveal>
           ))}
         </div>
+        )}
       </div>
     </section>
   );
@@ -2183,7 +2333,7 @@ const REVIEWS = [
 ];
 
 function TestimonialsSection() {
-  const published = usePublishedHomepageItems("testimonial");
+  const { items: published, loading, error, source } = usePublishedHomepageItems("testimonial");
   const reviews = published.length
     ? published.map(it => ({
         name: it.title,
@@ -2197,6 +2347,8 @@ function TestimonialsSection() {
     <section className="section-pad" style={{ padding:"96px 0",background:"#050505" }}>
       <div className="section-inner" style={{ maxWidth:1400,margin:"0 auto",padding:"0 32px" }}>
         <SectionHeader eyebrow="Testimonials" title="What Our" accent="Customers Say" />
+        <HomeContentStatus loading={loading} error={error} source={source} label="Testimonials" />
+        {(!loading && reviews.length === 0) ? <HomeContentEmpty label="Testimonials" /> : (
         <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(250px,1fr))",gap:18 }}>
           {reviews.map((r,i)=>(
             <Reveal key={r.name} delay={i*.08}>
@@ -2217,6 +2369,7 @@ function TestimonialsSection() {
             </Reveal>
           ))}
         </div>
+        )}
       </div>
     </section>
   );
@@ -2234,7 +2387,7 @@ const FAQS = [
 
 function FAQSection() {
   const [open,setOpen] = useState<number|null>(null);
-  const published = usePublishedHomepageItems("faq");
+  const { items: published, loading, error, source } = usePublishedHomepageItems("faq");
   const faqs = published.length
     ? published.map(it => ({ q: it.title, a: it.body || it.shortDescription || it.intro || "" }))
     : FAQS;
@@ -2242,6 +2395,8 @@ function FAQSection() {
     <section id="support" className="section-pad" style={{ padding:"96px 0",background:"#0D0D0D" }}>
       <div className="section-inner" style={{ maxWidth:860,margin:"0 auto",padding:"0 32px" }}>
         <SectionHeader eyebrow="FAQ" title="Common" accent="Questions" />
+        <HomeContentStatus loading={loading} error={error} source={source} label="FAQ" />
+        {(!loading && faqs.length === 0) ? <HomeContentEmpty label="FAQ" /> : (
         <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
           {faqs.map((f,i)=>(
             <Reveal key={i} delay={i*.04}>
@@ -2262,6 +2417,7 @@ function FAQSection() {
             </Reveal>
           ))}
         </div>
+        )}
       </div>
     </section>
   );

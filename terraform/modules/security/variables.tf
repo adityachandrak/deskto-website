@@ -8,3 +8,9 @@ variable "vpc_id" {
   type        = string
   description = "VPC ID for security group"
 }
+
+variable "app_port" {
+  type        = number
+  description = "Backend application port"
+  default     = 3001
+}

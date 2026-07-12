@@ -1,181 +1,114 @@
 ---
-# Deploy playbook - run for each release
-# Pulls Docker image from ECR, runs with docker-compose, performs health checks,
-# and automatically rolls back on failure
-
-- name: Deploy Deskto Website
+- name: Deploy Deskto backend container
   hosts: webservers
   become: true
   gather_facts: true
   vars:
-    deploy_user: deploy
     project_name: deskto-website
-    docker_compose_file: /opt/{{ project_name }}/docker-compose.yml
-    backup_dir: /opt/{{ project_name }}/backup
-    service_name: deskto-website
+    app_dir: /opt/{{ project_name }}
+    env_file: /opt/{{ project_name }}/.env
+    backend_image: "{{ lookup('env', 'BACKEND_IMAGE') | default('deskto-backend:latest', true) }}"
+    region: "{{ lookup('env', 'AWS_REGION') | default('ap-south-1', true) }}"
+    app_port: "{{ lookup('env', 'APP_PORT') | default('3001', true) }}"
 
   tasks:
-    - name: Read existing facts from bootstrap
-      ansible.builtin.stat:
-        path: /etc/deskto-website/ansible-facts.yml
-      register: facts_file
-
-    - name: Load existing facts
-      ansible.builtin.include_vars:
-        file: /etc/deskto-website/ansible-facts.yml
-      when: facts_file.stat.exists
-
-    - name: Login to ECR
-      docker_login:
-        registry: "{{ ecr_repo_url }}"
-        username: AWS
-        password: "{{ lookup('env', 'ECR_PASSWORD') | default('', true) }}"
-
-    - name: Get git SHA for this build
-      command: git rev-parse --short HEAD
-      register: git_sha
-      delegate_to: localhost
-      run_once: true
-
-    - name: Pull Docker image from ECR
-      docker_image:
-        name: "{{ ecr_repo_url }}"
-        tag: "sha-{{ git_sha.stdout }}"
-        source: pull
-        load_path: null
-
-    - name: Create project directory
+    - name: Ensure app directory exists
       file:
-        path: "/opt/{{ project_name }}"
+        path: "{{ app_dir }}"
         state: directory
         mode: '0755'
 
-    - name: Generate docker-compose.yml
+    - name: Fetch database host from AWS SSM
+      shell: |
+        aws ssm get-parameter --name "/{{ project_name }}/production/database-host" --with-decryption --region {{ region }} --query 'Parameter.Value' --output text
+      register: db_host
+
+    - name: Fetch database port from AWS SSM
+      shell: |
+        aws ssm get-parameter --name "/{{ project_name }}/production/database-port" --with-decryption --region {{ region }} --query 'Parameter.Value' --output text
+      register: db_port
+
+    - name: Fetch database name from AWS SSM
+      shell: |
+        aws ssm get-parameter --name "/{{ project_name }}/production/database-name" --with-decryption --region {{ region }} --query 'Parameter.Value' --output text
+      register: db_name
+
+    - name: Fetch database user from AWS SSM
+      shell: |
+        aws ssm get-parameter --name "/{{ project_name }}/production/database-user" --with-decryption --region {{ region }} --query 'Parameter.Value' --output text
+      register: db_user
+
+    - name: Fetch database password from AWS SSM
+      shell: |
+        aws ssm get-parameter --name "/{{ project_name }}/production/database-password" --with-decryption --region {{ region }} --query 'Parameter.Value' --output text
+      register: db_password
+
+    - name: Fetch JWT secret from AWS SSM
+      shell: |
+        aws ssm get-parameter --name "/{{ project_name }}/production/jwt-secret" --with-decryption --region {{ region }} --query 'Parameter.Value' --output text
+      register: jwt_secret
+
+    - name: Write runtime environment file
       copy:
-        dest: "{{ docker_compose_file }}"
+        dest: "{{ env_file }}"
         content: |
-          version: '3.8'
-          services:
-            app:
-              image: "{{ ecr_repo_url }}:sha-{{ git_sha.stdout }}"
-              ports:
-                - "80:80"
-              restart: unless-stopped
-              healthcheck:
-                test: ["CMD", "curl", "-f", "http://localhost/"]
-                interval: 30s
-                timeout: 10s
-                retries: 3
-                start_period: 40s
+          NODE_ENV=production
+          HOST=0.0.0.0
+          PORT={{ app_port }}
+          DB_HOST={{ db_host.stdout | trim }}
+          DB_PORT={{ db_port.stdout | trim }}
+          DB_NAME={{ db_name.stdout | trim }}
+          DB_USER={{ db_user.stdout | trim }}
+          DB_PASSWORD={{ db_password.stdout | trim }}
+          JWT_SECRET={{ jwt_secret.stdout | trim }}
+          FRONTEND_URL={{ lookup('env', 'FRONTEND_URL') | default('http://localhost:5173', true) }}
+        mode: '0600'
+
+    - name: Copy compose file
+      copy:
+        src: /Users/adityakumar/Downloads/New Aditya 3-d Website/docker-compose.yml
+        dest: "{{ app_dir }}/docker-compose.yml"
         mode: '0644'
 
-    - name: Stop previous service if exists (for blue/green swap)
-      systemd:
-        name: "{{ service_name }}"
-        state: stopped
-        enabled: no
-      ignore_errors: yes
+    - name: Pull latest backend image
+      shell: docker pull {{ backend_image }}
 
-    - name: Remove old docker-compose file if exists
-      file:
-        path: "{{ docker_compose_file }}"
-        state: absent
+    - name: Run database migrations
+      shell: |
+        docker run --rm \
+          --network host \
+          -e DB_HOST={{ db_host.stdout | trim }} \
+          -e DB_PORT={{ db_port.stdout | trim }} \
+          -e DB_NAME={{ db_name.stdout | trim }} \
+          -e DB_USER={{ db_user.stdout | trim }} \
+          -e DB_PASSWORD={{ db_password.stdout | trim }} \
+          -e JWT_SECRET={{ jwt_secret.stdout | trim }} \
+          -e FRONTEND_URL={{ lookup('env', 'FRONTEND_URL') | default('http://localhost:5173', true) }} \
+          -e NODE_ENV=production \
+          {{ backend_image }} npm run migrate
+      register: migration_result
 
-    - name: Deploy using docker-compose
-      command: docker compose up -d
-      args:
-        chdir: "/opt/{{ project_name }}"
-        creates: "{{ docker_compose_file }}"
+    - name: Stop existing backend container if present
+      shell: docker rm -f deskto-backend >/dev/null 2>&1 || true
 
-    - name: Enable and restart service
-      systemd:
-        name: "{{ service_name }}"
-        state: restarted
-        enabled: yes
-        daemon_reload: yes
-        listen: service_status
+    - name: Start backend container
+      shell: docker compose -f {{ app_dir }}/docker-compose.yml up -d backend
+      environment:
+        BACKEND_IMAGE: "{{ backend_image }}"
+        NODE_ENV: production
+        PORT: "{{ app_port }}"
 
-    - name: Wait for service to be healthy
-      wait_for:
-        host: "{{ ansible_host }}"
-        port: 80
-        state: started
-        delay: 10
-        timeout: 60
-        connect_timeout: 5
-        msg: "Service did not become healthy"
-      listen: service_status
-
-    - name: Verify health endpoint
+    - name: Wait for backend health endpoint
       uri:
-        url: "http://{{ ansible_host }}/"
+        url: "http://127.0.0.1:{{ app_port }}/health"
         method: GET
         status_code: 200
         timeout: 10
-        validate_certs: no
-      listen: health_check
-      rescue:
-        - name: Rollback deployment on failure
-          debug:
-            msg: "Health check failed! Rolling back to previous image..."
-          listen: health_check
+      register: health_check
+      retries: 12
+      delay: 5
+      until: health_check.status == 200
 
-        - name: Get previous successful image tag
-          find:
-            path: "/var/lib/docker/images"
-            patterns: "*{{ ecr_repo_url }}*"
-            recurse: yes
-          register: previous_images
-          listen: health_check
-
-        - name: Roll back to previous image
-          debug:
-            msg: "Rolling back to :latest"
-          listen: health_check
-
-        - name: Roll back with docker-compose
-          command: docker compose up -d
-          args:
-            chdir: "/opt/{{ project_name }}"
-            image: "{{ ecr_repo_url }}:latest"
-          listen: health_check
-
-        - name: Restart after rollback
-          systemd:
-            name: "{{ service_name }}"
-            state: restarted
-            daemon_reload: yes
-          listen: health_check
-
-        - name: Log rollback status
-          debug:
-            msg: "Rollback completed. Previous deployment failed."
-          listen: health_check
-
-    - name: Clean up old Docker images
-      command: docker image prune -f --filter until=168h
-      delegate_to: localhost
-      run_once: true
-
-    - name: Generate deployment summary
-      copy:
-        dest: "/opt/{{ project_name }}/deployment-info.txt"
-        content: |
-          Deployment Summary:
-          -------------------
-          Host: {{ ansible_host }}
-          Image: {{ ecr_repo_url }}:sha-{{ git_sha.stdout }}
-          Deployed: {{ ansible_date_time.iso8601 }}
-          Deployed by: {{ ansible_user }}
-          Docker image ID: {{ docker_image.stdout_lines[1] | default('N/A') }}
-        mode: '0644'
-
-    - name: Show deployment success
+    - name: Show deployment summary
       debug:
-        msg: "✅ Deployment successful! Serving from: {{ ecr_repo_url }}:sha-{{ git_sha.stdout }}"
-
-  handlers:
-    - name: service_status
-      listen: service_status
-    - name: health_check
-      listen: health_check
+        msg: "Backend deployed and healthy on port {{ app_port }}"
