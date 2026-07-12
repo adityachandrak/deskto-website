@@ -2022,16 +2022,16 @@ function usePublishedHomepageItems(type: string): {
   }, [type]);
 
   // Cross-device freshness: re-fetch when the tab becomes visible again, and
-  // every 60s while the tab is visible. This is what makes a freshly published
+  // every 15s while the tab is visible. This is what makes a freshly published
   // Featured Build / Offer / News visible on any device without a manual
   // refresh. Pauses when the tab is hidden so we don't waste API calls in the
-  // background. The 60s cadence is small enough that visitors see updates
-  // within a minute of admin publishing.
+  // background. The 15s cadence is small enough that visitors see updates
+  // within seconds of admin publishing, while still being polite to the API.
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = null;
     const start = () => {
       if (interval) return;
-      interval = setInterval(() => setTick((t) => t + 1), 60_000);
+      interval = setInterval(() => setTick((t) => t + 1), 15_000);
     };
     const stop = () => {
       if (interval) { clearInterval(interval); interval = null; }

@@ -4,13 +4,20 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "build": "vite build",
+    "build": "NODE_ENV=production vite build --mode production",
     "dev": "vite",
     "preview": "vite preview",
     "lint": "node --check scripts/validate-auth-workflow.mjs && node --check scripts/validate-product-catalog.mjs",
     "test": "npm run validate:catalog && npm run validate:auth",
     "validate:auth": "node scripts/validate-auth-workflow.mjs",
-    "validate:catalog": "node scripts/validate-product-catalog.mjs"
+    "validate:catalog": "node scripts/validate-product-catalog.mjs",
+    "validate:publish": "node scripts/validate-publish-end-to-end.mjs",
+    "validate:featured-builds": "node scripts/validate-featured-builds-details.mjs",
+    "validate:all": "npm run validate:catalog && npm run validate:auth && npm run validate:publish && npm run validate:featured-builds && bash scripts/validate-backend-has-cms-routes.sh",
+    "rebuild:backend": "bash scripts/rebuild-backend.sh",
+    "validate:backend": "bash scripts/validate-backend-has-cms-routes.sh",
+    "validate:e2e": "bash scripts/validate-e2e-flow.sh",
+    "fix:backend": "bash scripts/rebuild-and-validate.sh"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",
