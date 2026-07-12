@@ -5,6 +5,7 @@ import {
   TrendingUp, Bell, Settings, History, RefreshCcw, BarChart3, Zap, Gamepad2, Star, HelpCircle, MessageSquare,
 } from "lucide-react";
 import { DashboardLayout } from "./components/dashboard/DashboardLayout";
+import { BackendStatusBanner } from "./components/BackendStatusBanner";
 import { useDashboardData } from "./lib/dashboardData";
 import type { AuthUser } from "./lib/currentUser";
 import type { NavGroup } from "./components/dashboard/DashboardSidebar";
@@ -69,7 +70,7 @@ const TABS = [
   { key: "support", label: "Remote Support", icon: Headphones, group: "Operations" },
   { key: "marketplace", label: "Sell Used", icon: Store, group: "Operations" },
   { key: "crm", label: "CRM", icon: UserCog, group: "People" },
-  { key: "enquiries", label: "Quick Enquiries", icon: MessageSquare, group: "People" },
+  { key: "quick-enquiries", label: "Quick Enquiries", icon: MessageSquare, group: "People" },
   { key: "customers", label: "Customers", icon: Users, group: "People" },
   { key: "staff", label: "Staff", icon: UserCog, group: "People" },
   { key: "suppliers", label: "Suppliers", icon: TruckIcon, group: "Procurement" },
@@ -96,7 +97,7 @@ function normalizeAdminTab(value?: string | null) {
   if (raw === "gaming-hub" || raw === "gaming-hub-management") return "gaming";
   if (raw === "custom-builder" || raw === "builder-management") return "builder";
   if (raw === "pc-builds" || raw === "custom-pc") return "builds";
-  if (raw === "quick-enquiry" || raw === "quick-enquiries" || raw === "enquiries") return "enquiries";
+  if (raw === "quick-enquiry" || raw === "quick-enquiries" || raw === "enquiries") return "quick-enquiries";
   return raw || "overview";
 }
 
@@ -147,7 +148,6 @@ export default function AdminDashboard({ user, initialTab }: Props) {
     updateContentConfig,
     updateDefaultPreset,
     getBuilderMetrics,
-    updateQuickEnquiryStatus,
   } = data;
 
   const groups: NavGroup[] = useMemo(() => GROUP_ORDER.map(label => ({
@@ -186,7 +186,7 @@ export default function AdminDashboard({ user, initialTab }: Props) {
       case "support":           return <AdminSupportWorkflow store={store} patchServiceRequest={patchServiceRequest} />;
       case "marketplace":       return <AdminSellRequests store={store} patchServiceRequest={patchServiceRequest} />;
       case "crm":               return <AdminCRM store={store} addCRMNote={addCRMNote} />;
-      case "enquiries":         return <AdminQuickEnquiries store={store} updateQuickEnquiryStatus={updateQuickEnquiryStatus} />;
+      case "quick-enquiries":    return <AdminQuickEnquiries store={store} />;
       case "customers":         return <AdminCustomers store={store} addLog={addLog} />;
       case "staff":             return <AdminStaff store={store} addStaffMember={addStaffMember} />;
       case "suppliers":         return <AdminSuppliers store={store} addSupplier={addSupplier} />;
@@ -220,6 +220,7 @@ export default function AdminDashboard({ user, initialTab }: Props) {
       pageTitle={tabMeta.label}
       unreadCount={unread}
     >
+      <BackendStatusBanner />
       <AdminTabErrorBoundary active={normalizedTab}>
         {renderTab()}
       </AdminTabErrorBoundary>
