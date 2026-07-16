@@ -1,4 +1,4 @@
-import { Component, type ReactNode, useState, useMemo } from "react";
+import { Component, type ReactNode, useState, useMemo, useEffect } from "react";
 import {
   Home, Package, Tag, Award, Database, ShoppingBag, Wrench, Truck, Cpu, Hammer,
   Headphones, Store, Users, UserCog, Truck as TruckIcon, Receipt, Ticket,
@@ -103,6 +103,10 @@ function normalizeAdminTab(value?: string | null) {
 
 export default function AdminDashboard({ user, initialTab }: Props) {
   const [tab, setTab] = useState<string>(() => normalizeAdminTab(initialTab || window.location.hash.replace("#", "")));
+  const [resetVersion, setResetVersion] = useState(0);
+  useEffect(() => {
+    if (initialTab) setTab(normalizeAdminTab(initialTab));
+  }, [initialTab]);
   const data = useDashboardData();
   const {
     store,
@@ -167,13 +171,25 @@ export default function AdminDashboard({ user, initialTab }: Props) {
     setTab(next);
   };
 
+  const resetDashboardView = () => {
+    const accepted = window.confirm("Reset dashboard view and cached demo state? Shared production orders, products, customers, staff, services, and revenue will not be deleted.");
+    if (!accepted) return;
+    data.resetStore();
+    window.localStorage.removeItem("deskto-admin-categories-v1");
+    window.localStorage.removeItem("deskto-admin-brands-v1");
+    window.history.replaceState(null, "", "/dashboard/admin#overview");
+    setTab("overview");
+    setResetVersion(version => version + 1);
+    window.setTimeout(() => window.dispatchEvent(new Event("focus")), 0);
+  };
+
   const renderTab = () => {
     switch (normalizedTab) {
-      case "overview":          return <AdminOverview data={data} onTab={handleTabChange} />;
+      case "overview":          return <AdminOverview key={resetVersion} data={data} onTab={handleTabChange} />;
       case "products":          return <AdminProducts store={store} addCatalogProduct={addCatalogProduct} patchCatalogProduct={patchCatalogProduct} deleteCatalogProduct={deleteCatalogProduct} />;
       case "categories":        return <AdminCategories />;
       case "brands":            return <AdminBrands />;
-      case "inventory":         return <AdminInventory store={store} />;
+      case "inventory":         return <AdminInventory store={store} patchCatalogProduct={patchCatalogProduct} />;
       case "builder":           return <AdminCustomBuilder store={store} patchCustomBuilderConfig={patchCustomBuilderConfig} publishBuilderConfig={publishBuilderConfig} addBuilderComponent={addBuilderComponent} updateBuilderComponent={updateBuilderComponent} removeBuilderComponent={removeBuilderComponent} reorderBuilderComponents={reorderBuilderComponents} updateBuildPurpose={updateBuildPurpose} addBuildPurpose={addBuildPurpose} removeBuildPurpose={removeBuildPurpose} updatePricingRules={updatePricingRules} updateContentConfig={updateContentConfig} updateDefaultPreset={updateDefaultPreset} getBuilderMetrics={getBuilderMetrics} />;
       case "orders":            return <AdminOrders store={store} updateOrderStatus={updateOrderStatus} patchOrder={patchOrder} />;
       case "repairs":           return <AdminRepairs store={store} updateRepairStatus={updateRepairStatus} patchRepair={patchRepair} />;
@@ -219,6 +235,11 @@ export default function AdminDashboard({ user, initialTab }: Props) {
       title="Admin"
       pageTitle={tabMeta.label}
       unreadCount={unread}
+      headerActions={
+        <button className="glass-pill glass-pill-outline glass-pill-sm" onClick={resetDashboardView} title="Clear dashboard cache and reload shared production data">
+          <RefreshCcw size={11} /> Reset Dashboard
+        </button>
+      }
     >
       <BackendStatusBanner />
       <AdminTabErrorBoundary active={normalizedTab}>

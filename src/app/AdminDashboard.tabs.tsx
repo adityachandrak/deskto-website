@@ -18,7 +18,7 @@ import { StatusBadge } from "./components/dashboard/StatusBadge";
 import { SectionCard } from "./components/dashboard/SectionCard";
 import { DataTable, type Column } from "./components/dashboard/DataTable";
 import { EmptyState } from "./components/dashboard/EmptyState";
-import { isAuthenticated as isApiAuthenticated, ordersApi, homepageContentApi, ApiError as ApiClientError } from "./lib/api";
+import { isAuthenticated as isApiAuthenticated, ordersApi, homepageContentApi, adminApi, ApiError as ApiClientError } from "./lib/api";
 import type { HomepageContentInput, HomepageContentItem, HomepageContentType as ApiHomepageContentType, HomepageContentStatus } from "./lib/api";
 import { mediaBlobUrl, mediaKind, mediaMime, mediaName, mediaRef, openMediaFile, hasValidRef, isMediaFile, revokeMediaBlobUrl } from "./lib/mediaStore";
 import type {
@@ -35,7 +35,7 @@ const inr = (n: number) => `₹${(n || 0).toLocaleString("en-IN")}`;
 const formatDate = (t: number) => new Date(t).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 const formatTime = (t: number) => new Date(t).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
 
-const PIE_COLORS = ["#FF1F45", "#00cc66", "#00b4ff", "#ff6b00", "#a855f7", "#ffd700"];
+const PIE_COLORS = ["var(--primary)", "#00cc66", "#00b4ff", "#ff6b00", "#a855f7", "#ffd700"];
 const AUTH_STORAGE_KEY = "deskto-auth-demo-state";
 const DELIVERY_ZONE_LABELS: Record<string, string> = {
   STORE_PICKUP: "Store Pickup",
@@ -285,63 +285,48 @@ function MediaCell({ files }: { files?: string[] }) {
 
 export function AdminOverview({ data, onTab }: { data: ReturnType<typeof import("./lib/dashboardData").useDashboardData>; onTab?: (tab: string) => void }) {
   const { store } = data;
+  const [serverStats, setServerStats] = useState<any>(null);
+  const [overviewError, setOverviewError] = useState("");
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      try {
+        const stats = await adminApi.overview();
+        if (active) { setServerStats(stats); setOverviewError(""); }
+      } catch (error: any) {
+        if (active) setOverviewError(error?.message || "Unable to load live overview analytics");
+      }
+    };
+    void load();
+    const interval = window.setInterval(load, 15_000);
+    const onVisible = () => { if (document.visibilityState === "visible") void load(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { active = false; window.clearInterval(interval); document.removeEventListener("visibilitychange", onVisible); };
+  }, []);
   const go = (tab: string) => onTab && onTab(tab);
-  const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
-  const todaysOrders = store.orders.filter(o => o.createdAt >= todayStart.getTime());
-  const totalRevenue = store.orders.filter(o => o.status === "delivered").reduce((s, o) => s + o.total, 0);
-  const lowStock = store.products.filter(p => p.stock < 5).length;
-  
-  const activeBuilds = store.pcBuilds.filter(b => !["delivered", "cancelled"].includes(b.status)).length;
-  const openServices = store.serviceRequests.filter(s => !["completed", "cancelled"].includes(s.status)).length;
-  const pendingDeliveries = store.orders.filter(o => ["packing", "shipped"].includes(o.status)).length;
-  const staffOnline = store.staff.length; // Mock, real impl would check last active
-
-  // 7-day revenue chart (mock — derived from orders)
-  const dayBuckets: Record<string, number> = {};
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(); d.setDate(d.getDate() - i);
-    dayBuckets[d.toISOString().slice(0, 10)] = 0;
-  }
-  store.orders.forEach(o => {
-    const k = new Date(o.createdAt).toISOString().slice(0, 10);
-    if (k in dayBuckets) dayBuckets[k] += o.total;
-  });
-  const chartData = Object.entries(dayBuckets).map(([date, revenue]) => ({
-    date: date.slice(5),
-    revenue,
-  }));
-
-  // Sales by category
-  const byCat: Record<string, number> = {};
-  store.orders.forEach(o => o.items.forEach(i => {
-    const p = store.products.find(x => x.id === i.productId);
-    byCat[p?.category || "other"] = (byCat[p?.category || "other"] || 0) + i.qty * i.price;
-  }));
-  const pieData = Object.entries(byCat).map(([name, value]) => ({ name, value }));
-  
-  // Pipeline counts
-  const orderCounts = {
-    placed: store.orders.filter(o => o.status === "placed").length,
-    verified: store.orders.filter(o => o.status === "verified").length,
-    packing: store.orders.filter(o => o.status === "packing").length,
-    shipped: store.orders.filter(o => o.status === "shipped").length,
-    delivered: store.orders.filter(o => o.status === "delivered").length,
-  };
+  const chartData = serverStats?.weeklyRevenue || [];
+  const pieData = serverStats?.salesByCategory || [];
+  const servicePieData = serverStats?.salesByService || [];
+  const pipeline = new Map((serverStats?.orderPipeline || []).map((row: any) => [row.name, Number(row.value || 0)]));
+  const orderCounts = { placed: pipeline.get("placed") || 0, verified: pipeline.get("verified") || 0, packing: pipeline.get("packing") || 0, shipped: pipeline.get("shipped") || 0, delivered: pipeline.get("delivered") || 0 };
+  const metric = (key: string) => serverStats ? Number(serverStats[key] || 0) : "—";
+  const displayName = (value: string) => String(value || "Other").replace(/-/g, " ").replace(/\b\w/g, letter => letter.toUpperCase());
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+      {overviewError && <div className="glass-card" style={{ padding: 12, border: "1px solid rgba(255,31,69,.35)", color: "#ff8a9f", fontSize: 12 }}>Live analytics unavailable: {overviewError}</div>}
       <div className="dash-kpi-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
-        <KPICard label="Today's Sales" value={inr(todaysOrders.reduce((s, o) => s + o.total, 0))} icon={<TrendingUp size={14} />} color="#00cc66" delta={{ value: 8, positive: true }} onClick={() => go("orders")} />
-        <KPICard label="Orders Today" value={todaysOrders.length} icon={<ShoppingBag size={14} />} color="#FF1F45" hint={`${store.orders.length} total`} onClick={() => go("orders")} />
-        <KPICard label="Revenue (Delivered)" value={inr(totalRevenue)} icon={<TrendingUp size={14} />} color="#00b4ff" delta={{ value: 14, positive: true }} onClick={() => go("orders")} />
-        <KPICard label="Open Repairs" value={store.repairs.filter(r => !["ready", "delivered"].includes(r.status)).length} icon={<Wrench size={14} />} color="#ff6b00" onClick={() => go("repairs")} />
-        <KPICard label="Active PC Builds" value={activeBuilds} icon={<Cpu size={14} />} color="#a855f7" onClick={() => go("builds")} />
-        <KPICard label="Open Services" value={openServices} icon={<Zap size={14} />} color="#ffd700" onClick={() => go("upgrades")} />
-        <KPICard label="Pending Deliveries" value={pendingDeliveries} icon={<TruckIcon size={14} />} color="#00cc66" onClick={() => go("deliveries")} />
-        <KPICard label="Staff Online" value={staffOnline} icon={<Users size={14} />} color="#00b4ff" onClick={() => go("staff")} />
+        <KPICard label="Today's Sales" value={serverStats ? inr(Number(serverStats.sales_today || 0)) : "—"} icon={<TrendingUp size={14} />} color="#00cc66" onClick={() => go("orders")} />
+        <KPICard label="Orders Today" value={metric("orders_today")} icon={<ShoppingBag size={14} />} color="var(--primary)" hint={serverStats ? `${serverStats.orders} total` : "Loading live data"} onClick={() => go("orders")} />
+        <KPICard label="Revenue (Delivered)" value={serverStats ? inr(Number(serverStats.delivered_revenue || 0)) : "—"} icon={<TrendingUp size={14} />} color="#00b4ff" onClick={() => go("orders")} />
+        <KPICard label="Open Repairs" value={metric("open_repairs")} icon={<Wrench size={14} />} color="#ff6b00" onClick={() => go("repairs")} />
+        <KPICard label="Active PC Builds" value={metric("active_pc_builds")} icon={<Cpu size={14} />} color="#a855f7" onClick={() => go("builds")} />
+        <KPICard label="Open Services" value={metric("open_services")} icon={<Zap size={14} />} color="#ffd700" onClick={() => go("upgrades")} />
+        <KPICard label="Pending Deliveries" value={metric("pending_deliveries")} icon={<TruckIcon size={14} />} color="#00cc66" onClick={() => go("deliveries")} />
+        <KPICard label="Staff" value={metric("staff")} icon={<Users size={14} />} color="#00b4ff" onClick={() => go("staff")} />
       </div>
 
-      <div className="two-col-workflow" style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 14 }}>
+      <div className="two-col-workflow" style={{ display: "grid", gridTemplateColumns: "minmax(360px, 2fr) repeat(2, minmax(260px, 1fr))", gap: 14 }}>
         <SectionCard title="Weekly Revenue" subtitle="Last 7 days">
           <div style={{ height: 260 }}>
             <ResponsiveContainer>
@@ -349,7 +334,7 @@ export function AdminOverview({ data, onTab }: { data: ReturnType<typeof import(
                 <XAxis dataKey="date" stroke="#666" fontSize={10} />
                 <YAxis stroke="#666" fontSize={10} />
                 <Tooltip contentStyle={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 11 }} />
-                <Line type="monotone" dataKey="revenue" stroke="#FF1F45" strokeWidth={2} dot={{ fill: "#FF1F45" }} />
+                <Line type="monotone" dataKey="revenue" stroke="var(--primary)" strokeWidth={2} dot={{ fill: "var(--primary)" }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -359,12 +344,27 @@ export function AdminOverview({ data, onTab }: { data: ReturnType<typeof import(
           <div style={{ height: 260 }}>
             <ResponsiveContainer>
               <PieChart>
-                <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={(e: any) => e.name}>
+                <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={(e: any) => displayName(e.name)}>
                   {pieData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
                 </Pie>
                 <Tooltip contentStyle={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 11 }} />
               </PieChart>
             </ResponsiveContainer>
+          </div>
+        </SectionCard>
+
+        <SectionCard title="Sales by Services" subtitle="Recognized paid/completed service revenue">
+          <div style={{ height: 260 }}>
+            {servicePieData.length ? (
+              <ResponsiveContainer>
+                <PieChart>
+                  <Pie data={servicePieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={(e: any) => displayName(e.name)}>
+                    {servicePieData.map((_: any, i: number) => <Cell key={i} fill={PIE_COLORS[(i + 2) % PIE_COLORS.length]} />)}
+                  </Pie>
+                  <Tooltip contentStyle={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 11 }} />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : <div style={{ height: "100%", display: "grid", placeItems: "center", color: "#666", fontSize: 12 }}>No recognized service sales yet</div>}
           </div>
         </SectionCard>
       </div>
@@ -605,7 +605,7 @@ function imageExtensionFromType(contentType: string): string {
   return "jpg";
 }
 
-async function publishCatalogProductToBackend(product: CatalogProduct) {
+async function saveCatalogProductToBackend(product: CatalogProduct, targetStatus: "draft" | "published") {
   const authHeaders = catalogAuthHeaders();
   if (!authHeaders) throw new Error("Admin login is required before publishing to the live catalog.");
 
@@ -650,7 +650,8 @@ async function publishCatalogProductToBackend(product: CatalogProduct) {
       },
       tags: product.seo?.tags || product.seo?.keywords || [],
       marketTag: product.badge || null,
-      isFeatured: product.badge === "BESTSELLER" || product.badge === "HOT"
+      isFeatured: product.badge === "BESTSELLER" || product.badge === "HOT",
+      status: targetStatus === "draft" ? "draft" : undefined,
     }),
   });
 
@@ -663,6 +664,7 @@ async function publishCatalogProductToBackend(product: CatalogProduct) {
     const file = catalogImageFiles.get(previewUrl);
     if (!file) {
       if (previewUrl.startsWith("http")) uploadedUrls.push(previewUrl);
+      if (previewUrl.startsWith("http") && product.liveId) continue;
       if (!previewUrl.startsWith("data:image/")) continue;
     }
 
@@ -700,16 +702,21 @@ async function publishCatalogProductToBackend(product: CatalogProduct) {
     catalogImageFiles.delete(previewUrl);
   }
 
-  const publishResponse = await fetch(`${API_BASE}/products/${productId}/publish`, {
-    method: "POST",
-    headers: authHeaders,
-  });
-  if (!publishResponse.ok) throw new Error(await publishResponse.text());
-  const published = await publishResponse.json();
+  let persisted = saved;
+  if (targetStatus === "published") {
+    const publishResponse = await fetch(`${API_BASE}/products/${productId}/publish`, {
+      method: "POST",
+      headers: authHeaders,
+    });
+    if (!publishResponse.ok) throw new Error(await publishResponse.text());
+    persisted = await publishResponse.json();
+  }
 
   return {
-    imageUrl: published.imageUrl || uploadedUrls[0] || product.img,
-    gallery: (published.images || []).map((image: any) => image.url) || uploadedUrls
+    liveId: persisted.id || productId,
+    status: persisted.status || targetStatus,
+    imageUrl: persisted.imageUrl || uploadedUrls[0] || product.img,
+    gallery: (persisted.images || []).map((image: any) => image.url) || uploadedUrls
   };
 }
 
@@ -771,9 +778,9 @@ function AdminCatalogEditor({ draft, setDraft, onSave, onClose }: { draft: Parti
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
           {draft.gallery.slice(0, 5).map((src, index) => (
             <div key={index} style={{ position: "relative" }}>
-              <img src={src} alt={`catalog-${index + 1}`} style={{ width: 70, height: 70, objectFit: "cover", borderRadius: 8, border: index === 0 ? "2px solid #FF1F45" : "1px solid rgba(255,255,255,.12)" }} />
-              <button onClick={() => setDraft(prev => { const gal = [...(prev.gallery || [])]; const [removed] = gal.splice(index, 1); if (removed) catalogImageFiles.delete(removed); return { ...prev, gallery: gal, img: gal[0] || "" }; })} style={{ position: "absolute", top: -6, right: -6, width: 18, height: 18, borderRadius: "50%", background: "#FF1F45", border: "none", color: "white", cursor: "pointer", fontSize: 10, display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
-              {index === 0 && <span style={{ position: "absolute", bottom: 2, left: 2, fontSize: 8, background: "#FF1F45", color: "white", borderRadius: 3, padding: "1px 3px" }}>MAIN</span>}
+              <img src={src} alt={`catalog-${index + 1}`} style={{ width: 70, height: 70, objectFit: "cover", borderRadius: 8, border: index === 0 ? "2px solid var(--primary)" : "1px solid rgba(255,255,255,.12)" }} />
+              <button onClick={() => setDraft(prev => { const gal = [...(prev.gallery || [])]; const [removed] = gal.splice(index, 1); if (removed) catalogImageFiles.delete(removed); return { ...prev, gallery: gal, img: gal[0] || "" }; })} style={{ position: "absolute", top: -6, right: -6, width: 18, height: 18, borderRadius: "50%", background: "var(--primary)", border: "none", color: "white", cursor: "pointer", fontSize: 10, display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+              {index === 0 && <span style={{ position: "absolute", bottom: 2, left: 2, fontSize: 8, background: "var(--primary)", color: "white", borderRadius: 3, padding: "1px 3px" }}>MAIN</span>}
             </div>
           ))}
           {(draft.gallery?.length || 0) < 5 && (
@@ -854,12 +861,12 @@ export function AdminProducts({ store, addCatalogProduct, patchCatalogProduct, d
     } as CatalogProduct;
 
     try {
-      if (status === "published") {
-        toast.message("Uploading images to S3 and publishing catalog...");
-        const live = await publishCatalogProductToBackend(product);
-        product.img = live.imageUrl || product.img;
-        product.gallery = live.gallery?.length ? live.gallery : product.gallery;
-      }
+      toast.message(status === "published" ? "Uploading images to S3 and publishing catalog..." : "Saving catalog draft to server...");
+      const live = await saveCatalogProductToBackend(product, status);
+      product.img = live.imageUrl || product.img;
+      product.gallery = live.gallery?.length ? live.gallery : product.gallery;
+      product.catalogStatus = live.status === "published" ? "published" : "draft";
+      (product as CatalogProduct & { liveId?: string }).liveId = live.liveId;
 
       if (product.id) patchCatalogProduct(product.id, product);
       else addCatalogProduct(product as Omit<CatalogProduct, "id" | "createdAt" | "updatedAt">);
@@ -938,7 +945,7 @@ export function AdminProducts({ store, addCatalogProduct, patchCatalogProduct, d
               align: "right",
               render: p => {
                 const stock = p.stock || 0;
-                const color = stock === 0 ? "#FF1F45" : stock < 5 ? "#ff6b00" : "#00cc66";
+                const color = stock === 0 ? "var(--primary)" : stock < 5 ? "#ff6b00" : "#00cc66";
                 return <span style={{ color, fontWeight: 600 }}>{stock}</span>;
               }
             },
@@ -955,11 +962,15 @@ export function AdminProducts({ store, addCatalogProduct, patchCatalogProduct, d
                   </button>
                   <button
                     className="glass-pill glass-pill-sm glass-pill-primary"
-                    onClick={(e) => {
+                    onClick={async (e) => {
                       e.stopPropagation();
+                      if (p.liveId) await adminApi.updateProduct(p.liveId, {
+                        status: p.catalogStatus === "archived" ? "published" : "archived",
+                        isActive: p.catalogStatus === "archived",
+                      });
                       patchCatalogProduct(p.id, {
                         catalogStatus: p.catalogStatus === "archived" ? "published" : "archived",
-                        inStock: false
+                        inStock: p.catalogStatus === "archived" ? p.stock > 0 : false
                       });
                     }}
                   >
@@ -967,7 +978,7 @@ export function AdminProducts({ store, addCatalogProduct, patchCatalogProduct, d
                   </button>
                   <button
                     className="glass-pill glass-pill-sm glass-pill-red"
-                    onClick={(e) => { e.stopPropagation(); deleteCatalogProduct(p.id); }}
+                    onClick={async (e) => { e.stopPropagation(); if (p.liveId) await adminApi.deleteProduct(p.liveId); deleteCatalogProduct(p.id); }}
                   >
                     Delete
                   </button>
@@ -1354,7 +1365,7 @@ export function AdminGamingHub({ store, addGamingHubItem, patchGamingHubItem, de
   return (
     <div style={{ display: "grid", gap: 16 }}>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 12 }}>
-        <KPICard label="Total Posts" value={items.length} icon={<Gamepad2 size={14} />} color="#FF1F45" />
+        <KPICard label="Total Posts" value={items.length} icon={<Gamepad2 size={14} />} color="var(--primary)" />
         <KPICard label="Published" value={items.filter(i => i.status === "published").length} icon={<Eye size={14} />} color="#00cc66" />
         <KPICard label="Drafts" value={items.filter(i => i.status === "draft").length} icon={<Archive size={14} />} color="#ffd700" />
         <KPICard label="Total Views" value={totalViews} icon={<BarChart3 size={14} />} color="#00b4ff" />
@@ -1499,7 +1510,7 @@ function TypeFilteredAdmin({
                 <div>
                   <div style={{ color: "white", fontWeight: 600, marginBottom: 4 }}>{item.title}</div>
                   {typeFilter === "featured-build" && <div style={{ color: "#888", fontSize: 12, marginBottom: 4 }}>{item.specs}</div>}
-                  {typeFilter === "offer" && <div style={{ color: "#FF1F45", fontSize: 13, fontWeight: 600 }}>{item.discount}</div>}
+                  {typeFilter === "offer" && <div style={{ color: "var(--primary)", fontSize: 13, fontWeight: 600 }}>{item.discount}</div>}
                   <div style={{ color: "#666", fontSize: 11 }}>{formatDate(item.publishDate || item.createdAt)}</div>
                 </div>
                 <div style={{ textAlign: "right" }}>
@@ -1682,56 +1693,40 @@ export async function toggleArchiveCmsItem(
 
 // ─── Categories ───────────────────────────────────────────────────────────
 
-interface AdminCategory { id: string; name: string; icon: string; count: number; color: string; }
-const CATEGORIES_KEY = "deskto-admin-categories-v1";
-const DEFAULT_CATEGORIES: AdminCategory[] = [
-  { id: "cat_gaming_pc", name: "Gaming PC", icon: "🎮", count: 6, color: "#FF1F45" },
-  { id: "cat_desktop_pc", name: "Desktop PC", icon: "🖥️", count: 4, color: "#00b4ff" },
-  { id: "cat_gaming_laptop", name: "Gaming Laptop", icon: "💻", count: 3, color: "#a855f7" },
-  { id: "cat_laptop", name: "Laptop", icon: "💼", count: 5, color: "#00cc66" },
-  { id: "cat_monitor", name: "Monitor", icon: "🖥️", count: 4, color: "#ffd700" },
-  { id: "cat_components", name: "Components", icon: "🔧", count: 9, color: "#ff6b00" },
-];
-
-function loadCategories(): AdminCategory[] {
-  if (typeof window === "undefined") return DEFAULT_CATEGORIES;
-  try {
-    const raw = window.localStorage.getItem(CATEGORIES_KEY);
-    if (!raw) return DEFAULT_CATEGORIES;
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) && parsed.length ? parsed : DEFAULT_CATEGORIES;
-  } catch { return DEFAULT_CATEGORIES; }
-}
+interface AdminCategory { id: string; name: string; icon: string; count: number; color: string; isActive?: boolean; }
 
 export function AdminCategories() {
-  const [categories, setCategories] = useState<AdminCategory[]>(() => loadCategories());
+  const [categories, setCategories] = useState<AdminCategory[]>([]);
   const [editing, setEditing] = useState<AdminCategory | null>(null);
-
-  const persist = (next: AdminCategory[]) => {
-    setCategories(next);
-    try { window.localStorage.setItem(CATEGORIES_KEY, JSON.stringify(next)); } catch {}
+  const reload = async () => {
+    try {
+      const response = await adminApi.categories();
+      setCategories(response.categories.filter(category => category.isActive !== false));
+    } catch (error: any) { toast.error(error?.message || "Could not load categories"); }
   };
+  useEffect(() => { void reload(); }, []);
 
-  const startNew = () => setEditing({ id: "", name: "", icon: "🏷️", count: 0, color: "#FF1F45" });
-  const save = () => {
+  const startNew = () => setEditing({ id: "", name: "", icon: "🏷️", count: 0, color: "var(--primary)" });
+  const save = async () => {
     if (!editing) return;
     const name = editing.name.trim();
     if (!name) return toast.error("Category name is required.");
     if (editing.id) {
-      persist(categories.map(c => c.id === editing.id ? { ...editing, name } : c));
+      await adminApi.updateCategory(editing.id, { ...editing, name });
       toast.success(`Category "${name}" updated`);
     } else {
-      const id = `cat_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
-      persist([...categories, { ...editing, id, name }]);
+      await adminApi.createCategory({ ...editing, name });
       toast.success(`Category "${name}" added`);
     }
     setEditing(null);
+    await reload();
   };
-  const remove = (c: AdminCategory) => {
+  const remove = async (c: AdminCategory) => {
     if (typeof window !== "undefined" && !window.confirm(`Delete category "${c.name}"?`)) return;
-    persist(categories.filter(x => x.id !== c.id));
+    await adminApi.deleteCategory(c.id);
     if (editing?.id === c.id) setEditing(null);
     toast.success(`Category "${c.name}" deleted`);
+    await reload();
   };
 
   return (
@@ -1745,7 +1740,7 @@ export function AdminCategories() {
             <Field label="Name" value={editing.name} onChange={v => setEditing({ ...editing, name: v })} placeholder="e.g. Keyboards" />
             <Field label="Icon (emoji)" value={editing.icon} onChange={v => setEditing({ ...editing, icon: v })} placeholder="⌨️" />
             <Field label="Product Count" type="number" value={String(editing.count)} onChange={v => setEditing({ ...editing, count: Number(v) || 0 })} placeholder="0" />
-            <Field label="Color (hex)" value={editing.color} onChange={v => setEditing({ ...editing, color: v })} placeholder="#FF1F45" />
+            <Field label="Color (hex)" value={editing.color} onChange={v => setEditing({ ...editing, color: v })} placeholder="var(--primary)" />
           </div>
           <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
             <button className="glass-pill glass-pill-sm glass-pill-primary" onClick={save}>{editing.id ? "Save Changes" : "Add Category"}</button>
@@ -1776,51 +1771,41 @@ export function AdminCategories() {
 
 // ─── Brands ───────────────────────────────────────────────────────────────
 
-interface AdminBrand { id: string; name: string; }
-const BRANDS_KEY = "deskto-admin-brands-v1";
-const DEFAULT_BRANDS: AdminBrand[] = ["DESKTO", "ASUS", "Dell", "MSI", "Lenovo", "Intel", "NVIDIA", "AMD", "Samsung", "Corsair", "Logitech", "Razer", "HyperX", "LG", "TP-Link"]
-  .map(name => ({ id: `brand_${name.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`, name }));
-
-function loadBrands(): AdminBrand[] {
-  if (typeof window === "undefined") return DEFAULT_BRANDS;
-  try {
-    const raw = window.localStorage.getItem(BRANDS_KEY);
-    if (!raw) return DEFAULT_BRANDS;
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) && parsed.length ? parsed : DEFAULT_BRANDS;
-  } catch { return DEFAULT_BRANDS; }
-}
+interface AdminBrand { id: string; name: string; isActive?: boolean; count?: number; }
 
 export function AdminBrands() {
-  const [brands, setBrands] = useState<AdminBrand[]>(() => loadBrands());
+  const [brands, setBrands] = useState<AdminBrand[]>([]);
   const [editing, setEditing] = useState<AdminBrand | null>(null);
-
-  const persist = (next: AdminBrand[]) => {
-    setBrands(next);
-    try { window.localStorage.setItem(BRANDS_KEY, JSON.stringify(next)); } catch {}
+  const reload = async () => {
+    try {
+      const response = await adminApi.brands();
+      setBrands(response.brands.filter(brand => brand.isActive !== false));
+    } catch (error: any) { toast.error(error?.message || "Could not load brands"); }
   };
+  useEffect(() => { void reload(); }, []);
 
   const startNew = () => setEditing({ id: "", name: "" });
-  const save = () => {
+  const save = async () => {
     if (!editing) return;
     const name = editing.name.trim();
     if (!name) return toast.error("Brand name is required.");
     if (brands.some(b => b.name.toLowerCase() === name.toLowerCase() && b.id !== editing.id)) return toast.error(`"${name}" already exists.`);
     if (editing.id) {
-      persist(brands.map(b => b.id === editing.id ? { ...b, name } : b));
+      await adminApi.updateBrand(editing.id, { ...editing, name });
       toast.success(`Brand "${name}" updated`);
     } else {
-      const id = `brand_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
-      persist([...brands, { id, name }]);
+      await adminApi.createBrand({ name });
       toast.success(`Brand "${name}" added`);
     }
     setEditing(null);
+    await reload();
   };
-  const remove = (b: AdminBrand) => {
+  const remove = async (b: AdminBrand) => {
     if (typeof window !== "undefined" && !window.confirm(`Delete brand "${b.name}"?`)) return;
-    persist(brands.filter(x => x.id !== b.id));
+    await adminApi.deleteBrand(b.id);
     if (editing?.id === b.id) setEditing(null);
     toast.success(`Brand "${b.name}" deleted`);
+    await reload();
   };
 
   return (
@@ -1842,7 +1827,7 @@ export function AdminBrands() {
       <div className="dash-tab-grid">
         {brands.map(b => (
           <div key={b.id} className="glass-card" style={{ padding: 16, display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 48, height: 48, borderRadius: 8, background: "linear-gradient(135deg, #FF1F45, #5a0008)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Orbitron', sans-serif", fontSize: 14, color: "white", fontWeight: 800 }}>{b.name[0]}</div>
+            <div style={{ width: 48, height: 48, borderRadius: 8, background: "linear-gradient(135deg, var(--primary), #5a0008)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Orbitron', sans-serif", fontSize: 14, color: "white", fontWeight: 800 }}>{b.name[0]}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 13, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b.name}</div>
             </div>
@@ -1859,7 +1844,7 @@ export function AdminBrands() {
 
 // ─── Inventory ────────────────────────────────────────────────────────────
 
-export function AdminInventory({ store }: { store: DashboardStore }) {
+export function AdminInventory({ store, patchCatalogProduct }: { store: DashboardStore; patchCatalogProduct: (id: number, patch: Partial<CatalogProduct>) => void }) {
   const [showRestock, setShowRestock] = useState<{ product: typeof store.products[0]; qty: string } | null>(null);
   const [showCreatePO, setShowCreatePO] = useState(false);
   const [poDraft, setPoDraft] = useState({
@@ -1875,7 +1860,7 @@ export function AdminInventory({ store }: { store: DashboardStore }) {
   const totalUnits = store.products.reduce((s, p) => s + (p.stock || 0), 0);
 
   const stockColor = (stock: number) => {
-    if (stock === 0) return "#FF1F45";
+    if (stock === 0) return "var(--primary)";
     if (stock < 5) return "#ff6b00";
     return "#00cc66";
   };
@@ -1898,7 +1883,7 @@ export function AdminInventory({ store }: { store: DashboardStore }) {
         </div>
         <div className="glass-card" style={{ padding: 16, border: "1px solid rgba(255,31,69,0.3)" }}>
           <div style={{ fontSize: 11, color: "#888", textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>Low Stock</div>
-          <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 24, color: "#FF1F45" }}>{lowStock.length}</div>
+          <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 24, color: "var(--primary)" }}>{lowStock.length}</div>
         </div>
       </div>
 
@@ -1906,7 +1891,7 @@ export function AdminInventory({ store }: { store: DashboardStore }) {
       {lowStock.length > 0 && (
         <div className="glass-card" style={{ padding: 16, border: "1px solid rgba(255,31,69,0.3)", background: "rgba(255,31,69,0.03)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-            <AlertCircle size={18} color="#FF1F45" />
+            <AlertCircle size={18} color="var(--primary)" />
             <div>
               <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 12, color: "white" }}>{lowStock.length} Low-Stock Alert{lowStock.length > 1 ? "s" : ""}</div>
               <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>Restock soon to avoid lost sales</div>
@@ -2025,7 +2010,7 @@ export function AdminInventory({ store }: { store: DashboardStore }) {
               render: p => (
                 <span className="glass-pill glass-pill-sm" style={{
                   background: p.inStock ? "rgba(0,204,102,0.12)" : "rgba(255,31,69,0.12)",
-                  color: p.inStock ? "#00cc66" : "#FF1F45",
+                  color: p.inStock ? "#00cc66" : "var(--primary)",
                 }}>
                   {p.inStock ? "Available" : "Out of Stock"}
                 </span>
@@ -2091,8 +2076,13 @@ export function AdminInventory({ store }: { store: DashboardStore }) {
             <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
               <button
                 className="glass-pill glass-pill-primary"
-                onClick={() => {
+                onClick={async () => {
                   const added = Number(showRestock.qty || 0);
+                  if (!Number.isFinite(added) || added <= 0) return toast.error("Enter a positive restock quantity");
+                  const nextStock = Number(showRestock.product.stock || 0) + added;
+                  if (!showRestock.product.liveId) return toast.error("This product is not connected to the live catalog yet");
+                  await adminApi.updateProduct(showRestock.product.liveId, { stockQuantity: nextStock });
+                  patchCatalogProduct(showRestock.product.id, { stock: nextStock, inStock: true });
                   toast.success(`Added ${added} units to ${showRestock.product.name}`);
                   setShowRestock(null);
                 }}
@@ -2136,14 +2126,18 @@ export function AdminOrders({ store, updateOrderStatus, patchOrder }: { store: D
     : (order.deliveryCharge ?? order.shipping ?? 0) === 0
       ? "FREE"
       : inr(order.deliveryCharge ?? order.shipping ?? 0);
-  const setStatus = (order: Order, status: Order["status"]) => {
+  const setStatus = async (order: Order, status: Order["status"]) => {
     if (!order?.id || typeof order.id !== "string" || order.id.trim() === "") {
       toast.error("Cannot update status: order has no ID");
       console.warn("[admin] setStatus called with empty order.id", order);
       return;
     }
-    updateOrderStatus(order.id, status);
-    toast.success(`Order ${order.id.slice(-8).toUpperCase()} synced to ${status}`);
+    try {
+      await updateOrderStatus(order.id, status);
+      toast.success(`Order ${order.id.slice(-8).toUpperCase()} synced to ${status}`);
+    } catch (error: any) {
+      toast.error(error?.message || "Order status update failed");
+    }
   };
   const confirmDeliveryCharge = async (order: Order) => {
     const raw = deliveryChargeDrafts[order.id] ?? "";
@@ -2264,7 +2258,7 @@ export function AdminOrders({ store, updateOrderStatus, patchOrder }: { store: D
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10, marginBottom: 14 }}>
               <div className="glass" style={{ borderRadius: 10, padding: 12 }}><div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 9, color: "#777", marginBottom: 6 }}>STATUS</div><StatusBadge status={active.status} /></div>
-              <div className="glass" style={{ borderRadius: 10, padding: 12 }}><div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 9, color: "#777", marginBottom: 6 }}>TOTAL</div><div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 20, color: "#FF1F45", fontWeight: 700 }}>{inr(active.total)}</div></div>
+              <div className="glass" style={{ borderRadius: 10, padding: 12 }}><div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 9, color: "#777", marginBottom: 6 }}>TOTAL</div><div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 20, color: "var(--primary)", fontWeight: 700 }}>{inr(active.total)}</div></div>
             </div>
             <SectionCard title="Admin Controls" padded={false}>
               <div style={{ padding: 14, display: "grid", gap: 10 }}>
@@ -2459,7 +2453,7 @@ export function AdminDeliveries({
                 <div>
                   {d.staffName ? (
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <div style={{ width: 24, height: 24, borderRadius: "50%", background: "#FF1F45", display: "grid", placeItems: "center", fontSize: 10, color: "white", fontWeight: 700 }}>{d.staffName.charAt(0)}</div>
+                      <div style={{ width: 24, height: 24, borderRadius: "50%", background: "var(--primary)", display: "grid", placeItems: "center", fontSize: 10, color: "white", fontWeight: 700 }}>{d.staffName.charAt(0)}</div>
                       <div>
                         <div style={{ color: "white", fontSize: 12, fontWeight: 600 }}>{d.staffName}</div>
                         {d.staffPhone && <div style={{ color: "#777", fontSize: 11 }}>{d.staffPhone}</div>}
@@ -2536,7 +2530,7 @@ export function AdminDeliveries({
                   return staff ? (
                     <div className="glass" style={{ borderRadius: 10, padding: 14 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                        <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#FF1F45", display: "grid", placeItems: "center", fontSize: 16, color: "white", fontWeight: 700 }}>{staff.name.charAt(0)}</div>
+                        <div style={{ width: 40, height: 40, borderRadius: "50%", background: "var(--primary)", display: "grid", placeItems: "center", fontSize: 16, color: "white", fontWeight: 700 }}>{staff.name.charAt(0)}</div>
                         <div>
                           <div style={{ color: "white", fontWeight: 600 }}>{staff.name}</div>
                           <div style={{ color: "#888", fontSize: 12 }}>{staff.role} · {staff.email || staff.contact || ""}</div>
@@ -2602,7 +2596,7 @@ export function AdminDeliveries({
               </div>
               <div className="glass" style={{ borderRadius: 10, padding: 12 }}>
                 <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 9, color: "#777", marginBottom: 6 }}>ORDER VALUE</div>
-                <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 20, color: "#FF1F45", fontWeight: 700 }}>{(() => { const o = getOrder(active); return o ? inr(o.total) : "—"; })()}</div>
+                <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 20, color: "var(--primary)", fontWeight: 700 }}>{(() => { const o = getOrder(active); return o ? inr(o.total) : "—"; })()}</div>
               </div>
             </div>
 
@@ -2629,7 +2623,7 @@ export function AdminDeliveries({
               <div style={{ padding: 14 }}>
                 {active.staffName ? (
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#FF1F45", display: "grid", placeItems: "center", fontSize: 16, color: "white", fontWeight: 700 }}>{active.staffName.charAt(0)}</div>
+                    <div style={{ width: 40, height: 40, borderRadius: "50%", background: "var(--primary)", display: "grid", placeItems: "center", fontSize: 16, color: "white", fontWeight: 700 }}>{active.staffName.charAt(0)}</div>
                     <div>
                       <div style={{ color: "white", fontWeight: 600, fontSize: 13 }}>{active.staffName}</div>
                       {active.staffPhone && <div style={{ color: "#888", fontSize: 12 }}>{active.staffPhone}</div>}
@@ -2663,7 +2657,7 @@ export function AdminDeliveries({
                       </div>
                     ))}
                     <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 12, fontFamily: "'Rajdhani', sans-serif", fontSize: 16, color: "white" }}>
-                      <span>Total</span><span style={{ color: "#FF1F45", fontWeight: 700 }}>{inr(order.total)}</span>
+                      <span>Total</span><span style={{ color: "var(--primary)", fontWeight: 700 }}>{inr(order.total)}</span>
                     </div>
                   </div>
                 </SectionCard>
@@ -3394,7 +3388,7 @@ export function AdminCustomPC({ store, patchPCBuild }: { store: DashboardStore; 
               {b.components.map(c => (
                 <div key={`${c.type}-${c.name}`} style={{ display: "flex", justifyContent: "space-between", gap: 12, fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, color: "#ddd" }}>
                   <span><strong style={{ color: "white" }}>{c.type}:</strong> {c.name}</span>
-                  <span style={{ color: "#FF1F45", whiteSpace: "nowrap" }}>{inr(c.price)}</span>
+                  <span style={{ color: "var(--primary)", whiteSpace: "nowrap" }}>{inr(c.price)}</span>
                 </div>
               ))}
               <div style={{ margin: "6px 0", height: 1, background: "rgba(255,255,255,.06)" }} />
@@ -3410,7 +3404,7 @@ export function AdminCustomPC({ store, patchPCBuild }: { store: DashboardStore; 
               <div style={{ margin: "6px 0", height: 1, background: "rgba(255,255,255,.06)" }} />
               <div style={{ fontSize: 10, color: "#777", fontWeight: 700, letterSpacing: "0.8px", textTransform: "uppercase", marginBottom: 4 }}>Compatibility Report</div>
               {(b.validationReport || []).map(v => (
-                <div key={v.label} style={{ display: "flex", gap: 6, fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, color: v.pass ? "#00cc66" : "#ff1f45", alignItems: "flex-start" }}>
+                <div key={v.label} style={{ display: "flex", gap: 6, fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, color: v.pass ? "#00cc66" : "var(--primary)", alignItems: "flex-start" }}>
                   <CheckCircle size={11} style={{ marginTop: 2, flexShrink: 0 }} />
                   <span title={v.detail}>{v.label}</span>
                 </div>
@@ -3522,7 +3516,7 @@ function BuilderOverviewMetrics({ metrics }: { metrics: { totalCategories: numbe
   const topPick = metrics.popularSelections[0];
   return (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, marginBottom: 24 }}>
-      <KPICard label="Total Categories" value={metrics.totalCategories} icon={<Package size={14} />} color="#FF1F45" />
+      <KPICard label="Total Categories" value={metrics.totalCategories} icon={<Package size={14} />} color="var(--primary)" />
       <KPICard label="Active Options" value={metrics.activeOptions} icon={<CheckCircle size={14} />} color="#00cc66" />
       <KPICard label="Hidden/Disabled" value={metrics.hiddenOptions} icon={<Archive size={14} />} color="#ff6b00" />
       <KPICard label="Top Selected" value={topPick ? `${topPick.name} (${topPick.count}×)` : "No data yet"} icon={<Star size={14} />} color="#FFD700" />
@@ -3608,7 +3602,7 @@ function ComponentCategoryManager({ components, categoryId, onAdd, onUpdate, onR
   return (
     <div className="glass" style={{ borderRadius: 12, padding: 16, border: "1px solid rgba(255,31,69,.15)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 13, color: "#FF1F45" }}>{categoryId}</div>
+        <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 13, color: "var(--primary)" }}>{categoryId}</div>
         <span style={{ fontSize: 11, color: "#777" }}>{sorted.filter(c => c.isActive).length} active · {sorted.length} total</span>
       </div>
       <div style={{ display: "grid", gap: 8 }}>
@@ -3767,7 +3761,7 @@ function BuilderPreviewDialog({ config, onClose }: { config: CustomBuilderConfig
           <button className="glass-pill glass-pill-sm glass-pill-red" onClick={onClose}><X size={14} /> Close</button>
         </div>
         <div style={{ background: "#0a0a0a", borderRadius: 12, padding: 20, marginBottom: 20 }}>
-          <h3 style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 14, color: "#FF1F45", marginBottom: 8 }}>{config.contentConfig.pageTitle}</h3>
+          <h3 style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 14, color: "var(--primary)", marginBottom: 8 }}>{config.contentConfig.pageTitle}</h3>
           <p style={{ color: "#aaa", fontSize: 13, marginBottom: 16 }}>{config.contentConfig.builderDescription}</p>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
             {config.buildPurposes.filter(p => p.isActive).map(v => (
@@ -3789,7 +3783,7 @@ function BuilderPreviewDialog({ config, onClose }: { config: CustomBuilderConfig
             if (!catComponents.length) return null;
             return (
               <div key={cat} className="glass" style={{ borderRadius: 10, padding: 12 }}>
-                <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 10, color: "#FF1F45", marginBottom: 8 }}>{cat}</div>
+                <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 10, color: "var(--primary)", marginBottom: 8 }}>{cat}</div>
                 <select style={{ width: "100%", background: "#111", border: "1px solid rgba(255,255,255,.12)", borderRadius: 8, padding: "10px", color: "white" }}>
                   {catComponents.map((o, i) => <option key={o.id} value={i}>{o.name} · ₹{o.price.toLocaleString("en-IN")}</option>)}
                 </select>
@@ -3874,14 +3868,15 @@ export function AdminCustomBuilder({
     { id: "pricing", label: "Pricing Rules", icon: <Receipt size={14} /> },
   ];
 
-  const saveDraft = () => {
+  const saveDraft = async () => {
+    await adminApi.saveCustomBuilder({ ...config, status: "draft" });
     patchCustomBuilderConfig({ status: "draft" });
     setDraftSaved(true);
     setTimeout(() => setDraftSaved(false), 3000);
     toast.success("Draft saved successfully");
   };
 
-  const publish = () => {
+  const publish = async () => {
     const validationErrors: string[] = [];
     const categoriesWithComponents = Object.keys(config.components) as ComponentCategory[];
     categoriesWithComponents.forEach(cat => {
@@ -3900,6 +3895,7 @@ export function AdminCustomBuilder({
       toast.error("Validation failed:\n" + validationErrors.join("\n"));
       return;
     }
+    await adminApi.publishCustomBuilder({ ...config, status: "published", publishedAt: Date.now() });
     publishBuilderConfig();
     toast.success("Builder configuration published successfully!");
   };
@@ -4232,20 +4228,32 @@ function customerMetrics(store: DashboardStore, customerId: string) {
 }
 
 export function AdminCRM({ store, addCRMNote }: { store: DashboardStore; addCRMNote: (note: { customerId: string; text: string; by: string }) => void }) {
-  const users = readDemoUsers();
-  const [customerId, setCustomerId] = useState(users.find(u => u.role === "customer")?.id || users[0]?.id || "");
+  const [users, setUsers] = useState<DemoUser[]>([]);
+  const [customerId, setCustomerId] = useState("");
+  const [remoteNotes, setRemoteNotes] = useState<any[]>([]);
   const [note, setNote] = useState("");
   const selected = users.find(u => u.id === customerId) || users[0];
   const metrics = selected ? customerMetrics(store, selected.id) : null;
-  const notes = store.crmNotes.filter(n => !selected || n.customerId === selected.id);
+  const notes = remoteNotes.map(item => ({ id: item.id, customerId: item.customerId, text: item.note, by: item.createdByName || "Admin", at: new Date(item.createdAt).getTime() }));
 
-  const saveNote = () => {
+  const loadUsers = async () => {
+    const response = await adminApi.users("customer");
+    const mapped = response.users.map(user => ({ id: user.id, name: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email, email: user.email, role: user.role, status: user.status, createdAt: user.createdAt }));
+    setUsers(mapped);
+    setCustomerId(current => current || mapped[0]?.id || "");
+  };
+  const loadNotes = async (id: string) => setRemoteNotes(id ? (await adminApi.crmNotes(id)).notes : []);
+  useEffect(() => { void loadUsers().catch(error => toast.error(error?.message || "Could not load customers")); }, []);
+  useEffect(() => { void loadNotes(customerId).catch(error => toast.error(error?.message || "Could not load CRM notes")); }, [customerId]);
+
+  const saveNote = async () => {
     if (!selected || !note.trim()) {
       toast.error("Select a customer and enter a CRM note.");
       return;
     }
-    addCRMNote({ customerId: selected.id, text: note.trim(), by: "Admin" });
+    await adminApi.createCrmNote({ customerId: selected.id, note: note.trim(), noteType: "general" });
     setNote("");
+    await loadNotes(selected.id);
     toast.success("CRM note saved");
   };
 
@@ -4264,7 +4272,7 @@ export function AdminCRM({ store, addCRMNote }: { store: DashboardStore; addCRMN
             )}
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 10 }}>
-            <KPICard label="Orders" value={metrics?.orders.length || 0} icon={<ShoppingBag size={14} />} color="#FF1F45" />
+            <KPICard label="Orders" value={metrics?.orders.length || 0} icon={<ShoppingBag size={14} />} color="var(--primary)" />
             <KPICard label="Service Requests" value={(metrics?.repairs.length || 0) + (metrics?.services.length || 0) + (metrics?.builds.length || 0)} icon={<Wrench size={14} />} color="#00b4ff" />
             <KPICard label="Payments" value={inr(metrics?.spent || 0)} icon={<Receipt size={14} />} color="#00cc66" />
             <KPICard label="Reviews" value={metrics?.reviews.length || 0} icon={<MessageSquare size={14} />} color="#ffd700" />
@@ -4293,24 +4301,28 @@ export function AdminCRM({ store, addCRMNote }: { store: DashboardStore; addCRMN
 }
 
 export function AdminCustomers({ store, addLog }: { store: DashboardStore; addLog: (event: string, detail: string, actor?: string) => void }) {
-  const users = readDemoUsers();
-  const [selectedId, setSelectedId] = useState(users[0]?.id || "");
-  const [refresh, setRefresh] = useState(0);
+  const [users, setUsers] = useState<DemoUser[]>([]);
+  const [selectedId, setSelectedId] = useState("");
   const selected = users.find(u => u.id === selectedId) || users[0];
   const metrics = selected ? customerMetrics(store, selected.id) : null;
 
-  const setStatus = (user: DemoUser, status: string) => {
-    if (!writeDemoUserStatus(user.id, status)) {
-      toast.error("Could not update account status.");
-      return;
-    }
+  const reload = async () => {
+    const response = await adminApi.users("customer");
+    const mapped = response.users.map(user => ({ id: user.id, name: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email, email: user.email, role: user.role, status: user.status, createdAt: user.createdAt }));
+    setUsers(mapped);
+    setSelectedId(current => current || mapped[0]?.id || "");
+  };
+  useEffect(() => { void reload().catch(error => toast.error(error?.message || "Could not load customers")); }, []);
+
+  const setStatus = async (user: DemoUser, status: string) => {
+    await adminApi.updateUser(user.id, { status, isVerified: status === "active" ? true : undefined });
     addLog("customer_status_updated", `${user.email} marked ${status}`, "admin");
-    setRefresh(t => t + 1);
+    await reload();
     toast.success(`Customer ${status}`);
   };
 
   return (
-    <div key={refresh} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
       <SectionCard title="Customer Directory" subtitle={`${users.length} registered`}>
         <DataTable
           rowKey={u => u.id}
@@ -4335,7 +4347,7 @@ export function AdminCustomers({ store, addLog }: { store: DashboardStore; addLo
       {selected && metrics && (
         <SectionCard title={`${selected.name} History`} subtitle="Orders, services, payments, reviews, and support context">
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 10, marginBottom: 14 }}>
-            <KPICard label="Orders" value={metrics.orders.length} icon={<ShoppingBag size={14} />} color="#FF1F45" />
+            <KPICard label="Orders" value={metrics.orders.length} icon={<ShoppingBag size={14} />} color="var(--primary)" />
             <KPICard label="Repairs" value={metrics.repairs.length} icon={<Wrench size={14} />} color="#ff6b00" />
             <KPICard label="Services" value={metrics.services.length + metrics.builds.length} icon={<Database size={14} />} color="#00b4ff" />
             <KPICard label="Payments" value={inr(metrics.spent)} icon={<Receipt size={14} />} color="#00cc66" />
@@ -4354,20 +4366,36 @@ export function AdminCustomers({ store, addLog }: { store: DashboardStore; addLo
 
 export function AdminStaff({ store, addStaffMember }: { store: DashboardStore; addStaffMember: (staff: Omit<StaffMember, "id" | "joinedAt" | "performance"> & { id?: string }) => StaffMember }) {
   const [showForm, setShowForm] = useState(false);
+  const [staffRows, setStaffRows] = useState<StaffMember[]>([]);
   const [draft, setDraft] = useState({ name: "", email: "", role: "technician", department: "Repairs", phone: "" });
-  const save = () => {
+  const reload = async () => {
+    const response = await adminApi.users("staff");
+    setStaffRows(response.users.map(user => ({
+      id: user.id,
+      name: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email,
+      email: user.email,
+      phone: user.phone,
+      role: user.specialization?.toLowerCase().includes("delivery") ? "delivery" : user.specialization?.toLowerCase().includes("support") ? "support" : "technician",
+      department: user.department || "Services",
+      joinedAt: new Date(user.createdAt).getTime(),
+      performance: { jobs: user.serviceCount || 0, rating: 5, attendancePct: 100 },
+    })));
+  };
+  useEffect(() => { void reload().catch(error => toast.error(error?.message || "Could not load staff")); }, []);
+  const save = async () => {
     if (!draft.name.trim() || !draft.email.trim()) {
       toast.error("Name and email are required.");
       return;
     }
-    addStaffMember({ name: draft.name.trim(), email: draft.email.trim(), role: draft.role as StaffMember["role"], department: draft.department.trim() || "Operations" });
+    await adminApi.createStaff({ name: draft.name.trim(), email: draft.email.trim(), phone: draft.phone.trim() || undefined, specialization: draft.role, department: draft.department.trim() || "Support" });
     setDraft({ name: "", email: "", role: "technician", department: "Repairs", phone: "" });
     setShowForm(false);
-    toast.success("Staff profile created");
+    await reload();
+    toast.success("Staff account and profile created");
   };
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-      <SectionCard title="Staff Directory" subtitle={`${store.staff.length} members`}
+      <SectionCard title="Staff Directory" subtitle={`${staffRows.length} members`}
         action={<button className="glass-pill glass-pill-primary glass-pill-sm" onClick={() => setShowForm(v => !v)}><Plus size={12} /> Add Staff</button>}
       >
         {showForm && (
@@ -4384,7 +4412,7 @@ export function AdminStaff({ store, addStaffMember }: { store: DashboardStore; a
         )}
         <DataTable
           rowKey={s => s.id}
-          data={store.staff}
+          data={staffRows}
           columns={[
             { key: "id", label: "ID", render: s => <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 10 }}>{s.id.toUpperCase()}</span> },
             { key: "name", label: "Name" },
@@ -4548,7 +4576,7 @@ export function AdminCoupons({ store, addCoupon, patchCoupon }: { store: Dashboa
         rowKey={c => c.id}
         data={store.coupons}
         columns={[
-          { key: "code", label: "Code", render: c => <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 11, color: "#FF1F45", letterSpacing: 1 }}>{c.code}</span> },
+          { key: "code", label: "Code", render: c => <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 11, color: "var(--primary)", letterSpacing: 1 }}>{c.code}</span> },
           { key: "description", label: "Description" },
           { key: "discount", label: "Discount", align: "right", render: c => c.discountPercent ? `${c.discountPercent}%` : c.discountAmount ? inr(c.discountAmount) : "—"},
           { key: "minSpend", label: "Min Spend", align: "right", render: c => inr(c.minSpend) },
@@ -4614,7 +4642,7 @@ export function AdminOffers({ store, addOffer, patchOffer }: { store: DashboardS
             <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, color: "#aaa", marginTop: 4 }}>{o.detail}</div>
             {o.discount && <div style={{ color: "#00cc66", fontWeight: 700, marginTop: 8 }}>{o.discount}</div>}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
-              <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 11, color: "#FF1F45", letterSpacing: 1 }}>{o.code}</span>
+              <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 11, color: "var(--primary)", letterSpacing: 1 }}>{o.code}</span>
               <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, color: "#666" }}>Expires {formatDate(o.expiresAt)}</span>
             </div>
             <button className="glass-pill glass-pill-sm glass-pill-outline" style={{ marginTop: 12 }} onClick={(e) => { e.stopPropagation(); patchOffer(o.id, { active: o.active === false }); }}>{o.active === false ? "Activate" : "Disable"}</button>
@@ -4659,7 +4687,7 @@ export function AdminReports({ store }: { store: DashboardStore }) {
                 <XAxis dataKey="month" stroke="#666" fontSize={10} />
                 <YAxis stroke="#666" fontSize={10} />
                 <Tooltip contentStyle={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 11 }} />
-                <Bar dataKey="revenue" fill="#FF1F45" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="revenue" fill="var(--primary)" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

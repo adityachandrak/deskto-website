@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { query } from '../config/database';
+import { getClient, query } from '../config/database';
 import { authenticate, authorize, AuthRequest } from '../middleware/auth';
 import { validationResult, body, param } from 'express-validator';
 
@@ -12,6 +12,20 @@ function normalizeDeliveryChargeStatus(value: unknown): 'FIXED' | 'MANUAL_QUOTE'
 function parseMoney(value: unknown, fallback = 0): number {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function normalizeStoredItems(value: unknown): any[] {
+  const items = Array.isArray(value) ? value : [];
+  return items.map((item: any) => ({
+    productId: item.productId,
+    sku: item.sku,
+    name: item.name || item.productName || 'Item',
+    productName: item.name || item.productName || 'Item',
+    productImage: item.img || item.productImage || '',
+    quantity: Number(item.quantity || 0),
+    unitPrice: parseMoney(item.unitPrice ?? item.price),
+    totalPrice: parseMoney(item.totalPrice, parseMoney(item.unitPrice ?? item.price) * Number(item.quantity || 0)),
+  }));
 }
 
 // Get My Orders
@@ -29,8 +43,8 @@ router.get('/my', authenticate, async (req: AuthRequest, res: Response) => {
     }
 
     const ordersResult = await query(
-      `SELECT id, order_number, status, subtotal, tax_amount, shipping_amount,
-              total_amount, payment_status, payment_method, shipping_address, created_at, updated_at
+      `SELECT id, order_number, user_id, status, subtotal, tax_amount, shipping_amount,
+              total_amount, payment_status, payment_method, shipping_address, items, created_at, updated_at
        FROM orders
        ${whereClause}
        ORDER BY created_at DESC
@@ -47,6 +61,7 @@ router.get('/my', authenticate, async (req: AuthRequest, res: Response) => {
       orders: ordersResult.rows.map(o => ({
         id: o.id,
         orderNumber: o.order_number,
+        customerId: o.user_id,
         status: o.status,
         subtotal: parseFloat(o.subtotal),
         taxAmount: parseFloat(o.tax_amount),
@@ -56,7 +71,8 @@ router.get('/my', authenticate, async (req: AuthRequest, res: Response) => {
         paymentMethod: o.payment_method,
         shippingAddress: o.shipping_address,
         createdAt: o.created_at,
-        updatedAt: o.updated_at
+        updatedAt: o.updated_at,
+        items: normalizeStoredItems(o.items),
       })),
       pagination: {
         page: Number(page),
@@ -95,7 +111,7 @@ router.get('/',
       const ordersResult = await query(
         `SELECT o.id, o.order_number, o.status, o.subtotal, o.tax_amount,
                 o.shipping_amount, o.total_amount, o.payment_status, o.payment_method,
-                o.shipping_address, o.created_at, o.updated_at, o.user_id,
+                o.shipping_address, o.items, o.created_at, o.updated_at, o.user_id,
                 u.email AS user_email, u.first_name AS user_first_name, u.last_name AS user_last_name
          FROM orders o
          LEFT JOIN users u ON u.id = o.user_id
@@ -114,6 +130,7 @@ router.get('/',
         orders: ordersResult.rows.map(o => ({
           id: o.id,
           orderNumber: o.order_number,
+          customerId: o.user_id,
           status: o.status,
           subtotal: parseFloat(o.subtotal),
           taxAmount: parseFloat(o.tax_amount),
@@ -130,6 +147,9 @@ router.get('/',
             firstName: o.user_first_name,
             lastName: o.user_last_name,
           } : null,
+          customerName: [o.user_first_name, o.user_last_name].filter(Boolean).join(' ') || null,
+          customerEmail: o.user_email,
+          items: normalizeStoredItems(o.items),
         })),
         pagination: {
           page: Number(page),
@@ -166,14 +186,6 @@ router.get('/:orderNumber',
 
       const order = orderResult.rows[0];
 
-      const itemsResult = await query(
-        `SELECT oi.*, p.name as product_name, p.image_url as product_image
-         FROM order_items oi
-         JOIN products p ON oi.product_id = p.id
-         WHERE oi.order_id = $1`,
-        [order.id]
-      );
-
       res.json({
         id: order.id,
         orderNumber: order.order_number,
@@ -190,16 +202,7 @@ router.get('/:orderNumber',
         notes: order.notes,
         createdAt: order.created_at,
         updatedAt: order.updated_at,
-        items: itemsResult.rows.map(item => ({
-          id: item.id,
-          productId: item.product_id,
-          productName: item.product_name,
-          productImage: item.product_image,
-          quantity: item.quantity,
-          unitPrice: parseFloat(item.unit_price),
-          totalPrice: parseFloat(item.total_price),
-          specifications: item.specifications
-        }))
+        items: normalizeStoredItems(order.items),
       });
     } catch (error) {
       console.error('Get order error:', error);
@@ -222,6 +225,7 @@ router.post('/',
     body('shippingAddress.country').notEmpty().withMessage('Country is required')
   ],
   async (req: AuthRequest, res: Response) => {
+    const client = await getClient();
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -229,28 +233,41 @@ router.post('/',
       }
 
       const { items, shippingAddress, billingAddress, notes } = req.body;
+      await client.query('BEGIN');
 
       // Generate order number
       const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
       // Calculate totals
       let subtotal = 0;
+      const storedItems: any[] = [];
       for (const item of items) {
-        const product = await query(
-          'SELECT id, price, stock_quantity FROM products WHERE id = $1 AND is_active = TRUE',
+        const product = await client.query(
+          'SELECT id, sku, name, price, stock_quantity, image_url FROM products WHERE id = $1 AND is_active = TRUE FOR UPDATE',
           [item.productId]
         );
 
         if (product.rows.length === 0) {
+          await client.query('ROLLBACK');
           return res.status(400).json({ error: `Product ${item.productId} not found` });
         }
 
         const p = product.rows[0];
         if (p.stock_quantity < item.quantity) {
+          await client.query('ROLLBACK');
           return res.status(400).json({ error: `Insufficient stock for ${p.name}` });
         }
 
         subtotal += parseFloat(p.price) * item.quantity;
+        storedItems.push({
+          productId: p.id,
+          sku: p.sku,
+          name: p.name,
+          quantity: item.quantity,
+          unitPrice: parseMoney(p.price),
+          totalPrice: parseMoney(p.price) * item.quantity,
+          img: p.image_url || item.img || '',
+        });
       }
 
       const deliveryChargeStatus = normalizeDeliveryChargeStatus(req.body.deliveryChargeStatus || shippingAddress?.deliveryChargeStatus);
@@ -288,41 +305,55 @@ router.post('/',
       const mergedNotes = notes
         ? `${notes}\nBilling: ${JSON.stringify(billingAddress || null)}`
         : `Billing: ${JSON.stringify(billingAddress || null)}`;
-      const orderResult = await query(
+      const orderResult = await client.query(
         `INSERT INTO orders
          (order_number, user_id, customer_name, customer_email, customer_phone,
           status, subtotal, tax_amount, shipping_amount, total_amount,
-          shipping_address, notes)
-         VALUES ($1, $2, $3, $4, $5, 'placed', $6, $7, $8, $9, $10, $11)
+          shipping_address, items, notes)
+         VALUES ($1, $2, $3, $4, $5, 'placed', $6, $7, $8, $9, $10, $11, $12)
          RETURNING id, order_number, status, total_amount, created_at`,
         [orderNumber, req.user!.id, custName, custEmail, custPhone,
          subtotal, taxAmount, shippingAmount, totalAmount,
-         enrichedShippingAddress, mergedNotes]
+         enrichedShippingAddress, JSON.stringify(storedItems), mergedNotes]
       );
 
       const order = orderResult.rows[0];
 
-      // Create order items and update stock
-      for (const item of items) {
-        const product = await query(
-          'SELECT id, name, price FROM products WHERE id = $1',
-          [item.productId]
-        );
-
-        const p = product.rows[0];
-
-        await query(
-          `INSERT INTO order_items (order_id, product_id, quantity, unit_price, total_price)
-           VALUES ($1, $2, $3, $4, $5)`,
-          [order.id, item.productId, item.quantity, p.price, parseFloat(p.price) * item.quantity]
-        );
-
-        // Update stock
-        await query(
+      // Reserve stock in the same transaction as the order.
+      for (const item of storedItems) {
+        await client.query(
           'UPDATE products SET stock_quantity = stock_quantity - $1 WHERE id = $2',
           [item.quantity, item.productId]
         );
       }
+
+      // Home-delivery orders create a shared delivery workflow record in the
+      // same transaction. Admin/staff delivery dashboards hydrate this record
+      // from PostgreSQL and delivery status changes sync back to the order.
+      if (enrichedShippingAddress.deliveryMethod === 'ship') {
+        const deliveryNumber = `DLV-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+        await client.query(
+          `INSERT INTO services
+           (service_number, user_id, service_type, status, title, description, device_info)
+           VALUES ($1, $2, 'delivery', 'submitted', $3, $4, $5)`,
+          [
+            deliveryNumber,
+            req.user!.id,
+            `Delivery for ${orderNumber}`,
+            `Order delivery workflow for ${orderNumber}`,
+            JSON.stringify({
+              orderNumber,
+              customerName: custName,
+              customerEmail: custEmail,
+              customerPhone: custPhone,
+              address: enrichedShippingAddress,
+              deliveryMethod: enrichedShippingAddress.deliveryMethod,
+            }),
+          ]
+        );
+      }
+
+      await client.query('COMMIT');
 
       res.status(201).json({
         id: order.id,
@@ -334,8 +365,11 @@ router.post('/',
         createdAt: order.created_at
       });
     } catch (error) {
+      await client.query('ROLLBACK').catch(() => {});
       console.error('Create order error:', error);
       res.status(500).json({ error: 'Failed to create order' });
+    } finally {
+      client.release();
     }
   }
 );
@@ -411,7 +445,6 @@ router.patch('/:id/delivery-charge',
 // Update Order Status (Admin/Staff)
 router.patch('/:id/status',
   authenticate,
-  authorize('admin', 'staff'),
   [
     // Accept either a UUID (orders.id) or the human-friendly order number
     // (orders.order_number). The frontend carries the orderNumber as the
@@ -423,6 +456,7 @@ router.patch('/:id/status',
       .withMessage('Invalid status')
   ],
   async (req: AuthRequest, res: Response) => {
+    const client = await getClient();
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -432,7 +466,34 @@ router.patch('/:id/status',
       const { id } = req.params;
       const { status } = req.body;
 
-      const result = await query(
+      await client.query('BEGIN');
+      const existing = await client.query(
+        `SELECT id, order_number, user_id, status, items FROM orders
+          WHERE id::text = $1 OR order_number = $1
+          FOR UPDATE`,
+        [id]
+      );
+      if (existing.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: 'Order not found' });
+      }
+
+      const current = existing.rows[0];
+      if (req.user!.role === 'customer') {
+        if (String(current.user_id) !== String(req.user!.id)) {
+          await client.query('ROLLBACK');
+          return res.status(403).json({ error: 'You can only update your own orders' });
+        }
+        if (status !== 'cancelled' || !['placed', 'verified'].includes(current.status)) {
+          await client.query('ROLLBACK');
+          return res.status(403).json({ error: 'Customers can only cancel placed or verified orders' });
+        }
+      } else if (!['admin', 'staff'].includes(req.user!.role)) {
+        await client.query('ROLLBACK');
+        return res.status(403).json({ error: 'Insufficient permissions' });
+      }
+
+      const result = await client.query(
         `UPDATE orders
             SET status = $1, updated_at = NOW()
           WHERE id::text = $2 OR order_number = $2
@@ -440,9 +501,23 @@ router.patch('/:id/status',
         [status, id]
       );
 
-      if (result.rows.length === 0) {
-        return res.status(404).json({ error: 'Order not found' });
+      // Restore reserved stock exactly once when an order is cancelled.
+      if (status === 'cancelled' && current.status !== 'cancelled') {
+        await client.query(
+          `UPDATE products p
+              SET stock_quantity = p.stock_quantity + restored.quantity
+             FROM (
+               SELECT (entry->>'productId')::uuid AS product_id,
+                      SUM((entry->>'quantity')::int)::int AS quantity
+                 FROM jsonb_array_elements($1::jsonb) entry
+                GROUP BY (entry->>'productId')::uuid
+             ) restored
+            WHERE p.id = restored.product_id`,
+          [JSON.stringify(current.items || [])]
+        );
       }
+
+      await client.query('COMMIT');
 
       res.json({
         id: result.rows[0].id,
@@ -451,8 +526,11 @@ router.patch('/:id/status',
         updatedAt: result.rows[0].updated_at
       });
     } catch (error) {
+      await client.query('ROLLBACK').catch(() => {});
       console.error('Update order error:', error);
       res.status(500).json({ error: 'Failed to update order' });
+    } finally {
+      client.release();
     }
   }
 );

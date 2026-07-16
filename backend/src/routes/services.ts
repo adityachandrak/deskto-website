@@ -1,47 +1,77 @@
 import { Router, Request, Response } from 'express';
+import { PutObjectCommand, DeleteObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { query } from '../config/database';
 import { authenticate, authorize, AuthRequest } from '../middleware/auth';
-import { validationResult, body, param } from 'express-validator';
+import { validationResult, body } from 'express-validator';
 
 const router = Router();
+const SERVICE_TYPES = ['repair', 'pc-build', 'assembly', 'upgrade', 'software', 'rental', 'delivery', 'support', 'sell'] as const;
+const CUSTOMER_STATUSES = new Set(['quote-approved', 'approved', 'accepted', 'rejected', 'cancelled', 'paid']);
+const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+const EXTENSIONS: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
+const imageBucket = process.env.PRODUCT_IMAGE_BUCKET || '';
+const imageCdnUrl = (process.env.PRODUCT_IMAGE_CDN_URL || '').replace(/\/$/, '');
+const s3 = new S3Client({ region: process.env.AWS_REGION || 'ap-south-1' });
+
+function money(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
 
 function serviceToResponse(s: any) {
   const deviceInfo = s.device_info || {};
+  const attachments = Array.isArray(deviceInfo.attachments) ? deviceInfo.attachments : [];
   return {
     id: s.id,
     serviceNumber: s.service_number,
+    customerId: s.user_id,
     serviceType: s.service_type,
     status: s.status,
     title: s.title,
     description: s.description,
     deviceInfo,
+    attachments,
     customerName: s.customer_name || deviceInfo.customerName || deviceInfo.name || null,
     customerEmail: s.customer_email || deviceInfo.customerEmail || deviceInfo.email || null,
     customerPhone: s.customer_phone || deviceInfo.customerPhone || deviceInfo.phone || deviceInfo.contact || null,
-    estimatedCost: s.estimated_cost ? parseFloat(s.estimated_cost) : null,
-    finalCost: s.final_cost ? parseFloat(s.final_cost) : null,
+    estimatedCost: money(s.estimated_cost),
+    finalCost: money(s.final_cost),
+    quotationItems: deviceInfo.quotationItems || [],
+    quotationNote: deviceInfo.quotationNote || null,
     technicianId: s.technician_id,
     createdAt: s.created_at,
-    updatedAt: s.updated_at
+    updatedAt: s.updated_at,
   };
 }
 
-// Public quick enquiry from homepage contact form. This intentionally does not
-// require authentication because first-time visitors use it before signing in.
+async function findService(identifier: string) {
+  const result = await query(
+    `SELECT s.*, u.first_name || COALESCE(' ' || u.last_name, '') AS customer_name,
+            u.email AS customer_email, u.phone AS customer_phone
+     FROM services s LEFT JOIN users u ON u.id = s.user_id
+     WHERE s.id::text = $1 OR s.service_number = $1 LIMIT 1`,
+    [identifier]
+  );
+  return result.rows[0] || null;
+}
+
+function canReadService(req: AuthRequest, row: any) {
+  return req.user!.role === 'admin' || req.user!.role === 'staff' || row.user_id === req.user!.id;
+}
+
 router.post('/quick-enquiry',
   [
     body('name').trim().isLength({ min: 2 }).withMessage('Name is required'),
     body('contact').trim().isLength({ min: 5 }).withMessage('Phone or email is required'),
     body('serviceNeeded').trim().isLength({ min: 2 }).withMessage('Service needed is required'),
-    body('requirements').optional().isString()
+    body('requirements').optional().isString(),
   ],
   async (req: Request, res: Response) => {
     try {
       const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
-      }
-
+      if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
       const name = String(req.body.name || '').trim();
       const contact = String(req.body.contact || '').trim();
       const serviceNeeded = String(req.body.serviceNeeded || '').trim();
@@ -49,22 +79,16 @@ router.post('/quick-enquiry',
       const serviceNumber = `ENQ-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
       const hasEmail = contact.includes('@');
       const deviceInfo = {
-        source: 'homepage-quick-enquiry',
-        customerName: name,
-        contact,
+        source: 'homepage-quick-enquiry', customerName: name, contact,
         customerEmail: hasEmail ? contact : undefined,
         customerPhone: hasEmail ? undefined : contact,
-        serviceNeeded
+        serviceNeeded,
       };
-
       const result = await query(
-        `INSERT INTO services
-         (service_number, user_id, service_type, status, title, description, device_info)
-         VALUES ($1, NULL, 'support', 'submitted', $2, $3, $4)
-         RETURNING *`,
+        `INSERT INTO services (service_number, user_id, service_type, status, title, description, device_info)
+         VALUES ($1, NULL, 'support', 'submitted', $2, $3, $4) RETURNING *`,
         [serviceNumber, `Quick Enquiry: ${serviceNeeded}`, requirements || serviceNeeded, deviceInfo]
       );
-
       res.status(201).json(serviceToResponse(result.rows[0]));
     } catch (error) {
       console.error('Quick enquiry error:', error);
@@ -73,187 +97,115 @@ router.post('/quick-enquiry',
   }
 );
 
-// Get My Services
 router.get('/my', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    const { page = 1, limit = 20, status, serviceType } = req.query;
-    const offset = (Number(page) - 1) * Number(limit);
-
-    let whereClause = 'WHERE user_id = $1';
+    const { page = 1, limit = 50, status, serviceType } = req.query;
     const params: any[] = [req.user!.id];
-    let paramIndex = 2;
-
-    if (status) {
-      whereClause += ` AND status = $${paramIndex}`;
-      params.push(status);
-      paramIndex++;
-    }
-
-    if (serviceType) {
-      whereClause += ` AND service_type = $${paramIndex}`;
-      params.push(serviceType);
-      paramIndex++;
-    }
-
-    const servicesResult = await query(
-      `SELECT id, service_number, service_type, status, title, description,
-              estimated_cost, final_cost, created_at, updated_at
-       FROM services
-       ${whereClause}
-       ORDER BY created_at DESC
-       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
+    const conditions = ['s.user_id = $1'];
+    if (status) { params.push(String(status)); conditions.push(`s.status = $${params.length}`); }
+    if (serviceType) { params.push(String(serviceType)); conditions.push(`s.service_type = $${params.length}`); }
+    const offset = (Number(page) - 1) * Number(limit);
+    const where = `WHERE ${conditions.join(' AND ')}`;
+    const rows = await query(
+      `SELECT s.*, u.first_name || COALESCE(' ' || u.last_name, '') AS customer_name,
+              u.email AS customer_email, u.phone AS customer_phone
+       FROM services s LEFT JOIN users u ON u.id = s.user_id ${where}
+       ORDER BY s.created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
       [...params, Number(limit), offset]
     );
-
-    const countResult = await query(
-      `SELECT COUNT(*) FROM services ${whereClause}`,
-      params
-    );
-
+    const count = await query(`SELECT COUNT(*) FROM services s ${where}`, params);
     res.json({
-      services: servicesResult.rows.map(serviceToResponse),
-      pagination: {
-        page: Number(page),
-        limit: Number(limit),
-        total: parseInt(countResult.rows[0].count),
-        totalPages: Math.ceil(parseInt(countResult.rows[0].count) / Number(limit))
-      }
+      services: rows.rows.map(serviceToResponse),
+      pagination: { page: Number(page), limit: Number(limit), total: Number(count.rows[0].count), totalPages: Math.ceil(Number(count.rows[0].count) / Number(limit)) },
     });
   } catch (error) {
-    console.error('Get services error:', error);
+    console.error('Get my services error:', error);
     res.status(500).json({ error: 'Failed to fetch services' });
   }
 });
 
-// Admin/Staff: list all services and public enquiries.
-router.get('/',
-  authenticate,
-  authorize('admin', 'staff'),
-  async (req: AuthRequest, res: Response) => {
-    try {
-      const { page = 1, limit = 20, status, serviceType } = req.query;
-      const offset = (Number(page) - 1) * Number(limit);
-
-      let whereClause = '';
-      const params: any[] = [];
-      let paramIndex = 1;
-
-      if (status) {
-        whereClause += `${whereClause ? ' AND' : 'WHERE'} s.status = $${paramIndex}`;
-        params.push(status);
-        paramIndex++;
-      }
-
-      if (serviceType) {
-        whereClause += `${whereClause ? ' AND' : 'WHERE'} s.service_type = $${paramIndex}`;
-        params.push(serviceType);
-        paramIndex++;
-      }
-
-      const servicesResult = await query(
-        `SELECT s.*, u.first_name || COALESCE(' ' || u.last_name, '') AS customer_name,
-                u.email AS customer_email, u.phone AS customer_phone
-         FROM services s
-         LEFT JOIN users u ON u.id = s.user_id
-         ${whereClause}
-         ORDER BY s.created_at DESC
-         LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
-        [...params, Number(limit), offset]
-      );
-
-      const countResult = await query(
-        `SELECT COUNT(*) FROM services s ${whereClause}`,
-        params
-      );
-
-      res.json({
-        services: servicesResult.rows.map(serviceToResponse),
-        pagination: {
-          page: Number(page),
-          limit: Number(limit),
-          total: parseInt(countResult.rows[0].count),
-          totalPages: Math.ceil(parseInt(countResult.rows[0].count) / Number(limit))
-        }
-      });
-    } catch (error) {
-      console.error('Get all services error:', error);
-      res.status(500).json({ error: 'Failed to fetch services' });
-    }
+router.get('/', authenticate, authorize('admin', 'staff'), async (req: AuthRequest, res: Response) => {
+  try {
+    const { page = 1, limit = 100, status, serviceType, technicianId } = req.query;
+    const params: any[] = [];
+    const conditions: string[] = [];
+    if (status) { params.push(String(status)); conditions.push(`s.status = $${params.length}`); }
+    if (serviceType) { params.push(String(serviceType)); conditions.push(`s.service_type = $${params.length}`); }
+    if (technicianId) { params.push(String(technicianId)); conditions.push(`s.technician_id::text = $${params.length}`); }
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+    const offset = (Number(page) - 1) * Number(limit);
+    const rows = await query(
+      `SELECT s.*, u.first_name || COALESCE(' ' || u.last_name, '') AS customer_name,
+              u.email AS customer_email, u.phone AS customer_phone
+       FROM services s LEFT JOIN users u ON u.id = s.user_id ${where}
+       ORDER BY s.created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+      [...params, Number(limit), offset]
+    );
+    const count = await query(`SELECT COUNT(*) FROM services s ${where}`, params);
+    res.json({
+      services: rows.rows.map(serviceToResponse),
+      pagination: { page: Number(page), limit: Number(limit), total: Number(count.rows[0].count), totalPages: Math.ceil(Number(count.rows[0].count) / Number(limit)) },
+    });
+  } catch (error) {
+    console.error('Get all services error:', error);
+    res.status(500).json({ error: 'Failed to fetch services' });
   }
-);
+});
 
-// Get Service by Number
-router.get('/:serviceNumber',
-  authenticate,
-  [
-    param('serviceNumber').notEmpty().withMessage('Service number is required')
-  ],
-  async (req: AuthRequest, res: Response) => {
-    try {
-      const { serviceNumber } = req.params;
-      const isAdminOrStaff = req.user!.role === 'admin' || req.user!.role === 'staff';
-
-      let queryText = 'SELECT * FROM services WHERE service_number = $1';
-      const queryParams: any[] = [serviceNumber];
-
-      // Non-admin users can only see their own services
-      if (!isAdminOrStaff) {
-        queryText += ' AND user_id = $2';
-        queryParams.push(req.user!.id);
-      }
-
-      const result = await query(queryText, queryParams);
-
-      if (result.rows.length === 0) {
-        return res.status(404).json({ error: 'Service not found' });
-      }
-
-      const s = result.rows[0];
-      res.json(serviceToResponse(s));
-    } catch (error) {
-      console.error('Get service error:', error);
-      res.status(500).json({ error: 'Failed to fetch service' });
-    }
+router.get('/technicians/list', authenticate, authorize('admin', 'staff'), async (_req: AuthRequest, res: Response) => {
+  try {
+    const result = await query(
+      `SELECT u.id, u.email, u.phone, u.first_name, u.last_name,
+              COALESCE(sp.department, 'General') AS department, u.status, u.created_at
+       FROM users u LEFT JOIN staff_profiles sp ON sp.user_id = u.id
+       WHERE u.role = 'staff' AND u.status = 'active' ORDER BY u.first_name, u.last_name`
+    );
+    res.json({ technicians: result.rows.map(row => ({
+      id: row.id,
+      email: row.email,
+      phone: row.phone,
+      name: [row.first_name, row.last_name].filter(Boolean).join(' ') || row.email,
+      department: row.department,
+      status: row.status,
+      createdAt: row.created_at,
+    })) });
+  } catch (error) {
+    console.error('Get technicians error:', error);
+    res.status(500).json({ error: 'Failed to fetch technicians' });
   }
-);
+});
 
-// Create Service Request
-router.post('/',
-  authenticate,
+router.get('/:identifier', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const row = await findService(String(req.params.identifier));
+    if (!row || !canReadService(req, row)) return res.status(404).json({ error: 'Service not found' });
+    res.json(serviceToResponse(row));
+  } catch (error) {
+    console.error('Get service error:', error);
+    res.status(500).json({ error: 'Failed to fetch service' });
+  }
+});
+
+router.post('/', authenticate,
   [
-    body('serviceType').isIn(['repair', 'upgrade', 'rental', 'assembly', 'support'])
-      .withMessage('Invalid service type'),
-    body('title').notEmpty().withMessage('Title is required'),
-    body('description').optional().isString()
+    body('serviceType').isIn([...SERVICE_TYPES]).withMessage('Invalid service type'),
+    body('title').trim().notEmpty().withMessage('Title is required'),
+    body('description').optional().isString(),
+    body('deviceInfo').optional().isObject(),
   ],
   async (req: AuthRequest, res: Response) => {
     try {
       const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
-      }
-
-      const { serviceType, title, description, deviceInfo } = req.body;
-
-      const serviceNumber = `SRV-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-
+      if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+      const { serviceType, title, description, deviceInfo = {} } = req.body;
+      const prefix = serviceType === 'delivery' ? 'DLV' : serviceType === 'pc-build' ? 'PCB' : 'SRV';
+      const serviceNumber = `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
       const result = await query(
-        `INSERT INTO services
-         (service_number, user_id, service_type, status, title, description, device_info)
-         VALUES ($1, $2, $3, 'submitted', $4, $5, $6)
-         RETURNING id, service_number, service_type, status, title, created_at`,
-        [serviceNumber, req.user!.id, serviceType, title, description, deviceInfo]
+        `INSERT INTO services (service_number, user_id, service_type, status, title, description, device_info)
+         VALUES ($1, $2, $3, 'submitted', $4, $5, $6) RETURNING *`,
+        [serviceNumber, req.user!.id, serviceType, title, description || null, deviceInfo]
       );
-
-      const s = result.rows[0];
-      res.status(201).json({
-        id: s.id,
-        serviceNumber: s.service_number,
-        serviceType: s.service_type,
-        status: s.status,
-        title: s.title,
-        createdAt: s.created_at
-      });
+      res.status(201).json(serviceToResponse(result.rows[0]));
     } catch (error) {
       console.error('Create service error:', error);
       res.status(500).json({ error: 'Failed to create service' });
@@ -261,72 +213,94 @@ router.post('/',
   }
 );
 
-// Update Service Status (Admin/Staff)
-router.patch('/:id/status',
-  authenticate,
-  authorize('admin', 'staff'),
-  [
-    param('id').isUUID().withMessage('Invalid service ID'),
-    body('status').isIn([
-      'submitted', 'received', 'admin-approved', 'rejected', 'assigned',
-      'diagnosing', 'quotation', 'quote-approved', 'in-repair', 'qc',
-      'completed', 'delivered'
-    ]).withMessage('Invalid status')
-  ],
-  async (req: AuthRequest, res: Response) => {
-    try {
-      const { id } = req.params;
-      const { status, estimatedCost, finalCost, technicianId } = req.body;
-
-      const updates: string[] = ['status = $1'];
-      const values: any[] = [status];
-      let paramIndex = 2;
-
-      if (estimatedCost !== undefined) {
-        updates.push(`estimated_cost = $${paramIndex}`);
-        values.push(estimatedCost);
-        paramIndex++;
-      }
-
-      if (finalCost !== undefined) {
-        updates.push(`final_cost = $${paramIndex}`);
-        values.push(finalCost);
-        paramIndex++;
-      }
-
-      if (technicianId !== undefined) {
-        updates.push(`technician_id = $${paramIndex}`);
-        values.push(technicianId);
-        paramIndex++;
-      }
-
-      values.push(id);
-
-      const result = await query(
-        `UPDATE services SET ${updates.join(', ')}, updated_at = NOW()
-         WHERE id = $${paramIndex}
-         RETURNING *`,
-        values
-      );
-
-      if (result.rows.length === 0) {
-        return res.status(404).json({ error: 'Service not found' });
-      }
-
-      const s = result.rows[0];
-      res.json({
-        id: s.id,
-        serviceNumber: s.service_number,
-        status: s.status,
-        estimatedCost: s.estimated_cost ? parseFloat(s.estimated_cost) : null,
-        finalCost: s.final_cost ? parseFloat(s.final_cost) : null,
-        updatedAt: s.updated_at
-      });
-    } catch (error) {
-      console.error('Update service error:', error);
-      res.status(500).json({ error: 'Failed to update service' });
+router.patch('/:identifier', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const current = await findService(String(req.params.identifier));
+    if (!current) return res.status(404).json({ error: 'Service not found' });
+    const isOperator = req.user!.role === 'admin' || req.user!.role === 'staff';
+    const owns = current.user_id === req.user!.id;
+    const requestedStatus = req.body.status === undefined ? current.status : String(req.body.status);
+    if (!isOperator && (!owns || !CUSTOMER_STATUSES.has(requestedStatus))) {
+      return res.status(403).json({ error: 'Customers may only approve, accept, reject, pay, or cancel their own service request' });
     }
+    const devicePatch = req.body.deviceInfo && typeof req.body.deviceInfo === 'object' ? req.body.deviceInfo : {};
+    const estimatedCost = req.body.estimatedCost === undefined ? current.estimated_cost : money(req.body.estimatedCost);
+    const finalCost = req.body.finalCost === undefined ? current.final_cost : money(req.body.finalCost);
+    const technicianId = isOperator && req.body.technicianId !== undefined ? (req.body.technicianId || null) : current.technician_id;
+    const result = await query(
+      `UPDATE services SET status = $1, estimated_cost = $2, final_cost = $3, technician_id = $4,
+              device_info = COALESCE(device_info, '{}'::jsonb) || $5::jsonb, updated_at = NOW()
+       WHERE id = $6 RETURNING *`,
+      [requestedStatus, estimatedCost, finalCost, technicianId, JSON.stringify(devicePatch), current.id]
+    );
+    const updated = result.rows[0];
+    if (updated.service_type === 'delivery') {
+      const orderNumber = updated.device_info?.orderNumber;
+      const orderStatus = requestedStatus === 'delivered' ? 'delivered' : requestedStatus === 'dispatched' ? 'shipped' : null;
+      if (orderNumber && orderStatus) await query('UPDATE orders SET status = $1, updated_at = NOW() WHERE order_number = $2', [orderStatus, orderNumber]);
+    }
+    res.json(serviceToResponse(await findService(updated.service_number)));
+  } catch (error) {
+    console.error('Update service error:', error);
+    res.status(500).json({ error: 'Failed to update service' });
   }
-);
+});
+
+router.post('/:identifier/attachments/upload-url', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    if (!imageBucket || !imageCdnUrl) return res.status(503).json({ error: 'Service attachment upload is not configured' });
+    const row = await findService(String(req.params.identifier));
+    if (!row || !canReadService(req, row)) return res.status(404).json({ error: 'Service not found' });
+    const contentType = String(req.body.contentType || '');
+    if (!ALLOWED_IMAGE_TYPES.has(contentType)) return res.status(400).json({ error: 'Only JPG, PNG, and WEBP images are allowed' });
+    const existing = Array.isArray(row.device_info?.attachments) ? row.device_info.attachments : [];
+    if (existing.length >= 8) return res.status(400).json({ error: 'A service request can have a maximum of 8 attachments' });
+    const safe = String(req.body.fileName || 'attachment').replace(/\.[^.]+$/, '').replace(/[^a-z0-9-]+/gi, '-').replace(/(^-|-$)/g, '').toLowerCase() || 'attachment';
+    const objectKey = `products/service-attachments/${row.user_id || 'public'}/${row.id}/${Date.now()}-${safe}.${EXTENSIONS[contentType]}`;
+    const uploadUrl = await getSignedUrl(s3, new PutObjectCommand({ Bucket: imageBucket, Key: objectKey, ContentType: contentType }), { expiresIn: 900 });
+    res.json({ uploadUrl, objectKey, expiresIn: 900 });
+  } catch (error) {
+    console.error('Create service attachment URL error:', error);
+    res.status(500).json({ error: 'Failed to create attachment upload URL' });
+  }
+});
+
+router.post('/:identifier/attachments/complete', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const row = await findService(String(req.params.identifier));
+    if (!row || !canReadService(req, row)) return res.status(404).json({ error: 'Service not found' });
+    const objectKey = String(req.body.objectKey || '');
+    const prefix = `products/service-attachments/${row.user_id || 'public'}/${row.id}/`;
+    if (!objectKey.startsWith(prefix)) return res.status(400).json({ error: 'Invalid attachment key' });
+    const attachments = Array.isArray(row.device_info?.attachments) ? [...row.device_info.attachments] : [];
+    if (!attachments.some((item: any) => item.objectKey === objectKey)) {
+      attachments.push({ objectKey, url: `${imageCdnUrl}/${objectKey}`, fileName: String(req.body.fileName || 'attachment'), contentType: String(req.body.contentType || '') });
+    }
+    await query(
+      `UPDATE services SET device_info = COALESCE(device_info, '{}'::jsonb) || $1::jsonb, updated_at = NOW() WHERE id = $2`,
+      [JSON.stringify({ attachments }), row.id]
+    );
+    res.json(serviceToResponse(await findService(row.service_number)));
+  } catch (error) {
+    console.error('Complete service attachment error:', error);
+    res.status(500).json({ error: 'Failed to attach upload' });
+  }
+});
+
+router.delete('/:identifier', authenticate, authorize('admin'), async (req: AuthRequest, res: Response) => {
+  try {
+    const row = await findService(String(req.params.identifier));
+    if (!row) return res.status(404).json({ error: 'Service not found' });
+    const attachments = Array.isArray(row.device_info?.attachments) ? row.device_info.attachments : [];
+    await query('DELETE FROM services WHERE id = $1', [row.id]);
+    if (imageBucket) {
+      await Promise.all(attachments.map((item: any) => item.objectKey ? s3.send(new DeleteObjectCommand({ Bucket: imageBucket, Key: item.objectKey })).catch(() => {}) : Promise.resolve()));
+    }
+    res.json({ success: true, serviceNumber: row.service_number });
+  } catch (error) {
+    console.error('Delete service error:', error);
+    res.status(500).json({ error: 'Failed to delete service' });
+  }
+});
 
 export default router;

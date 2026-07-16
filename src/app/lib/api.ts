@@ -230,6 +230,32 @@ export const productsApi = {
   },
 };
 
+// Shared admin data used by the dashboard. Every mutation goes through the
+// authenticated API so another browser/device observes the same result.
+export const adminApi = {
+  overview: () => apiFetch<any>('/admin/overview'),
+  products: () => apiFetch<{ products: ApiProduct[]; total: number }>('/products/admin/all'),
+  updateProduct: (id: string, data: Record<string, unknown>) => apiFetch<ApiProduct>(`/products/${encodeURIComponent(id)}`, { method: 'PUT', json: data }),
+  deleteProduct: (id: string) => apiFetch<any>(`/products/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  categories: () => apiFetch<{ categories: any[] }>('/admin/categories'),
+  createCategory: (data: Record<string, unknown>) => apiFetch<any>('/admin/categories', { method: 'POST', json: data }),
+  updateCategory: (id: string, data: Record<string, unknown>) => apiFetch<any>(`/admin/categories/${encodeURIComponent(id)}`, { method: 'PUT', json: data }),
+  deleteCategory: (id: string) => apiFetch<any>(`/admin/categories/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  brands: () => apiFetch<{ brands: any[] }>('/admin/brands'),
+  createBrand: (data: Record<string, unknown>) => apiFetch<any>('/admin/brands', { method: 'POST', json: data }),
+  updateBrand: (id: string, data: Record<string, unknown>) => apiFetch<any>(`/admin/brands/${encodeURIComponent(id)}`, { method: 'PUT', json: data }),
+  deleteBrand: (id: string) => apiFetch<any>(`/admin/brands/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  users: (role?: string) => apiFetch<{ users: any[] }>(`/admin/users${role ? `?role=${encodeURIComponent(role)}` : ''}`),
+  updateUser: (id: string, data: Record<string, unknown>) => apiFetch<any>(`/admin/users/${encodeURIComponent(id)}`, { method: 'PATCH', json: data }),
+  createStaff: (data: Record<string, unknown>) => apiFetch<any>('/admin/staff', { method: 'POST', json: data }),
+  crmNotes: (customerId?: string) => apiFetch<{ notes: any[] }>(`/admin/crm-notes${customerId ? `?customerId=${encodeURIComponent(customerId)}` : ''}`),
+  createCrmNote: (data: Record<string, unknown>) => apiFetch<any>('/admin/crm-notes', { method: 'POST', json: data }),
+  customBuilder: () => apiFetch<any>('/admin/custom-builder'),
+  saveCustomBuilder: (data: unknown) => apiFetch<any>('/admin/custom-builder', { method: 'PUT', json: { data } }),
+  publishCustomBuilder: (data: unknown) => apiFetch<any>('/admin/custom-builder/publish', { method: 'POST', json: { data } }),
+  publicCustomBuilder: () => apiFetch<any>('/public/custom-builder'),
+};
+
 // ── ordersApi ────────────────────────────────────────────────────────────
 export const ordersApi = {
   async getMy(params?: { page?: number; limit?: number; status?: string }): Promise<{ orders: ApiOrder[]; pagination: { page: number; limit: number; total: number; totalPages: number } }> {
@@ -302,6 +328,10 @@ export const ordersApi = {
 
 // ── servicesApi ──────────────────────────────────────────────────────────
 export const servicesApi = {
+  async getTechnicians(): Promise<{ technicians: { id: string; email: string; phone?: string; name: string; department?: string; status?: string; createdAt?: string }[] }> {
+    return apiFetch(`/services/technicians/list`);
+  },
+
   async getMy(params?: { page?: number; limit?: number; status?: string }): Promise<{ services: ApiService[]; pagination: { page: number; limit: number; total: number; totalPages: number } }> {
     const qs = params ? "?" + new URLSearchParams(Object.entries(params).filter(([, v]) => v !== undefined && v !== "").map(([k, v]) => [k, String(v)])).toString() : "";
     return apiFetch(`/services/my${qs}`);
@@ -312,7 +342,7 @@ export const servicesApi = {
     return apiFetch(`/services${qs}`);
   },
 
-  async create(input: { serviceType: "repair" | "upgrade" | "rental" | "assembly" | "support"; title: string; description?: string; deviceInfo?: unknown }): Promise<{ id: string; serviceNumber: string; serviceType: string; status: string; title: string; createdAt: string }> {
+  async create(input: { serviceType: ApiService["serviceType"]; title: string; description?: string; deviceInfo?: unknown }): Promise<ApiService> {
     return apiFetch(`/services`, { method: "POST", json: input });
   },
 
@@ -320,14 +350,34 @@ export const servicesApi = {
     return apiFetch(`/services/quick-enquiry`, { method: "POST", json: input, retryOn401: false });
   },
 
-  async updateStatus(serviceId: string, status: string, extras?: { estimatedCost?: number; finalCost?: number; technicianId?: string }): Promise<{ id: string; serviceNumber: string; status: string }> {
+  async updateStatus(serviceId: string, status: string, extras?: { estimatedCost?: number; finalCost?: number; technicianId?: string; deviceInfo?: Record<string, unknown> }): Promise<ApiService> {
     if (!serviceId || typeof serviceId !== "string" || serviceId.trim() === "") {
       throw new ApiError(400, "Service ID is required to update status", { serviceId });
     }
-    return apiFetch(`/services/${encodeURIComponent(serviceId.trim())}/status`, {
+    return apiFetch(`/services/${encodeURIComponent(serviceId.trim())}`, {
       method: "PATCH",
       json: { status, ...(extras || {}) },
     });
+  },
+
+  async update(serviceId: string, patch: { status?: string; estimatedCost?: number; finalCost?: number; technicianId?: string; deviceInfo?: Record<string, unknown> }): Promise<ApiService> {
+    return apiFetch(`/services/${encodeURIComponent(serviceId.trim())}`, { method: "PATCH", json: patch });
+  },
+
+  async uploadAttachment(serviceId: string, file: Blob, fileName: string): Promise<ApiService> {
+    const contentType = file.type || "image/jpeg";
+    const presign = await apiFetch<{ uploadUrl: string; objectKey: string }>(`/services/${encodeURIComponent(serviceId)}/attachments/upload-url`, {
+      method: "POST", json: { fileName, contentType },
+    });
+    const upload = await fetch(presign.uploadUrl, { method: "PUT", headers: { "Content-Type": contentType }, body: file, credentials: "omit" });
+    if (!upload.ok) throw new ApiError(upload.status, "Service attachment upload to S3 failed");
+    return apiFetch(`/services/${encodeURIComponent(serviceId)}/attachments/complete`, {
+      method: "POST", json: { objectKey: presign.objectKey, fileName, contentType },
+    });
+  },
+
+  async delete(serviceId: string): Promise<{ success: boolean; serviceNumber: string }> {
+    return apiFetch(`/services/${encodeURIComponent(serviceId.trim())}`, { method: "DELETE" });
   },
 };
 
@@ -564,4 +614,3 @@ export const homepageContentApi = {
     });
   },
 };
-

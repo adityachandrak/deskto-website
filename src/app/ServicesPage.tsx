@@ -13,8 +13,10 @@ import { useCurrentUser } from "@/app/lib/currentUser";
 import { useDashboardData } from "@/app/lib/dashboardData";
 import type { GamingHubItem } from "@/app/lib/dashboardData";
 import { saveMediaFile } from "@/app/lib/mediaStore";
+import { useTenantConfig } from "@/app/core/TenantConfigContext";
 
 const WHATSAPP = "+919876543210";
+
 
 function RepairField({ label, value, onChange, placeholder, type = "text" }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; type?: string }) {
   return (
@@ -106,7 +108,7 @@ function BreadcrumbBar({ crumbs }: { crumbs: string[] }) {
                 {c}
               </a>
             ) : (
-              <span style={{ color: "#FF1F45", fontWeight: 600 }}>{c}</span>
+              <span style={{ color: "var(--primary)", fontWeight: 600 }}>{c}</span>
             )}
           </span>
         ))}
@@ -137,11 +139,13 @@ function GlassCard({ children, style }: { children: React.ReactNode; style?: Rea
 
 // ─────────────── HERO ───────────────
 function ServiceHero({ service }: { service: Service }) {
+  const config = useTenantConfig();
   const Icon = service.icon;
-  const waLink = `https://wa.me/${WHATSAPP.replace(/\D/g, "")}?text=${encodeURIComponent(
+  const waLink = `https://wa.me/${(config.site.contact.whatsappNumber || WHATSAPP).replace(/\D/g, "")}?text=${encodeURIComponent(
     `Hi, I'm interested in your ${service.title} service`
   )}`;
-  const telLink = `tel:${WHATSAPP.replace(/\s/g, "")}`;
+  const telLink = `tel:${(config.site.contact.phone || WHATSAPP).replace(/\s/g, "")}`;
+
 
   const onBook = () => {
     toast.success(`Booking request received — we'll contact you shortly.`);
@@ -227,8 +231,9 @@ function ServiceHero({ service }: { service: Service }) {
               marginBottom: 12,
             }}
           >
-            DESKTO Service Category
+            {config.site.name} Service Category
           </div>
+
           <h1
             style={{
               fontFamily: "'Orbitron', sans-serif",
@@ -306,7 +311,7 @@ function ServiceHero({ service }: { service: Service }) {
                 padding: "14px 22px",
                 background: "rgba(255,31,69,0.15)",
                 border: "1px solid rgba(255,31,69,0.4)",
-                color: "#FF1F45",
+                color: "var(--primary)",
                 borderRadius: 8,
                 textDecoration: "none",
                 fontFamily: "'Orbitron', sans-serif",
@@ -628,10 +633,11 @@ function RelatedServicesSection({ service }: { service: Service }) {
 
 // ─────────────── CTA STRIP ───────────────
 function CtaSection({ service }: { service: Service }) {
-  const waLink = `https://wa.me/${WHATSAPP.replace(/\D/g, "")}?text=${encodeURIComponent(
+  const config = useTenantConfig();
+  const waLink = `https://wa.me/${(config.site.contact.whatsappNumber || WHATSAPP).replace(/\D/g, "")}?text=${encodeURIComponent(
     `Hi, I'm interested in your ${service.title} service`
   )}`;
-  const telLink = `tel:${WHATSAPP.replace(/\s/g, "")}`;
+  const telLink = `tel:${(config.site.contact.phone || WHATSAPP).replace(/\s/g, "")}`;
 
   return (
     <section style={{ padding: "60px 0", position: "relative" }}>
@@ -689,7 +695,7 @@ function CtaSection({ service }: { service: Service }) {
               position: "relative",
             }}
           >
-            Talk to a DESKTO expert today. We'll scope your requirement, give you a written quote, and get you up and running.
+            Talk to a {config.site.name} expert today. We'll scope your requirement, give you a written quote, and get you up and running.
           </p>
           <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap", position: "relative" }}>
             <a
@@ -754,7 +760,7 @@ function RepairHubPage({ service }: { service: Service }) {
       title: "PC Repair",
       href: "/services/pc-repair",
       icon: Monitor,
-      color: "#FF1F45",
+      color: "var(--primary)",
       sub: "Desktop, gaming PC, workstation, PSU, GPU, boot, cooling, display, and performance repairs.",
       points: ["Desktop / Gaming PC", "Hardware diagnostics", "Quotation approval", "QC + warranty"],
     },
@@ -810,7 +816,9 @@ function RepairHubPage({ service }: { service: Service }) {
 }
 
 function RepairBookingPage({ kind }: { kind: "pc-repair" | "laptop-repair" }) {
+  const config = useTenantConfig();
   const user = useCurrentUser();
+
   const { addRepairRequest } = useDashboardData();
   const isLaptop = kind === "laptop-repair";
   const [form, setForm] = useState({
@@ -829,7 +837,7 @@ function RepairBookingPage({ kind }: { kind: "pc-repair" | "laptop-repair" }) {
   const [requestId, setRequestId] = useState("");
   const serviceCharge = form.serviceType === "Home Visit" ? 999 : form.serviceType === "Pickup & Delivery" ? 799 : 499;
   const title = isLaptop ? "Laptop Repair" : "PC Repair";
-  const accent = isLaptop ? "#00b4ff" : "#FF1F45";
+  const accent = isLaptop ? "#00b4ff" : "var(--primary)";
   const repairImages = form.uploadFiles.filter(Boolean);
 
   const set = (key: keyof typeof form, value: string) => setForm(prev => ({ ...prev, [key]: value }));
@@ -860,7 +868,7 @@ function RepairBookingPage({ kind }: { kind: "pc-repair" | "laptop-repair" }) {
       return { ...prev, uploadFiles: next };
     });
   };
-  const submit = () => {
+  const submit = async () => {
     if (!form.name.trim() || !form.phone.trim() || !form.brand.trim() || !form.model.trim() || !form.issue.trim() || !form.preferredSlot.trim()) {
       toast.error("Complete customer, device, issue, and preferred slot details.");
       return;
@@ -873,7 +881,7 @@ function RepairBookingPage({ kind }: { kind: "pc-repair" | "laptop-repair" }) {
       toast.error("Repair uploads must be JPG, JPEG, PNG, or WEBP images.");
       return;
     }
-    const repair = addRepairRequest({
+    const repair = await addRepairRequest({
       customerId: user?.id || `guest_${Date.now()}`,
       customerName: form.name.trim(),
       contactPhone: form.phone.trim(),
@@ -915,7 +923,8 @@ function RepairBookingPage({ kind }: { kind: "pc-repair" | "laptop-repair" }) {
                     {(isLaptop ? ["Laptop", "MacBook", "Other"] : ["Desktop", "Gaming PC", "Printer", "Other"]).map(v => <option key={v}>{v}</option>)}
                   </select>
                 </label>
-                <RepairField label="Brand" value={form.brand} onChange={v => set("brand", v)} placeholder={isLaptop ? "Dell, HP, Lenovo, Apple" : "DESKTO, ASUS, HP, Custom"} />
+                <RepairField label="Brand" value={form.brand} onChange={v => set("brand", v)} placeholder={isLaptop ? "Dell, HP, Lenovo, Apple" : `${config.site.name}, ASUS, HP, Custom`} />
+
                 <RepairField label="Model" value={form.model} onChange={v => set("model", v)} placeholder={isLaptop ? "XPS 15, Legion 5" : "Phantom X, custom Ryzen PC"} />
                 <RepairField label="Serial Number Optional" value={form.serialNumber} onChange={v => set("serialNumber", v)} />
                 <RepairField label="Preferred Date & Time" value={form.preferredSlot} onChange={v => set("preferredSlot", v)} type="datetime-local" />
@@ -1207,7 +1216,9 @@ const PC_COMPONENTS = {
 } as const;
 
 function CustomPCBuildPage({ service }: { service: Service }) {
+  const tenantConfig = useTenantConfig();
   const user = useCurrentUser();
+
   const { addPCBuildRequest, store } = useDashboardData();
   const config = store.customBuilderConfig;
   const contentCfg = config.contentConfig;
@@ -1267,7 +1278,8 @@ function CustomPCBuildPage({ service }: { service: Service }) {
     ? contentCfg.validationChecklist
     : ["CPU Socket Compatibility", "RAM Compatibility", "GPU Clearance", "PSU Wattage", "Cooler Height", "Network Readiness", "Upgrade Path"];
 
-  const validationReport = validationChecklist.map(label => ({ label, pass: true, detail: `${label} validated by DESKTO builder system` }));
+  const validationReport = validationChecklist.map(label => ({ label, pass: true, detail: `${label} validated by ${tenantConfig.site.name} builder system` }));
+
 
   const selectedBuilderComponents = activeCategories.reduce((acc, cat) => {
     const options = builderComponents[cat];
@@ -1276,13 +1288,13 @@ function CustomPCBuildPage({ service }: { service: Service }) {
     return acc;
   }, {} as Record<string, string>);
 
-  const submit = () => {
+  const submit = async () => {
     if (!form.name.trim() || !form.phone.trim()) {
       toast.error("Enter customer name and phone.");
       return;
     }
     const buildComponents = components.map(c => ({ type: c.type, name: c.name, price: c.price }));
-    const build = addPCBuildRequest({
+    const build = await addPCBuildRequest({
       customerId: user?.id || `guest_${Date.now()}`,
       customerName: form.name.trim(),
       contactPhone: form.phone.trim(),
@@ -1340,7 +1352,7 @@ function CustomPCBuildPage({ service }: { service: Service }) {
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 12 }}>
                 {activeCategories.map(type => (
                   <div key={type} className="glass" style={{ borderRadius: 10, padding: 12 }}>
-                    <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 10, color: "#FF1F45", marginBottom: 8 }}>{type}</div>
+                    <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 10, color: "var(--primary)", marginBottom: 8 }}>{type}</div>
                     <select value={selected[type] || 0} onChange={e => setSelected(prev => ({ ...prev, [type]: Number(e.target.value) }))} style={{ width: "100%", background: "#111", border: "1px solid rgba(255,255,255,.12)", borderRadius: 8, padding: "10px", color: "white", fontSize: 16, fontFamily: "'Space Grotesk', sans-serif" }}>
                       {builderComponents[type].map((o, i) => <option key={o.id} value={i}>{o.brand} {o.model} · ₹{o.price.toLocaleString("en-IN")}</option>)}
                     </select>
@@ -1529,12 +1541,12 @@ function UpgradeOptimizationPage({ service }: { service: Service }) {
     }
   };
 
-  const submit = () => {
+  const submit = async () => {
     if (!form.name.trim() || !form.phone.trim() || !form.requirements.trim()) {
       toast.error("Enter customer name, phone, and upgrade requirements.");
       return;
     }
-    const request = addServiceRequest({
+    const request = await addServiceRequest({
       kind: "upgrade",
       customerId: user?.id || `guest_${Date.now()}`,
       customerName: form.name.trim(),
@@ -1640,7 +1652,7 @@ function AssemblyServicePage({ service }: { service: Service }) {
   };
   const toggleItem = (item: string) => setEquipment(prev => ({ ...prev, [item]: !prev[item] }));
 
-  const submit = () => {
+  const submit = async () => {
     if (!form.name.trim() || !form.phone.trim()) {
       toast.error("Enter customer name and phone number.");
       return;
@@ -1655,7 +1667,7 @@ function AssemblyServicePage({ service }: { service: Service }) {
       toast.error("Tick at least one equipment item you are providing.");
       return;
     }
-    const request = addServiceRequest({
+    const request = await addServiceRequest({
       kind: "assembly",
       customerId: user?.id || `guest_${Date.now()}`,
       customerName: form.name.trim(),
@@ -1774,12 +1786,12 @@ function SoftwareDataServicePage({ service }: { service: Service }) {
     }
   };
 
-  const submit = () => {
+  const submit = async () => {
     if (!form.name.trim() || !form.phone.trim() || !form.problem.trim()) {
       toast.error("Enter customer name, phone, and problem description.");
       return;
     }
-    const request = addServiceRequest({
+    const request = await addServiceRequest({
       kind: "software",
       customerId: user?.id || `guest_${Date.now()}`,
       customerName: form.name.trim(),
@@ -1872,9 +1884,9 @@ function RentalSolutionsPage({ service }: { service: Service }) {
       setUploading(false);
     }
   };
-  const submit = () => {
+  const submit = async () => {
     if (!form.name.trim() || !form.phone.trim() || !form.startDate || !form.endDate) { toast.error("Enter customer, phone, start date, and end date."); return; }
-    const request = addServiceRequest({
+    const request = await addServiceRequest({
       kind: "rental", customerId: user?.id || `guest_${Date.now()}`, customerName: form.name.trim(), contactPhone: form.phone.trim(), contactEmail: form.email.trim(),
       title: `${form.category} Rental`, deviceType: form.category, category: form.category, requirements: form.requirements || `${form.quantity} unit(s), ${form.duration} rental`, serviceMethod: form.serviceMethod,
       companyName: form.companyName, quantity: Number(form.quantity || 1), rentalDuration: form.duration, startDate: form.startDate, endDate: form.endDate, uploads: uploads.filter(Boolean),
@@ -1945,9 +1957,9 @@ function SellUsedProductsPage({ service }: { service: Service }) {
       setUploading(false);
     }
   };
-  const submit = () => {
+  const submit = async () => {
     if (!form.name.trim() || !form.phone.trim() || !form.brand.trim() || !form.model.trim()) { toast.error("Enter customer, phone, brand, and model."); return; }
-    const request = addServiceRequest({
+    const request = await addServiceRequest({
       kind: "sell", customerId: user?.id || `guest_${Date.now()}`, customerName: form.name.trim(), contactPhone: form.phone.trim(), contactEmail: form.email.trim(),
       title: `Sell ${form.brand} ${form.model}`, deviceType: form.category, category: form.category, requirements: `${form.condition} condition · ${form.age || "Age not specified"} · ${form.requirements || "No notes"}`,
       currentSpecs: form.specs, serialNumber: form.serialNumber, expectedPrice: Number(form.expectedPrice || 0), serviceMethod: form.serviceMethod, uploads: uploads.filter(Boolean),
@@ -2007,9 +2019,9 @@ function RemoteBusinessSupportPage({ service }: { service: Service }) {
       setUploading(false);
     }
   };
-  const submit = () => {
+  const submit = async () => {
     if (!form.name.trim() || !form.phone.trim() || !form.requirements.trim()) { toast.error("Enter customer, phone, and issue details."); return; }
-    const request = addServiceRequest({
+    const request = await addServiceRequest({
       kind: "support", customerId: user?.id || `guest_${Date.now()}`, customerName: form.name.trim(), contactPhone: form.phone.trim(), contactEmail: form.email.trim(),
       title: `${mode}: ${form.category}`, deviceType: form.deviceType, category: form.category, requirements: form.requirements, serviceMethod: form.serviceMethod,
       preferredSlot: form.preferredSlot, companyName: form.companyName, priority: form.priority, quantity: Number(form.deviceCount || 0), uploads: uploads.filter(Boolean),
@@ -2055,7 +2067,7 @@ function NotFoundView() {
     <div style={{ background: "#050505", minHeight: "100vh", color: "white" }}>
       <Navbar />
       <div style={{ maxWidth: 600, margin: "120px auto", padding: "0 24px", textAlign: "center" }}>
-        <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 80, color: "#FF1F45", fontWeight: 900, lineHeight: 1 }}>404</div>
+        <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 80, color: "var(--primary)", fontWeight: 900, lineHeight: 1 }}>404</div>
         <h2 style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 24, margin: "20px 0 12px" }}>Service Not Found</h2>
         <p style={{ color: "#CFCFCF", fontSize: 14, fontFamily: "'Space Grotesk', sans-serif", marginBottom: 30 }}>
           The service you're looking for doesn't exist or has been moved.
@@ -2321,7 +2333,9 @@ function GamingHubArticlePage({ item, related, track, patchGamingHubItem }: {
 }
 
 function GamingHubPage({ service, postSlug }: { service: Service; postSlug?: string | null }) {
+  const config = useTenantConfig();
   const { store, trackGamingHubMetric, patchGamingHubItem } = useDashboardData();
+
   const [selected, setSelected] = useState("All");
   const allPublished = (store.gamingHub || []).filter(item => item.status === "published");
   const published = allPublished.filter(item => item.showOnHub);
@@ -2350,7 +2364,7 @@ function GamingHubPage({ service, postSlug }: { service: Service; postSlug?: str
             <Gamepad2 size={92} color="#e5001f" />
           </div>
           <div>
-            <span style={{ color: "#ff2f55", fontFamily: "'Orbitron', sans-serif", fontSize: 12, letterSpacing: 4 }}>DESKTO SERVICE CATEGORY</span>
+            <span style={{ color: "#ff2f55", fontFamily: "'Orbitron', sans-serif", fontSize: 12, letterSpacing: 4 }}>{config.site.name.toUpperCase()} SERVICE CATEGORY</span>
             <h1 style={{ fontFamily: "'Orbitron', sans-serif", fontSize: "clamp(46px,7vw,86px)", lineHeight: .95, margin: "20px 0", letterSpacing: 0 }}>{service.title}</h1>
             <p style={{ color: "#d0d0d0", fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, lineHeight: 1.7, maxWidth: 760 }}>{service.longDescription}</p>
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 24 }}>

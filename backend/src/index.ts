@@ -66,6 +66,7 @@ import orderRoutes from './routes/orders';
 import serviceRoutes from './routes/services';
 import backupRoutes from './routes/backup';
 import homepageContentRoutes from './routes/homepageContent';
+import adminCoreRoutes from './routes/adminCore';
 
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
@@ -73,6 +74,7 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/services', serviceRoutes);
 app.use('/api', backupRoutes);
 app.use('/api', homepageContentRoutes);
+app.use('/api', adminCoreRoutes);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

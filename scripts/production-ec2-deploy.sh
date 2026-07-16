@@ -96,6 +96,9 @@ for _ in {1..30}; do
 done
 
 curl -fsS "http://127.0.0.1:${BACKEND_PORT}/health"
+echo "Verifying deployed CMS routes"
+curl -fsS "http://127.0.0.1:${BACKEND_PORT}/api/version" >/dev/null
+curl -fsS "http://127.0.0.1:${BACKEND_PORT}/api/public/homepage-content" >/dev/null
 curl -fsSI "http://127.0.0.1/" | head -5
 
 echo "Running container summary"

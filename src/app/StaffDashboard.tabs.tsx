@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { CheckCircle, Circle, Clock, AlertCircle, Bell, Archive, Trash2, Eye, Search, Filter, Calendar, TrendingUp, Award, Target, Zap, Activity, User, Mail, Phone, Building2, Briefcase, Star, Save, X, LogIn, LogOut, Truck, MapPin, ShoppingBag } from "lucide-react";
 import type { AuthUser } from "./lib/currentUser";
-import type { DashboardStore, GamingHubItem, GamingHubComment, PCBuild, Repair, ServiceRequest, StaffMember, TaskItem, AttendanceLog, InventoryRequest, Delivery } from "./lib/dashboardData";
+import type { DashboardStore, GamingHubItem, GamingHubComment, PCBuild, Repair, ServiceRequest, StaffMember, TaskItem, AttendanceLog, InventoryRequest, Delivery, Order } from "./lib/dashboardData";
 import { SectionCard } from "./components/dashboard/SectionCard";
 import { StatusBadge } from "./components/dashboard/StatusBadge";
 import { EmptyState } from "./components/dashboard/EmptyState";
@@ -148,7 +148,7 @@ export function StaffOverview({ user, data, staff, onTab }: { user: AuthUser; da
   const myLogs = store.auditLogs.filter(l => l.actor === myStaffId).slice(0, 5);
 
   const statCards = [
-    { label: "Active Repairs", value: activeRepairs, tab: "repairs", color: "#FF1F45" },
+    { label: "Active Repairs", value: activeRepairs, tab: "repairs", color: "var(--primary)" },
     { label: "Upgrades", value: activeUpgrades, tab: "upgrades", color: "#00cc66" },
     { label: "Software Jobs", value: activeSoftware, tab: "software", color: "#00b4ff" },
     { label: "PC Builds", value: activeBuilds, tab: "builds", color: "#a855f7" },
@@ -204,7 +204,7 @@ export function StaffOverview({ user, data, staff, onTab }: { user: AuthUser; da
         <QueueCard title="Notifications" subtitle={`${notifications.length} unread`}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
             <div style={{ width: 48, height: 48, borderRadius: 12, background: notifications.length > 0 ? "rgba(255,31,69,0.2)" : "rgba(0,204,102,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Bell size={24} color={notifications.length > 0 ? "#FF1F45" : "#00cc66"} />
+              <Bell size={24} color={notifications.length > 0 ? "var(--primary)" : "#00cc66"} />
             </div>
             <div>
               <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 24, color: "white" }}>{notifications.length}</div>
@@ -387,7 +387,7 @@ export function StaffNotifications({ user, store, markRead, archive }: { user: A
   const getTypeColor = (type: string) => {
     switch (type) {
       case "order": return "#00b4ff";
-      case "repair": return "#FF1F45";
+      case "repair": return "var(--primary)";
       case "rental": return "#a855f7";
       case "support": return "#00cc66";
       case "offer": return "#ffd700";
@@ -410,7 +410,7 @@ export function StaffNotifications({ user, store, markRead, archive }: { user: A
             >
               {f === "all" ? "All" : "Unread"}
               {f === "unread" && unreadCount > 0 && (
-                <span style={{ marginLeft: 6, background: "#FF1F45", color: "white", borderRadius: 999, padding: "2px 6px", fontSize: 10 }}>{unreadCount}</span>
+                <span style={{ marginLeft: 6, background: "var(--primary)", color: "white", borderRadius: 999, padding: "2px 6px", fontSize: 10 }}>{unreadCount}</span>
               )}
             </button>
           ))}
@@ -530,7 +530,7 @@ export function StaffAttendance({ staff, store, clockIn, clockOut }: { staff: St
                 Clock In
               </button>
             ) : !todayRecord?.clockOut ? (
-              <button className="glass-pill glass-pill-primary" onClick={handleClockOut} style={{ padding: "12px 32px", fontSize: 14, background: "rgba(255,31,69,0.3)", borderColor: "#FF1F45" }}>
+              <button className="glass-pill glass-pill-primary" onClick={handleClockOut} style={{ padding: "12px 32px", fontSize: 14, background: "rgba(255,31,69,0.3)", borderColor: "var(--primary)" }}>
                 <LogOut size={16} style={{ marginRight: 8 }} />
                 Clock Out
               </button>
@@ -620,7 +620,7 @@ export function StaffAttendance({ staff, store, clockIn, clockOut }: { staff: St
                 <div style={{ color: record.clockIn ? "#00cc66" : "#888", fontSize: 12 }}>
                   {record.clockIn ? `In: ${formatTime(record.clockIn)}` : "Absent"}
                 </div>
-                <div style={{ color: record.clockOut ? "#FF1F45" : "#888", fontSize: 12 }}>
+                <div style={{ color: record.clockOut ? "var(--primary)" : "#888", fontSize: 12 }}>
                   {record.clockOut ? `Out: ${formatTime(record.clockOut)}` : "..."}
                 </div>
                 <div style={{
@@ -666,7 +666,7 @@ export function StaffPerformance({ staff }: { staff: StaffMember }) {
 
   // Service breakdown (simulated)
   const serviceBreakdown = [
-    { type: "Repairs", count: 45, color: "#FF1F45" },
+    { type: "Repairs", count: 45, color: "var(--primary)" },
     { type: "Upgrades", count: 28, color: "#00cc66" },
     { type: "Software", count: 22, color: "#00b4ff" },
     { type: "Assembly", count: 15, color: "#a855f7" },
@@ -853,7 +853,7 @@ export function StaffProfile({ user, staff }: { user: AuthUser; staff: StaffMemb
               width: 100,
               height: 100,
               borderRadius: "50%",
-              background: "linear-gradient(135deg, #FF1F45, #a855f7)",
+              background: "linear-gradient(135deg, var(--primary), #a855f7)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -917,7 +917,7 @@ export function StaffProfile({ user, staff }: { user: AuthUser; staff: StaffMemb
       <QueueCard title="Quick Actions" subtitle="Frequently used features">
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 12 }}>
           {[
-            { icon: <Bell size={20} />, label: "Notifications", color: "#FF1F45" },
+            { icon: <Bell size={20} />, label: "Notifications", color: "var(--primary)" },
             { icon: <Calendar size={20} />, label: "Attendance", color: "#00b4ff" },
             { icon: <TrendingUp size={20} />, label: "Performance", color: "#00cc66" },
             { icon: <Activity size={20} />, label: "My Tasks", color: "#a855f7" },
@@ -1078,7 +1078,7 @@ export function StaffRepairs({ staff, store, patchRepair }: { staff: StaffMember
           <div className="glass-card" style={{ marginTop: 16, padding: 20, border: "1px solid rgba(255,31,69,0.3)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: 16 }}>
               <div>
-                <h3 style={{ color: "#FF1F45", margin: 0, marginBottom: 8 }}>{r.device}</h3>
+                <h3 style={{ color: "var(--primary)", margin: 0, marginBottom: 8 }}>{r.device}</h3>
                 <div style={{ color: "#ccc", fontSize: 13 }}>
                   <span>{r.brand} {r.model}</span> · <span>{r.deviceType}</span>
                 </div>
@@ -1646,7 +1646,7 @@ export function StaffGamingHub({
                           </button>
                           <button
                             className="glass-pill glass-pill-sm"
-                            style={{ background: "rgba(255,31,69,0.15)", border: "1px solid rgba(255,31,69,0.4)", color: "#FF1F45", fontSize: 10, padding: "4px 10px" }}
+                            style={{ background: "rgba(255,31,69,0.15)", border: "1px solid rgba(255,31,69,0.4)", color: "var(--primary)", fontSize: 10, padding: "4px 10px" }}
                             onClick={() => { rejectGamingHubComment(item.id, comment.id, staff.id); toast.success("Comment rejected"); }}
                           >
                             Reject
@@ -1807,7 +1807,7 @@ export function StaffDeliveries({
             ))}
             <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 8, marginTop: 4, borderTop: "1px solid rgba(255,255,255,0.1)" }}>
               <span style={{ color: "#888", fontSize: 12 }}>Order Total</span>
-              <span style={{ color: "#FF1F45", fontWeight: 700, fontSize: 14 }}>{inr(order.total)}</span>
+              <span style={{ color: "var(--primary)", fontWeight: 700, fontSize: 14 }}>{inr(order.total)}</span>
             </div>
           </div>
         )}
@@ -1954,7 +1954,7 @@ export function StaffDeliveries({
 
 // ─── Staff Orders ───────────────────────────────────────────────────────────
 
-export function StaffOrders({ staff, store }: { staff: StaffMember; store: DashboardStore }) {
+export function StaffOrders({ staff, store, updateOrderStatus }: { staff: StaffMember; store: DashboardStore; updateOrderStatus: (id: string, status: Order["status"]) => Promise<void> }) {
   const STATUS_OPTIONS: Order["status"][] = ["placed", "verified", "packing", "shipped", "delivered", "cancelled"];
   const STATUS_COLORS: Record<Order["status"], string> = {
     placed: "#ffd700", verified: "#00b4ff", packing: "#ff6b00", shipped: "#a855f7", delivered: "#00cc66", cancelled: "#888",
@@ -1962,6 +1962,16 @@ export function StaffOrders({ staff, store }: { staff: StaffMember; store: Dashb
 
   const [filter, setFilter] = useState<Order["status"] | "all">("all");
   const [open, setOpen] = useState<Order | null>(null);
+  const advance = async (order: Order) => {
+    const next = ({ placed: "verified", verified: "packing", packing: "shipped", shipped: "delivered" } as Partial<Record<Order["status"], Order["status"]>>)[order.status];
+    if (!next) return;
+    try {
+      await updateOrderStatus(order.id, next);
+      toast.success(`Order advanced to ${next}`);
+    } catch (error: any) {
+      toast.error(error?.message || "Order status update failed");
+    }
+  };
 
   const orders = [...store.orders].sort((a, b) => b.createdAt - a.createdAt);
   const filtered = filter === "all" ? orders : orders.filter(o => o.status === filter);
@@ -1978,7 +1988,7 @@ export function StaffOrders({ staff, store }: { staff: StaffMember; store: Dashb
         <KPICard label="Pending" value={orders.filter(o => ["placed", "verified"].includes(o.status)).length} icon={<Clock size={14} />} color="#ffd700" />
         <KPICard label="Processing" value={orders.filter(o => ["packing", "shipped"].includes(o.status)).length} icon={<Zap size={14} />} color="#ff6b00" />
         <KPICard label="Delivered" value={orders.filter(o => o.status === "delivered").length} icon={<CheckCircle size={14} />} color="#00cc66" />
-        <KPICard label="Revenue" value={inr(orders.filter(o => o.status !== "cancelled").reduce((s, o) => s + (o.total || 0), 0))} icon={<TrendingUp size={14} />} color="#FF1F45" />
+        <KPICard label="Revenue" value={inr(orders.filter(o => o.status !== "cancelled").reduce((s, o) => s + (o.total || 0), 0))} icon={<TrendingUp size={14} />} color="var(--primary)" />
       </div>
 
       {/* Filter pills */}
@@ -2026,7 +2036,7 @@ export function StaffOrders({ staff, store }: { staff: StaffMember; store: Dashb
                 </div>
               ),
             },
-            { key: "total", label: "Total", align: "right", render: o => <span style={{ color: "#FF1F45", fontWeight: 700 }}>{inr(o.total)}</span> },
+            { key: "total", label: "Total", align: "right", render: o => <span style={{ color: "var(--primary)", fontWeight: 700 }}>{inr(o.total)}</span> },
             {
               key: "status", label: "Status", render: o => (
                 <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "3px 10px", borderRadius: 999, background: `${STATUS_COLORS[o.status]}22`, border: `1px solid ${STATUS_COLORS[o.status]}55`, fontSize: 11, color: STATUS_COLORS[o.status], fontWeight: 600, textTransform: "capitalize" }}>
@@ -2040,6 +2050,13 @@ export function StaffOrders({ staff, store }: { staff: StaffMember; store: Dashb
                 <span style={{ color: o.paymentStatus === "paid" ? "#00cc66" : o.paymentStatus === "cod" ? "#ffd700" : "#888", fontSize: 12 }}>
                   {o.paymentStatus?.toUpperCase() || "—"}
                 </span>
+              ),
+            },
+            {
+              key: "action", label: "", render: o => (
+                <button className="glass-pill glass-pill-sm glass-pill-primary" disabled={["delivered", "cancelled"].includes(o.status)} onClick={e => { e.stopPropagation(); void advance(o); }}>
+                  Advance
+                </button>
               ),
             },
           ]}
@@ -2073,6 +2090,10 @@ export function StaffOrders({ staff, store }: { staff: StaffMember; store: Dashb
               </div>
             </div>
 
+            <button className="glass-pill glass-pill-primary" style={{ width: "100%", marginBottom: 14 }} disabled={["delivered", "cancelled"].includes(active.status)} onClick={() => void advance(active)}>
+              Advance Order
+            </button>
+
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10, marginBottom: 14 }}>
               <div className="glass" style={{ borderRadius: 10, padding: 12 }}>
                 <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 9, color: "#777", marginBottom: 6 }}>FULFILLMENT</div>
@@ -2083,7 +2104,7 @@ export function StaffOrders({ staff, store }: { staff: StaffMember; store: Dashb
               </div>
               <div className="glass" style={{ borderRadius: 10, padding: 12 }}>
                 <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 9, color: "#777", marginBottom: 6 }}>TOTAL</div>
-                <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 20, color: "#FF1F45", fontWeight: 700 }}>{inr(active.total)}</div>
+                <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 20, color: "var(--primary)", fontWeight: 700 }}>{inr(active.total)}</div>
               </div>
             </div>
 
@@ -2103,7 +2124,7 @@ export function StaffOrders({ staff, store }: { staff: StaffMember; store: Dashb
                 ))}
                 <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 12, fontFamily: "'Rajdhani', sans-serif", fontSize: 16, color: "white" }}>
                   <span style={{ fontWeight: 600 }}>Total</span>
-                  <span style={{ color: "#FF1F45", fontWeight: 700 }}>{inr(active.total)}</span>
+                  <span style={{ color: "var(--primary)", fontWeight: 700 }}>{inr(active.total)}</span>
                 </div>
               </div>
             </SectionCard>
@@ -2271,7 +2292,7 @@ export function StaffInventoryRequests({
             <div
               key={req.id}
               className="glass-card"
-              style={{ padding: 16, display: "grid", gridTemplateColumns: "auto 1fr auto auto auto", gap: 16, alignItems: "center", borderLeft: `3px solid ${req.status === "approved" ? "#00cc66" : req.status === "rejected" ? "#FF1F45" : req.status === "received" ? "#00b4ff" : "#ff6b00"}` }}
+              style={{ padding: 16, display: "grid", gridTemplateColumns: "auto 1fr auto auto auto", gap: 16, alignItems: "center", borderLeft: `3px solid ${req.status === "approved" ? "#00cc66" : req.status === "rejected" ? "var(--primary)" : req.status === "received" ? "#00b4ff" : "#ff6b00"}` }}
             >
               <div style={{ color: "#888", fontSize: 11, fontFamily: "'Orbitron', sans-serif" }}>×{req.qty}</div>
               <div>
@@ -2300,7 +2321,7 @@ export function StaffInventoryRequests({
                     </button>
                     <button
                       className="glass-pill glass-pill-sm"
-                      style={{ background: "rgba(255,31,69,0.15)", border: "1px solid rgba(255,31,69,0.4)", color: "#FF1F45", fontSize: 10, padding: "4px 8px" }}
+                      style={{ background: "rgba(255,31,69,0.15)", border: "1px solid rgba(255,31,69,0.4)", color: "var(--primary)", fontSize: 10, padding: "4px 8px" }}
                       onClick={() => { rejectInventoryRequest(req.id, myId); toast.success("Rejected"); }}
                     >
                       Reject

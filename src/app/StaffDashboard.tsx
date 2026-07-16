@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Home, ClipboardCheck, Wrench, Cpu, Hammer, Headphones, Truck, Package,
   Clock, TrendingUp, Bell, User, Zap, Database, Gamepad2, ShoppingBag,
@@ -40,6 +40,9 @@ const TABS = [
 
 export default function StaffDashboard({ user, initialTab }: Props) {
   const [tab, setTab] = useState<string>(() => initialTab || window.location.hash.replace("#", "") || "overview");
+  useEffect(() => {
+    if (initialTab) setTab(initialTab);
+  }, [initialTab]);
   const data = useDashboardData();
   const { store, updateRepairStatus, patchRepair, patchPCBuild, patchServiceRequest, advanceTask, clockIn, clockOut, submitInventoryRequest, approveInventoryRequest, rejectInventoryRequest, markInventoryReceived, approveGamingHubComment, rejectGamingHubComment, updateDeliveryStatus, assignDeliveryStaff, updateDelivery, addReplyToTicket, closeTicket, markNotificationRead, archiveNotification, patchGamingHubItem } = data;
 
@@ -89,7 +92,7 @@ export default function StaffDashboard({ user, initialTab }: Props) {
       case "assembly":       return <StaffAssembly staff={myStaff} store={store} patchServiceRequest={patchServiceRequest} />;
       case "support":        return <StaffSupportWorkflow staff={myStaff} store={store} patchServiceRequest={patchServiceRequest} />;
       case "deliveries":     return <StaffDeliveries staff={myStaff} store={store} updateDeliveryStatus={updateDeliveryStatus} assignDeliveryStaff={assignDeliveryStaff} updateDelivery={updateDelivery} />;
-      case "orders":         return <StaffOrders staff={myStaff} store={store} />;
+      case "orders":         return <StaffOrders staff={myStaff} store={store} updateOrderStatus={data.updateOrderStatus} />;
       case "gaming":         return <StaffGamingHub staff={myStaff} store={store} patchGamingHubItem={data.patchGamingHubItem} approveGamingHubComment={approveGamingHubComment} rejectGamingHubComment={rejectGamingHubComment} />;
       case "inventory":      return <StaffInventoryRequests staff={myStaff} store={store} submitInventoryRequest={submitInventoryRequest} approveInventoryRequest={approveInventoryRequest} rejectInventoryRequest={rejectInventoryRequest} markInventoryReceived={markInventoryReceived} />;
       case "attendance":     return <StaffAttendance staff={myStaff} store={store} clockIn={clockIn} clockOut={clockOut} />;

@@ -145,6 +145,38 @@ CREATE TABLE IF NOT EXISTS orders (
 );
 
 -- =============================================
+-- SHARED SERVICE REQUESTS
+-- Authoritative cross-device workflow for repairs, PC builds, assembly,
+-- upgrades, software, rentals, deliveries, remote support, and sell-used.
+-- Detailed form fields, quotation metadata, and S3 attachment records live in
+-- device_info so new workflow fields can be added without destructive schema
+-- changes.
+-- =============================================
+CREATE TABLE IF NOT EXISTS services (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    service_number VARCHAR(50) UNIQUE NOT NULL,
+    user_id UUID REFERENCES users(id),
+    service_type VARCHAR(50) NOT NULL,
+    status VARCHAR(50) DEFAULT 'submitted',
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    device_info JSONB NOT NULL DEFAULT '{}',
+    estimated_cost DECIMAL(12,2),
+    final_cost DECIMAL(12,2),
+    technician_id UUID REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+ALTER TABLE services ADD COLUMN IF NOT EXISTS device_info JSONB NOT NULL DEFAULT '{}';
+ALTER TABLE services ADD COLUMN IF NOT EXISTS estimated_cost DECIMAL(12,2);
+ALTER TABLE services ADD COLUMN IF NOT EXISTS final_cost DECIMAL(12,2);
+ALTER TABLE services ADD COLUMN IF NOT EXISTS technician_id UUID REFERENCES users(id);
+ALTER TABLE services ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+CREATE INDEX IF NOT EXISTS idx_services_user_created ON services(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_services_type_status ON services(service_type, status);
+CREATE INDEX IF NOT EXISTS idx_services_technician ON services(technician_id);
+
+-- =============================================
 -- REPAIRS (Dashboard: Repairs Page)
 -- Columns: Repair#, Customer, Device, Issue, Status, Cost
 -- Features: Quotation, Assign Technician
@@ -425,6 +457,22 @@ CREATE TABLE IF NOT EXISTS crm_notes (
     note TEXT NOT NULL,
     is_private BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Shared JSON configuration for dashboard-managed features that are edited as
+-- one versioned document (for example the Custom PC Builder).  Keeping the
+-- document in PostgreSQL makes drafts and publishes visible across devices.
+CREATE TABLE IF NOT EXISTS admin_configs (
+    config_key VARCHAR(100) PRIMARY KEY,
+    draft_data JSONB NOT NULL DEFAULT '{}'::jsonb,
+    published_data JSONB,
+    status VARCHAR(20) NOT NULL DEFAULT 'draft'
+        CHECK (status IN ('draft', 'published')),
+    version INTEGER NOT NULL DEFAULT 1,
+    modified_by UUID REFERENCES users(id),
+    published_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS customer_stats (

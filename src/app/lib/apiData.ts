@@ -10,7 +10,10 @@ import type { Product, Order, Service, Wishlist, ProductQuery } from "@/lib/type
 import { isAuthenticated } from "@/app/lib/currentUser";
 
 // Feature flag: Use API if available
-const USE_API = import.meta.env.VITE_API_URL && import.meta.env.VITE_API_URL !== '/api';
+// `/api` is the production same-origin backend, not a signal to use the
+// browser-only demo store. Keep all shared dashboard data on the backend
+// unless a developer explicitly enables demo mode.
+const USE_API = import.meta.env.VITE_USE_DEMO_AUTH !== "true";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Products Hook

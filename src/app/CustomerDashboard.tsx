@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Home, User, MapPin, ShoppingBag, Wrench, CalendarDays, Cpu, Hammer,
   Headphones, Heart, ShoppingCart, Bell, Star, FileText, ShieldCheck,
@@ -44,6 +44,9 @@ const TABS: { key: string; label: string; icon: any; title: string }[] = [
 
 export default function CustomerDashboard({ user, initialTab }: Props) {
   const [tab, setTab] = useState<string>(() => initialTab || window.location.hash.replace("#", "") || "overview");
+  useEffect(() => {
+    if (initialTab) setTab(initialTab);
+  }, [initialTab]);
   const data = useDashboardData();
   const { store, markNotificationRead, archiveNotification, addAddress, deleteAddress, updateOrderStatus, updateRepairStatus, patchRepair, patchPCBuild, patchServiceRequest, updateRental, fileReview, redeemCoupon, addReplyToTicket, closeTicket } = data;
 

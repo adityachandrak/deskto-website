@@ -21,8 +21,11 @@ function demoHashPassword(password: string) {
   return `demo_bcrypt_${btoa(unescape(encodeURIComponent(password))).slice(0, 28)}`;
 }
 
-// Feature flag: Use API if available
-const USE_API = import.meta.env.VITE_API_URL && import.meta.env.VITE_API_URL !== '/api';
+// Production intentionally uses the same-origin `/api` path. Treating that
+// value as demo mode leaves the dashboard looking signed in while never
+// obtaining a JWT, so every protected admin mutation fails with
+// "401: No token provided". Demo auth must be an explicit opt-in.
+const USE_API = import.meta.env.VITE_USE_DEMO_AUTH !== "true";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Demo/Legacy localStorage functions (fallback)
@@ -61,16 +64,19 @@ function readUserFromStorage(): AuthUser | null {
 // Hook to get current user
 // ─────────────────────────────────────────────────────────────────────────────
 export function useCurrentUser(): AuthUser | null {
-  const [user, setUser] = useState<AuthUser | null>(() => readUserFromStorage());
+  // API mode must never bootstrap an authenticated dashboard from the legacy
+  // browser-only demo record. Only a backend-verified JWT may establish the
+  // current user in production.
+  const [user, setUser] = useState<AuthUser | null>(() => USE_API ? null : readUserFromStorage());
 
   useEffect(() => {
-    // Always sync from localStorage first (covers demo mode and page refreshes)
     const syncFromStorage = () => {
-      const localUser = readUserFromStorage();
-      setUser(localUser);
+      if (USE_API) {
+        if (!isAuthenticated()) {
+          setUser(null);
+          return;
+        }
 
-      // If we have a backend token and no local user, try the API
-      if (!localUser && USE_API && isAuthenticated()) {
         authApi.getMe()
           .then(apiUser => {
             setUser({
@@ -79,12 +85,15 @@ export function useCurrentUser(): AuthUser | null {
             });
           })
           .catch(error => {
-            console.error('Failed to fetch user from API:', error);
-            if ((error as any)?.status === 401) {
-              clearSession();
-            }
+            console.error('Failed to verify API session:', error);
+            setUser(null);
+            if ((error as any)?.status === 401) clearSession();
           });
+        return;
       }
+
+      const localUser = readUserFromStorage();
+      setUser(localUser);
     };
 
     syncFromStorage();

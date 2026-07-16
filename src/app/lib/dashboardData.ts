@@ -11,10 +11,11 @@ import {
   productsApi,
   servicesApi,
   homepageContentApi,
+  adminApi,
   isAuthenticated as isApiAuthenticated,
   getAccessToken,
 } from "./api";
-import { apiOrderToFrontend, apiServiceToFrontend } from "./apiTypes";
+import { apiOrderToFrontend, apiServiceToDelivery, apiServiceToFrontend, apiServiceToPCBuild, apiServiceToRepair } from "./apiTypes";
 
 // ── TYPES ─────────────────────────────────────────────────────────────────
 
@@ -448,6 +449,8 @@ export interface StaffMember {
   email: string;
   role: "technician" | "sales" | "support" | "delivery";
   department: string;
+  phone?: string;
+  contact?: string;
   joinedAt: number;
   performance: { jobs: number; rating: number; attendancePct: number };
 }
@@ -559,6 +562,7 @@ export interface DashboardSettings {
 
 export interface CatalogProduct {
   id: number;
+  liveId?: string;
   name: string;
   type?: "gaming" | "general";
   category: string;
@@ -4859,6 +4863,17 @@ function defaultServiceQa(kind: ServiceRequestKind) {
 
 // ── HOOK ──────────────────────────────────────────────────────────────────
 
+async function uploadServiceMedia(serviceNumber: string, media: string[] = []) {
+  let latest: any = null;
+  for (const [index, value] of media.filter(Boolean).entries()) {
+    if (!value.startsWith("data:")) continue;
+    const blob = await (await fetch(value)).blob();
+    const extension = blob.type === "image/png" ? "png" : blob.type === "image/webp" ? "webp" : "jpg";
+    latest = await servicesApi.uploadAttachment(serviceNumber, blob, `attachment-${index + 1}.${extension}`);
+  }
+  return latest;
+}
+
 export function useDashboardData() {
   const [store, setStore] = useState<DashboardStore>(() => loadStore());
 
@@ -4902,7 +4917,12 @@ export function useDashboardData() {
     });
   }, []);
 
-  const updateOrderStatus = useCallback((orderId: string, status: OrderStatus) => {
+  const updateOrderStatus = useCallback(async (orderId: string, status: OrderStatus) => {
+    // Persist first so a failed backend mutation never looks successful only
+    // in the browser that clicked it.
+    if (isApiAuthenticated()) {
+      await ordersApi.updateStatus(orderId, status);
+    }
     let customerId = "";
     let oldStatus = "";
 
@@ -4933,19 +4953,6 @@ export function useDashboardData() {
     }
     addLog("order_status", `Order ${orderId} → ${status}`);
 
-    // Sync to backend if we have an API token. Fire-and-forget so the UI
-    // stays responsive; on failure we keep the local change (the next
-    // hydration from the backend will reconcile).
-    if (isApiAuthenticated()) {
-      // The orderId in the local store may be the human-friendly order number
-      // (e.g. ORD-1717000000000). Backend updateStatus uses the primary key.
-      // We rely on the backend's `id::text = $1 OR order_number = $1` lookup,
-      // so passing the order number is safe.
-      ordersApi.updateStatus(orderId, status)
-        .catch((err) => {
-          console.warn("[dashboard] failed to sync order status to backend:", err);
-        });
-    }
   }, [addLog, autoNotifyStatusChange]);
 
   const patchOrder = useCallback((orderId: string, patch: Partial<Order>) => {
@@ -5018,7 +5025,8 @@ export function useDashboardData() {
     return order;
   }, [addLog]);
 
-  const updateRepairStatus = useCallback((repairId: string, status: RepairStatus) => {
+  const updateRepairStatus = useCallback(async (repairId: string, status: RepairStatus) => {
+    await servicesApi.updateStatus(repairId, status);
     let customerId = "";
     let oldStatus = "";
     
@@ -5043,16 +5051,11 @@ export function useDashboardData() {
     addLog("repair_status", `Repair ${repairId} → ${status}`);
   }, [addLog, autoNotifyStatusChange]);
 
-  const addRepairRequest = useCallback((input: Omit<Repair, "id" | "status" | "timeline" | "createdAt" | "updatedAt"> & { status?: RepairStatus }) => {
-    const status = input.status || "submitted";
-    const repair: Repair = {
-      ...input,
-      id: rid("rep"),
-      status,
-      timeline: repairTimelineThrough(status, Date.now()),
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
+  const addRepairRequest = useCallback(async (input: Omit<Repair, "id" | "status" | "timeline" | "createdAt" | "updatedAt"> & { status?: RepairStatus }) => {
+    const { uploadedFiles = [], ...deviceInfo } = input;
+    let created = await servicesApi.create({ serviceType: "repair", title: input.device, description: input.issue, deviceInfo });
+    created = await uploadServiceMedia(created.serviceNumber, uploadedFiles) || created;
+    const repair = apiServiceToRepair(created);
     setStore(prev => {
       const next = {
         ...prev,
@@ -5078,7 +5081,14 @@ export function useDashboardData() {
     return repair;
   }, [addLog]);
 
-  const patchRepair = useCallback((repairId: string, patch: Partial<Repair>) => {
+  const patchRepair = useCallback(async (repairId: string, patch: Partial<Repair>) => {
+    const current = store.repairs.find(repair => repair.id === repairId);
+    await servicesApi.update(repairId, {
+      status: patch.status || current?.status,
+      estimatedCost: patch.quotation ?? patch.estimatedCharge,
+      technicianId: patch.technicianId,
+      deviceInfo: patch as Record<string, unknown>,
+    });
     let customerId = "";
     let oldStatus = "";
     let newStatus = patch.status;
@@ -5129,18 +5139,14 @@ export function useDashboardData() {
       autoNotifyStatusChange("repair", repairId, customerId, oldStatus, newStatus);
     }
     addLog("repair_updated", `Repair ${repairId} updated`);
-  }, [addLog, autoNotifyStatusChange]);
+  }, [addLog, autoNotifyStatusChange, store.repairs]);
 
-  const addPCBuildRequest = useCallback((input: Omit<PCBuild, "id" | "status" | "timeline" | "createdAt" | "updatedAt"> & { status?: PCBuildStatus }) => {
-    const status = input.status || "submitted";
-    const build: PCBuild = {
-      ...input,
-      id: rid("pcb"),
-      status,
-      timeline: pcBuildTimelineThrough(status, Date.now()),
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
+  const addPCBuildRequest = useCallback(async (input: Omit<PCBuild, "id" | "status" | "timeline" | "createdAt" | "updatedAt"> & { status?: PCBuildStatus }) => {
+    const created = await servicesApi.create({
+      serviceType: "pc-build", title: input.name, description: `${input.purpose || "Custom PC"} build request`,
+      deviceInfo: input,
+    });
+    const build = apiServiceToPCBuild(created);
     setStore(prev => {
       const next = {
         ...prev,
@@ -5157,7 +5163,14 @@ export function useDashboardData() {
     return build;
   }, [addLog]);
 
-  const patchPCBuild = useCallback((buildId: string, patch: Partial<PCBuild>) => {
+  const patchPCBuild = useCallback(async (buildId: string, patch: Partial<PCBuild>) => {
+    const current = store.pcBuilds.find(build => build.id === buildId);
+    await servicesApi.update(buildId, {
+      status: patch.status || current?.status,
+      estimatedCost: patch.quotation ?? patch.total,
+      technicianId: patch.technicianId,
+      deviceInfo: patch as Record<string, unknown>,
+    });
     let customerId = "";
     let oldStatus = "";
     let newStatus = patch.status;
@@ -5208,21 +5221,13 @@ export function useDashboardData() {
       autoNotifyStatusChange("system", buildId, customerId, oldStatus, newStatus);
     }
     addLog("pc_build_updated", `PC build ${buildId} updated`);
-  }, [addLog, autoNotifyStatusChange]);
+  }, [addLog, autoNotifyStatusChange, store.pcBuilds]);
 
-  const addServiceRequest = useCallback((input: Omit<ServiceRequest, "id" | "status" | "timeline" | "createdAt" | "updatedAt" | "checklist" | "qaChecks"> & { id?: string; status?: ServiceRequestStatus; checklist?: ServiceRequest["checklist"]; qaChecks?: ServiceRequest["qaChecks"] }) => {
-    const status = input.status || "submitted";
-    const request: ServiceRequest = {
-      ...input,
-      id: input.id || rid(input.kind === "upgrade" ? "upg" : input.kind === "assembly" ? "asm" : "sft"),
-      status,
-      paymentStatus: input.paymentStatus || "pending",
-      checklist: input.checklist || defaultServiceChecklist(input.kind),
-      qaChecks: input.qaChecks || defaultServiceQa(input.kind),
-      timeline: serviceTimelineThrough(input.kind, status, Date.now()),
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
+  const addServiceRequest = useCallback(async (input: Omit<ServiceRequest, "id" | "status" | "timeline" | "createdAt" | "updatedAt" | "checklist" | "qaChecks"> & { id?: string; status?: ServiceRequestStatus; checklist?: ServiceRequest["checklist"]; qaChecks?: ServiceRequest["qaChecks"] }) => {
+    const { uploads = [], ...deviceInfo } = input;
+    let created = await servicesApi.create({ serviceType: input.kind, title: input.title, description: input.requirements, deviceInfo });
+    created = await uploadServiceMedia(created.serviceNumber, uploads) || created;
+    const request = apiServiceToFrontend(created);
     setStore(prev => {
       const next = {
         ...prev,
@@ -5248,7 +5253,14 @@ export function useDashboardData() {
     return request;
   }, [addLog]);
 
-  const patchServiceRequest = useCallback((requestId: string, patch: Partial<ServiceRequest>) => {
+  const patchServiceRequest = useCallback(async (requestId: string, patch: Partial<ServiceRequest>) => {
+    const current = store.serviceRequests.find(request => request.id === requestId);
+    await servicesApi.update(requestId, {
+      status: patch.status || current?.status,
+      estimatedCost: patch.quotation ?? patch.expectedPrice,
+      technicianId: patch.technicianId,
+      deviceInfo: patch as Record<string, unknown>,
+    });
     let customerId = "";
     let oldStatus = "";
     let newStatus = patch.status;
@@ -5301,7 +5313,7 @@ export function useDashboardData() {
       autoNotifyStatusChange(notifyType, requestId, customerId, oldStatus, newStatus);
     }
     addLog("service_request_updated", `Service request ${requestId} updated`);
-  }, [addLog, autoNotifyStatusChange]);
+  }, [addLog, autoNotifyStatusChange, store.serviceRequests]);
 
   const updateRental = useCallback((rentalId: string, patch: Partial<Rental>) => {
     setStore(prev => {
@@ -5474,7 +5486,8 @@ export function useDashboardData() {
     addLog("gaming_comment_rejected", `Comment ${commentId} on ${itemId} rejected`, actor);
   }, [addLog]);
 
-  const updateDeliveryStatus = useCallback((id: string, status: Delivery["status"], actor?: string) => {
+  const updateDeliveryStatus = useCallback(async (id: string, status: Delivery["status"], actor?: string) => {
+    await servicesApi.updateStatus(id, status);
     setStore(prev => {
       const delivery = prev.deliveries.find(d => d.id === id);
       const updates: Partial<Delivery> = { status, updatedAt: Date.now() };
@@ -5494,7 +5507,8 @@ export function useDashboardData() {
     addLog("delivery_status", `Delivery ${id} → ${status}`, actor);
   }, [addLog]);
 
-  const assignDeliveryStaff = useCallback((deliveryId: string, staffId: string, staffName: string, staffPhone: string, actor?: string) => {
+  const assignDeliveryStaff = useCallback(async (deliveryId: string, staffId: string, staffName: string, staffPhone: string, actor?: string) => {
+    await servicesApi.update(deliveryId, { status: "ready", technicianId: staffId, deviceInfo: { staffName, staffPhone } });
     setStore(prev => {
       const delivery = prev.deliveries.find(d => d.id === deliveryId);
       const next = {
@@ -5511,7 +5525,9 @@ export function useDashboardData() {
     addLog("delivery_staff_assigned", `Delivery ${deliveryId} assigned to ${staffName}`, actor);
   }, [addLog]);
 
-  const updateDelivery = useCallback((id: string, patch: Partial<Delivery>, actor?: string) => {
+  const updateDelivery = useCallback(async (id: string, patch: Partial<Delivery>, actor?: string) => {
+    const current = store.deliveries.find(delivery => delivery.id === id);
+    await servicesApi.update(id, { status: patch.status || current?.status, technicianId: patch.staffId, deviceInfo: patch as Record<string, unknown> });
     setStore(prev => {
       const delivery = prev.deliveries.find(d => d.id === id);
       const updated = { ...delivery, ...patch, updatedAt: Date.now() };
@@ -5526,7 +5542,7 @@ export function useDashboardData() {
       return next;
     });
     addLog("delivery_updated", `Delivery ${id} updated`, actor);
-  }, [addLog]);
+  }, [addLog, store.deliveries]);
 
   const addReplyToTicket = useCallback((ticketId: string, text: string, from: "customer" | "agent") => {
     setStore(prev => {
@@ -6104,6 +6120,46 @@ export function useDashboardData() {
     };
   }, []);
 
+  // Custom Builder configuration is a shared PostgreSQL document. Admin/staff
+  // load the current draft; customers and anonymous visitors load only the
+  // published document. This deliberately runs once per page/session so a
+  // periodic refresh never overwrites an admin's unsaved edits.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      let payload: any = null;
+      if (isApiAuthenticated()) {
+        try {
+          const me = await authApi.getMe();
+          payload = me.role === 'admin' || me.role === 'staff'
+            ? await adminApi.customBuilder()
+            : await adminApi.publicCustomBuilder();
+        } catch { payload = await adminApi.publicCustomBuilder().catch(() => null); }
+      } else {
+        payload = await adminApi.publicCustomBuilder().catch(() => null);
+      }
+      if (cancelled || !payload) return;
+      const data = payload.draftData || payload.data || payload.publishedData;
+      if (!data || typeof data !== 'object') return;
+      setStore(prev => {
+        const next = {
+          ...prev,
+          customBuilderConfig: {
+            ...prev.customBuilderConfig,
+            ...data,
+            status: payload.status || data.status || 'published',
+            version: payload.version || data.version || prev.customBuilderConfig.version,
+            publishedAt: payload.publishedAt ? new Date(payload.publishedAt).getTime() : data.publishedAt,
+            lastModifiedAt: payload.updatedAt ? new Date(payload.updatedAt).getTime() : Date.now(),
+          },
+        };
+        saveStore(next);
+        return next;
+      });
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   // Hydrate from backend when the user has an API session.
   // For customers: pull /api/orders/my and /api/services/my so their dashboard
   // reflects the real PostgreSQL store. For admin/staff: pull all orders.
@@ -6149,12 +6205,24 @@ export function useDashboardData() {
         const servicesPromise = role === "customer"
           ? servicesApi.getMy({ limit: 50 })
           : servicesApi.getAll({ limit: 100 }).catch(() => servicesApi.getMy({ limit: 50 }));
+        const techniciansPromise = role === "customer"
+          ? Promise.resolve({ technicians: [] })
+          : servicesApi.getTechnicians();
+        const catalogPromise = role === "customer"
+          ? Promise.resolve({ products: [] })
+          : adminApi.products();
 
-        const [ordersRes, servicesRes] = await Promise.all([ordersPromise, servicesPromise]);
+        const [ordersRes, servicesRes, techniciansRes, catalogRes] = await Promise.all([ordersPromise, servicesPromise, techniciansPromise, catalogPromise]);
         if (cancelled) return;
 
         const apiOrders = (ordersRes?.orders || []).map(apiOrderToFrontend);
-        const apiServices = (servicesRes?.services || []).map(apiServiceToFrontend);
+        const rawServices = servicesRes?.services || [];
+        const apiRepairs = rawServices.filter(service => service.serviceType === "repair").map(apiServiceToRepair);
+        const apiPCBuilds = rawServices.filter(service => service.serviceType === "pc-build").map(apiServiceToPCBuild);
+        const apiDeliveries = rawServices.filter(service => service.serviceType === "delivery").map(apiServiceToDelivery);
+        const apiServices = rawServices
+          .filter(service => !["repair", "pc-build", "delivery"].includes(service.serviceType))
+          .map(apiServiceToFrontend);
 
         setStore(prev => {
           // Merge strategy: API orders take precedence when their orderNumber
@@ -6165,8 +6233,68 @@ export function useDashboardData() {
 
           if (role === "customer") {
             next.orders = apiOrders;
+            next.repairs = apiRepairs;
+            next.pcBuilds = apiPCBuilds;
+            next.deliveries = apiDeliveries;
             next.serviceRequests = apiServices;
           } else {
+            const apiStaff: StaffMember[] = techniciansRes.technicians.map(technician => ({
+              id: technician.id,
+              name: technician.name,
+              email: technician.email,
+              phone: technician.phone,
+              contact: technician.phone,
+              role: "technician",
+              department: technician.department || "Services",
+              joinedAt: technician.createdAt ? new Date(technician.createdAt).getTime() : Date.now(),
+              performance: { jobs: 0, rating: 5, attendancePct: 100 },
+            }));
+            const apiStaffEmails = new Set(apiStaff.map(staff => staff.email.toLowerCase()));
+            next.staff = [...apiStaff, ...prev.staff.filter(staff => !apiStaffEmails.has(staff.email.toLowerCase()))];
+            const apiProductsBySku = new Map((catalogRes.products || []).map(product => [product.sku, product]));
+            next.products = prev.products.map(product => {
+              const live = apiProductsBySku.get(product.sku || '');
+              if (!live) return product;
+              apiProductsBySku.delete(product.sku || '');
+              return {
+                ...product,
+                liveId: live.id,
+                name: live.name,
+                description: live.description || product.description,
+                price: live.price,
+                orig: live.comparePrice ?? product.orig,
+                category: live.category,
+                brand: live.brand || product.brand,
+                stock: live.stockQuantity,
+                inStock: live.stockQuantity > 0 && live.isActive !== false,
+                img: live.imageUrl || product.img,
+                gallery: live.images?.map(image => image.url) || product.gallery,
+                catalogStatus: live.status === 'archived' ? 'archived' : live.status === 'published' ? 'published' : 'draft',
+                updatedAt: Date.now(),
+              };
+            });
+            const template = prev.products[0];
+            const maxLocalId = Math.max(0, ...next.products.map(product => product.id));
+            if (template) {
+              next.products.push(...Array.from(apiProductsBySku.values()).map((live, index) => ({
+                ...template,
+                id: maxLocalId + index + 1,
+                liveId: live.id,
+                sku: live.sku,
+                name: live.name,
+                description: live.description || '',
+                price: live.price,
+                orig: live.comparePrice ?? null,
+                category: live.category,
+                brand: live.brand || '',
+                stock: live.stockQuantity,
+                inStock: live.stockQuantity > 0 && live.isActive !== false,
+                img: live.imageUrl || '',
+                gallery: live.images?.map(image => image.url) || [],
+                catalogStatus: live.status === 'archived' ? 'archived' : live.status === 'published' ? 'published' : 'draft',
+                updatedAt: Date.now(),
+              })));
+            }
             // Admin/staff: keep local mock + add API orders not already in the
             // local store.
             const localOrderNumbers = new Set(prev.orders.map((o: Order) => o.id));
@@ -6175,6 +6303,14 @@ export function useDashboardData() {
               ...prev.orders,
             ];
             next.orders = merged;
+
+            const mergeShared = <T extends { id: string }>(apiRows: T[], localRows: T[]) => {
+              const apiIds = new Set(apiRows.map(row => row.id));
+              return [...apiRows, ...localRows.filter(row => !apiIds.has(row.id))];
+            };
+            next.repairs = mergeShared(apiRepairs, prev.repairs);
+            next.pcBuilds = mergeShared(apiPCBuilds, prev.pcBuilds);
+            next.deliveries = mergeShared(apiDeliveries, prev.deliveries);
 
             const localServiceNumbers = new Set((prev.serviceRequests || []).map((s: ServiceRequest) => s.id));
             const mergedServices = [
@@ -6245,7 +6381,7 @@ export function useDashboardData() {
     }
     const onAuth = () => hydrateFromBackend();
     const onFocus = () => hydrateFromBackend();
-    const interval = window.setInterval(() => hydrateFromBackend(), 30000);
+    const interval = window.setInterval(() => hydrateFromBackend(), 5_000);
     window.addEventListener("deskto-auth-state-changed", onAuth);
     window.addEventListener("focus", onFocus);
     return () => {

@@ -82,7 +82,7 @@ async function serializeProduct(row: any, imagesByProduct?: Map<string, any[]>) 
 router.get('/',
   [
     validatorQuery('page').optional().isInt({ min: 1 }),
-    validatorQuery('limit').optional().isInt({ min: 1, max: 100 }),
+    validatorQuery('limit').optional().isInt({ min: 1, max: 200 }),
     validatorQuery('minPrice').optional().isFloat({ min: 0 }),
     validatorQuery('maxPrice').optional().isFloat({ min: 0 })
   ],
@@ -173,6 +173,22 @@ router.get('/',
     }
   }
 );
+
+// Admin/staff catalog feed.  Unlike the public route this intentionally
+// includes drafts and archived rows so the dashboard status is authoritative.
+router.get('/admin/all', authenticate, authorize('admin', 'staff'), async (_req: AuthRequest, res: Response) => {
+  try {
+    const result = await query(`SELECT id, sku, name, slug, description, price, compare_price, category, brand,
+      stock_quantity, low_stock_threshold, image_url, specifications, tags, market_tag, is_featured,
+      status, is_active, published_at, created_at, updated_at FROM products ORDER BY updated_at DESC`);
+    const imagesByProduct = await getProductImages(result.rows.map(row => row.id));
+    const products = await Promise.all(result.rows.map(row => serializeProduct(row, imagesByProduct)));
+    res.set('Cache-Control', 'no-store').json({ products, total: products.length });
+  } catch (error) {
+    console.error('Admin products error:', error);
+    res.status(500).json({ error: 'Failed to fetch admin catalog' });
+  }
+});
 
 // Create Product Image Upload URL (Admin only)
 router.post('/:productId/images/upload-url',
@@ -548,8 +564,9 @@ router.post('/admin/upsert',
 
       const {
         sku, name, description, price, comparePrice, category, brand,
-        stockQuantity, imageUrl, specifications, tags, marketTag, isFeatured
+        stockQuantity, imageUrl, specifications, tags, marketTag, isFeatured, status
       } = req.body;
+      const requestedStatus = status === 'published' ? 'published' : status === 'archived' ? 'archived' : status === 'draft' ? 'draft' : null;
 
       const slugBase = String(name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
       const existing = await query('SELECT id, slug FROM products WHERE sku = $1 LIMIT 1', [sku]);
@@ -559,7 +576,8 @@ router.post('/admin/upsert',
         `INSERT INTO products
          (sku, name, slug, description, price, compare_price, category, brand,
           stock_quantity, image_url, specifications, tags, market_tag, is_featured, status, is_active, published_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'published', TRUE, NOW())
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
+           COALESCE($15, 'draft'), COALESCE($15, 'draft') = 'published', CASE WHEN $15 = 'published' THEN NOW() ELSE NULL END)
          ON CONFLICT (sku) DO UPDATE SET
           name = EXCLUDED.name,
           description = EXCLUDED.description,
@@ -573,13 +591,13 @@ router.post('/admin/upsert',
           tags = EXCLUDED.tags,
           market_tag = EXCLUDED.market_tag,
           is_featured = EXCLUDED.is_featured,
-          status = 'published',
-          is_active = TRUE,
-          published_at = COALESCE(products.published_at, NOW()),
+          status = COALESCE($15, products.status),
+          is_active = CASE WHEN $15 IS NULL THEN products.is_active ELSE $15 = 'published' END,
+          published_at = CASE WHEN $15 = 'published' THEN COALESCE(products.published_at, NOW()) ELSE products.published_at END,
           updated_at = NOW()
          RETURNING *`,
         [sku, name, slug, description, price, comparePrice, category, brand,
-         stockQuantity || 0, imageUrl || null, specifications || null, tags || null, marketTag || null, isFeatured || false]
+         stockQuantity || 0, imageUrl || null, specifications || null, tags || null, marketTag || null, isFeatured || false, requestedStatus]
       );
 
       const p = result.rows[0];
@@ -608,7 +626,7 @@ router.put('/:id',
 
       const allowedFields = ['name', 'description', 'price', 'compare_price', 'category',
                           'brand', 'stock_quantity', 'image_url', 'specifications',
-                          'tags', 'market_tag', 'is_active', 'is_featured'];
+                          'tags', 'market_tag', 'is_active', 'is_featured', 'status'];
 
       const setClause: string[] = [];
       const values: any[] = [];
@@ -674,10 +692,15 @@ router.delete('/:id',
     try {
       const { id } = req.params;
 
-      await query(
-        'UPDATE products SET is_active = FALSE WHERE id = $1',
-        [id]
-      );
+      const existing = await query('SELECT sku FROM products WHERE id=$1', [id]);
+      if (!existing.rows.length) return res.status(404).json({ error: 'Product not found' });
+      if (req.query.hard === 'true' && String(existing.rows[0].sku).startsWith('E2E-')) {
+        const images = await query('SELECT object_key FROM product_images WHERE product_id=$1', [id]);
+        await Promise.all(images.rows.filter(row => row.object_key).map(row => s3.send(new DeleteObjectCommand({ Bucket: imageBucket, Key: row.object_key }))));
+        await query('DELETE FROM products WHERE id=$1', [id]);
+        return res.json({ message: 'E2E product permanently cleaned up' });
+      }
+      await query('UPDATE products SET is_active = FALSE, status = $2, updated_at=NOW() WHERE id = $1', [id, 'archived']);
 
       res.json({ message: 'Product deleted successfully' });
     } catch (error) {

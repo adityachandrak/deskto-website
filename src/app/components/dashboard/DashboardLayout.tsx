@@ -17,6 +17,7 @@ interface DashboardLayoutProps {
   onSearch?: (q: string) => void;
   searchPlaceholder?: string;
   badgeCounts?: Partial<Record<string, number>>;
+  headerActions?: ReactNode;
 }
 
 function getInitialHash(): string {
@@ -34,6 +35,7 @@ function setHash(key: string) {
 export function DashboardLayout({
   user, groups, active, onTabChange, title, pageTitle, children, unreadCount,
   searchQuery, onSearch, searchPlaceholder, badgeCounts,
+  headerActions,
 }: DashboardLayoutProps) {
   // Hash sync
   useEffect(() => {
@@ -93,8 +95,11 @@ export function DashboardLayout({
             >
               <ArrowLeft size={11} /> <Home size={11} /> Back to site
             </a>
-            <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, color: "#888" }}>
-              Signed in as <span style={{ color: "white" }}>{user.name}</span> · {user.email}
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
+              <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, color: "#888" }}>
+                Signed in as <span style={{ color: "white" }}>{user.name}</span> · {user.email}
+              </div>
+              {headerActions}
             </div>
           </div>
           {children}

@@ -34,6 +34,43 @@ console.log("\n── Publish end-to-end ─────────────
 const adminTabs = await read("src/app/AdminDashboard.tabs.tsx");
 const appTsx = await read("src/app/App.tsx");
 const routes = await read("backend/src/routes/homepageContent.ts");
+const rebuildScript = await read("scripts/rebuild-backend.sh");
+const productionDeploy = await read("scripts/production-ec2-deploy.sh");
+const currentUser = await read("src/app/lib/currentUser.ts");
+const apiData = await read("src/app/lib/apiData.ts");
+const productionEnv = await read(".env.production");
+
+// 0. Production authentication: `/api` must issue a real backend JWT.
+check("production explicitly disables demo authentication", () => {
+  assert.match(productionEnv, /^VITE_USE_DEMO_AUTH=false$/m);
+});
+check("currentUser uses API auth for the same-origin /api backend", () => {
+  assert.match(currentUser, /VITE_USE_DEMO_AUTH\s*!==\s*["']true["']/);
+  assert.doesNotMatch(currentUser, /VITE_API_URL\s*&&\s*import\.meta\.env\.VITE_API_URL\s*!==\s*["']\/api["']/);
+});
+check("dashboard API data uses the same explicit demo-mode flag", () => {
+  assert.match(apiData, /VITE_USE_DEMO_AUTH\s*!==\s*["']true["']/);
+});
+check("production current user is never bootstrapped from demo localStorage", () => {
+  assert.match(currentUser, /useState<AuthUser \| null>\(\(\) => USE_API \? null : readUserFromStorage\(\)\)/);
+  assert.match(currentUser, /if \(USE_API\)[\s\S]{0,500}if \(!isAuthenticated\(\)\)[\s\S]{0,200}setUser\(null\)/);
+});
+check("admin dashboard has no unauthenticated demo-user bypass", () => {
+  assert.doesNotMatch(appTsx, /if \(kind === "admin" && !user\)/);
+  assert.doesNotMatch(appTsx, /id: "demo-admin"/);
+});
+check("dashboard waits for backend user verification when a JWT exists", () => {
+  assert.match(appTsx, /!user && isApiAuthenticated\(\) && !authWaitExpired/);
+  assert.match(appTsx, /setTimeout\(\(\) => setAuthWaitExpired\(true\), 10_000\)/);
+});
+check("signup awaits shared backend registration before redirecting", () => {
+  assert.match(appTsx, /const registered = await apiRegister\(/);
+  assert.doesNotMatch(appTsx, /apiRegister\([\s\S]{0,400}\.catch\(\(\) => \{ \/\* backend not available/);
+});
+check("admin signup code is passed to the backend and not exposed as a placeholder", () => {
+  assert.match(appTsx, /adminCode: pending\.adminCode/);
+  assert.doesNotMatch(appTsx, /placeholder=\{ADMIN_SIGNUP_CODE\}/);
+});
 
 // 1. Admin save handler: saveCmsItem calls publish() then notifyCmsRefetch()
 check("saveCmsItem calls .publish() when target is 'published'", () => {
@@ -132,6 +169,20 @@ check("GET /api/public/homepage-content filters by status = 'published'", () => 
 });
 check("PATCH /admin/homepage-content/:id/publish sets status='published'", () => {
   assert.match(routes, /router\.patch\('\/admin\/homepage-content\/:id\/publish'[\s\S]*?SET status = 'published'/);
+});
+
+// 8. Deployment must preserve DB/JWT configuration and verify the CMS route
+check("backend rebuild inspects environment before removing the container", () => {
+  const inspectAt = rebuildScript.indexOf('docker inspect "$CONTAINER_NAME"');
+  const removeAt = rebuildScript.indexOf('docker rm -f "$CONTAINER_NAME"');
+  assert.ok(inspectAt >= 0 && removeAt > inspectAt, "container is removed before its environment is captured");
+});
+check("backend rebuild fails unless the public CMS route returns 200", () => {
+  assert.match(rebuildScript, /cms_status=.*api\/public\/homepage-content/);
+  assert.match(rebuildScript, /cms_status" = "200"/);
+});
+check("production deploy verifies the public CMS route", () => {
+  assert.match(productionDeploy, /curl -fsS .*\/api\/public\/homepage-content/);
 });
 
 console.log(`\nResult: ${pass} passed, ${fail} failed\n`);

@@ -12,7 +12,9 @@ import { Toaster } from "@/app/components/ui/sonner";
 import { BrandMark } from "@/app/components/BrandMark";
 import { toast } from "sonner";
 import { AUTH_STATE_CHANGED_EVENT, logout, useCurrentUser, login as apiLogin, register as apiRegister } from "@/app/lib/currentUser";
+import { useTenantConfig, useFeatureFlags } from "@/app/core/TenantConfigContext";
 import { ordersApi, servicesApi, isAuthenticated as isApiAuthenticated } from "@/app/lib/api";
+
 import CustomerDashboard from "@/app/CustomerDashboard";
 import StaffDashboard from "@/app/StaffDashboard";
 import AdminDashboard from "@/app/AdminDashboard";
@@ -55,7 +57,7 @@ class AppErrorBoundary extends Component<{ children: ReactNode }, { error: Error
     return (
       <div style={{ background: "#050505", minHeight: "100vh", color: "white", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, fontFamily: "'Space Grotesk', sans-serif" }}>
         <div className="glass-card" style={{ width: "min(720px, 100%)", padding: 24, display: "grid", gap: 14, borderColor: "rgba(255,31,69,.35)" }}>
-          <div style={{ fontFamily: "'Orbitron', sans-serif", color: "#FF1F45", fontSize: 22 }}>Dashboard could not load</div>
+          <div style={{ fontFamily: "'Orbitron', sans-serif", color: "var(--primary)", fontSize: 22 }}>Dashboard could not load</div>
           <div style={{ color: "#bbb", lineHeight: 1.6 }}>
             A saved demo record in this browser is blocking the dashboard render. Resetting demo dashboard data regenerates clean records.
           </div>
@@ -96,7 +98,7 @@ function GlobalStyles() {
       body{background:#050505;color:#fff;font-family:'Inter',sans-serif;overflow-x:hidden;}
       ::-webkit-scrollbar{width:3px}
       ::-webkit-scrollbar-track{background:#050505}
-      ::-webkit-scrollbar-thumb{background:#FF1F45;border-radius:2px}
+      ::-webkit-scrollbar-thumb{background:var(--primary);border-radius:2px}
       ::selection{background:rgba(255,31,69,.3);color:#fff}
 
       /* ── Glass System ── */
@@ -149,12 +151,12 @@ function GlobalStyles() {
 
       .glass-pill-primary{
         border-color:rgba(255,31,69,0.6);
-        color:#FF1F45;
+        color:var(--primary);
         background:rgba(255,31,69,0.06);
       }
       .glass-pill-primary:hover{
         background:rgba(255,31,69,0.14);
-        border-color:#FF1F45;
+        border-color:var(--primary);
         box-shadow:0 0 24px rgba(255,31,69,0.4);
       }
       .glass-pill-outline{
@@ -166,7 +168,7 @@ function GlobalStyles() {
       }
       .glass-pill-red{
         border-color:rgba(255,31,69,0.45);
-        color:#FF1F45;
+        color:var(--primary);
       }
       .glass-pill-red:hover{
         background:rgba(255,31,69,0.1);
@@ -209,7 +211,7 @@ function GlobalStyles() {
       .glass-pill-icon:hover{
         background:rgba(255,31,69,0.1);
         border-color:rgba(255,31,69,0.45);
-        color:#FF1F45;
+        color:var(--primary);
       }
       .glass-pill-sm{padding:7px 14px;font-size:9px;}
       .glass-pill-lg{padding:14px 28px;font-size:11px;}
@@ -357,7 +359,7 @@ function GlobalStyles() {
       .dash-sidebar{position:sticky;top:0;height:100vh;overflow:hidden;border-right:1px solid rgba(255,255,255,0.06);padding:20px 14px;background:rgba(10,10,10,0.6);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);}
       .dash-sidebar-link{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;font-family:'Space Grotesk',sans-serif;font-size:12px;color:#888;transition:all .15s;cursor:pointer;border-left:2px solid transparent;margin-bottom:2px;}
       .dash-sidebar-link:hover{background:rgba(255,255,255,0.04);color:white;}
-      .dash-sidebar-link.active{background:rgba(255,31,69,0.1);color:#FF1F45;border-left-color:#FF1F45;}
+      .dash-sidebar-link.active{background:rgba(255,31,69,0.1);color:var(--primary);border-left-color:var(--primary);}
       .dash-main{padding:24px 32px;}
       .dash-topbar{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 24px;border-bottom:1px solid rgba(255,255,255,0.06);position:sticky;top:0;background:rgba(5,5,5,0.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);z-index:50;}
       .dash-kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;}
@@ -367,7 +369,7 @@ function GlobalStyles() {
       .dash-timeline-step{position:relative;}
       .dash-timeline-step::before{content:"";position:absolute;left:-18px;top:6px;width:11px;height:11px;border-radius:50%;background:#0a0a0a;border:2px solid #555;}
       .dash-timeline-step.done::before{background:#00cc66;border-color:#00cc66;box-shadow:0 0 8px rgba(0,204,102,0.5);}
-      .dash-timeline-step.current::before{background:#FF1F45;border-color:#FF1F45;box-shadow:0 0 8px rgba(255,31,69,0.6);}
+      .dash-timeline-step.current::before{background:var(--primary);border-color:var(--primary);box-shadow:0 0 8px rgba(255,31,69,0.6);}
       .dash-sidebar-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:590;display:none;}
       .dash-menu-btn,.dash-sidebar-close{display:none;}
       .data-table-mobile-cards{display:none;}
@@ -452,7 +454,7 @@ function ParticleCanvas() {
         p.x+=p.vx; p.y+=p.vy;
         if(p.x<0)p.x=canvas.width; if(p.x>canvas.width)p.x=0;
         if(p.y<0)p.y=canvas.height; if(p.y>canvas.height)p.y=0;
-        ctx.beginPath(); ctx.arc(p.x,p.y,p.size,0,Math.PI*2); ctx.fillStyle=p.red?"#FF1F45":"#fff"; ctx.globalAlpha=p.alpha; ctx.fill();
+        ctx.beginPath(); ctx.arc(p.x,p.y,p.size,0,Math.PI*2); ctx.fillStyle=p.red?"var(--primary)":"#fff"; ctx.globalAlpha=p.alpha; ctx.fill();
       });
       ctx.globalAlpha=1;
       for(let i=0;i<pts.length;i++) for(let j=i+1;j<pts.length;j++){
@@ -484,12 +486,12 @@ export function SectionHeader({ eyebrow,title,accent,sub }: { eyebrow:string;tit
   return (
     <div style={{ textAlign:"center",marginBottom:52 }}>
       <Reveal>
-        <span className="glass-red" style={{ display:"inline-block",padding:"6px 16px",borderRadius:4,fontFamily:"'Space Grotesk',sans-serif",fontSize:10,fontWeight:600,color:"#FF1F45",letterSpacing:"3px",textTransform:"uppercase",marginBottom:16 }}>{eyebrow}</span>
+        <span className="glass-red" style={{ display:"inline-block",padding:"6px 16px",borderRadius:4,fontFamily:"'Space Grotesk',sans-serif",fontSize:10,fontWeight:600,color:"var(--primary)",letterSpacing:"3px",textTransform:"uppercase",marginBottom:16 }}>{eyebrow}</span>
       </Reveal>
       <Reveal delay={.1}>
         <h2 className="section-h2" style={{ fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(26px,4vw,50px)",fontWeight:900,lineHeight:1.05,letterSpacing:"-.5px",marginBottom:12 }}>
           <span style={{ color:"white" }}>{title} </span>
-          <span style={{ background:"linear-gradient(135deg,#FF1F45,#ff8090)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent" }}>{accent}</span>
+          <span style={{ background:"linear-gradient(135deg,var(--primary),#ff8090)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent" }}>{accent}</span>
         </h2>
       </Reveal>
       {sub && <Reveal delay={.2}><p style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:15,color:"#CFCFCF",maxWidth:500,margin:"0 auto",lineHeight:1.7 }}>{sub}</p></Reveal>}
@@ -579,7 +581,7 @@ function NavbarCartButton({ mobile=false }: { mobile?: boolean }) {
     <a href="/checkout" className={`glass-pill glass-pill-icon${mobile ? " mobile-only" : ""}`} aria-label="Open cart" style={{ position:"relative",fontSize:0,textDecoration:"none",color:"white" }}>
       <ShoppingCart size={mobile ? 16 : 15} />
       {count > 0 && (
-        <span style={{ position:"absolute",top:3,right:3,minWidth:13,height:13,padding:"0 3px",background:"#FF1F45",borderRadius:999,fontSize:7,display:"flex",alignItems:"center",justifyContent:"center",color:"white",fontFamily:"'Rajdhani',sans-serif",fontWeight:700 }}>
+        <span style={{ position:"absolute",top:3,right:3,minWidth:13,height:13,padding:"0 3px",background:"var(--primary)",borderRadius:999,fontSize:7,display:"flex",alignItems:"center",justifyContent:"center",color:"white",fontFamily:"'Rajdhani',sans-serif",fontWeight:700 }}>
           {count > 99 ? "99+" : count}
         </span>
       )}
@@ -588,6 +590,7 @@ function NavbarCartButton({ mobile=false }: { mobile?: boolean }) {
 }
 
 export function Navbar() {
+  const config = useTenantConfig();
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   useEffect(() => {
@@ -610,16 +613,17 @@ export function Navbar() {
       <div className="nav-inner" style={{ maxWidth:1400,margin:"0 auto",padding:"0 28px",display:"flex",alignItems:"center",justifyContent:"space-between",height:68 }}>
 
         {/* Logo */}
-        <a href="/" aria-label="Go to DESKTO home" style={{ display:"flex",alignItems:"center",gap:10,textDecoration:"none",flexShrink:0 }}>
+        <a href="/" aria-label={`Go to ${config.site.name} home`} style={{ display:"flex",alignItems:"center",gap:10,textDecoration:"none",flexShrink:0 }}>
           <BrandMark size={38} />
         </a>
+
 
         {/* Desktop links */}
         <div className="desktop-only" style={{ alignItems:"center",gap:30 }}>
           {links.map(l => (
             <a key={l.label} href={l.href}
               style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:11,fontWeight:600,color:"#CFCFCF",textDecoration:"none",letterSpacing:"1.5px",textTransform:"uppercase",transition:"color .3s" }}
-              onMouseEnter={e=>(e.currentTarget.style.color="#FF1F45")}
+              onMouseEnter={e=>(e.currentTarget.style.color="var(--primary)")}
               onMouseLeave={e=>(e.currentTarget.style.color="#CFCFCF")}>{l.label}</a>
           ))}
           <NavbarLogoutButton />
@@ -653,10 +657,10 @@ export function Navbar() {
             {links.map(l => (
               <a key={l.label} href={l.href} onClick={() => setOpen(false)}
                 style={{ fontFamily:"'Space Grotesk',sans-serif",color:"#CFCFCF",textDecoration:"none",fontSize:13,fontWeight:600,letterSpacing:"1.5px",textTransform:"uppercase",padding:"13px 0",borderBottom:"1px solid rgba(255,255,255,.04)",display:"flex",alignItems:"center",justifyContent:"space-between",transition:"color .3s" }}
-                onMouseEnter={e=>(e.currentTarget.style.color="#FF1F45")}
+                onMouseEnter={e=>(e.currentTarget.style.color="var(--primary)")}
                 onMouseLeave={e=>(e.currentTarget.style.color="#CFCFCF")}>
                 <span>{l.label}</span>
-                <ChevronRight size={13} color="#FF1F45" />
+                <ChevronRight size={13} color="var(--primary)" />
               </a>
             ))}
             <NavbarLogoutButton mobile onLogout={() => setOpen(false)} />
@@ -717,7 +721,7 @@ function Gpu3DFan({ cx, cy, r, anim }: { cx: number; cy: number; r: number; anim
         return <circle key={a} cx={sx} cy={sy} r={1.8} fill="#1a1a1e" stroke="rgba(255,255,255,.15)" strokeWidth={0.5} />;
       })}
       {/* Center LED glow */}
-      <circle cx={cx} cy={cy} r={r * 0.07} fill="#FF1F45" opacity={0.9} className="animate-glow" />
+      <circle cx={cx} cy={cy} r={r * 0.07} fill="var(--primary)" opacity={0.9} className="animate-glow" />
       <circle cx={cx} cy={cy} r={r * 0.12} fill="none" stroke="rgba(255,31,69,.2)" strokeWidth={0.6} />
     </g>
   );
@@ -812,11 +816,11 @@ function Gpu3DBackground() {
             {/* ── Gradient: RGB bar (red-maroon theme) ── */}
             <linearGradient id="gpuRgb5090" x1="0" y1="0" x2="1" y2="0">
               <stop offset="0%" stopColor="#8B0000" />
-              <stop offset="20%" stopColor="#FF1F45" />
+              <stop offset="20%" stopColor="var(--primary)" />
               <stop offset="40%" stopColor="#cc1133" />
-              <stop offset="60%" stopColor="#FF1F45" />
+              <stop offset="60%" stopColor="var(--primary)" />
               <stop offset="80%" stopColor="#8B0000" />
-              <stop offset="100%" stopColor="#FF1F45" />
+              <stop offset="100%" stopColor="var(--primary)" />
             </linearGradient>
             {/* ── Gradient: PCIe gold pins ── */}
             <linearGradient id="gpuPCIe5090" x1="0" y1="0" x2="0" y2="1">
@@ -832,7 +836,7 @@ function Gpu3DBackground() {
             {/* ── Filter: Card drop shadow ── */}
             <filter id="gpuSoft5090" x="-20%" y="-20%" width="140%" height="140%">
               <feDropShadow dx="0" dy="20" stdDeviation="28" floodColor="#000" floodOpacity="0.6" />
-              <feDropShadow dx="0" dy="6" stdDeviation="8" floodColor="#FF1F45" floodOpacity="0.08" />
+              <feDropShadow dx="0" dy="6" stdDeviation="8" floodColor="var(--primary)" floodOpacity="0.08" />
             </filter>
             {/* ── Filter: Neon glow for RGB strip ── */}
             <filter id="gpuNeonGlow" x="-30%" y="-60%" width="160%" height="220%">
@@ -855,7 +859,7 @@ function Gpu3DBackground() {
             <circle
               key={`p-${i}`}
               cx={p.x} cy={p.y} r={p.size}
-              fill={p.isRed ? "#FF1F45" : "#ffffff"}
+              fill={p.isRed ? "var(--primary)" : "#ffffff"}
               opacity={p.opacity}
               style={{
                 animation: `gpu-particle-drift ${p.dur}s ease-in-out infinite`,
@@ -872,7 +876,7 @@ function Gpu3DBackground() {
             <circle
               key={`s-${i}`}
               cx={s.x} cy={s.y} r={1}
-              fill="#FF1F45"
+              fill="var(--primary)"
               style={{
                 animation: `gpu-spark ${s.dur}s ease-out infinite`,
                 animationDelay: `${s.delay}s`,
@@ -888,7 +892,7 @@ function Gpu3DBackground() {
 
           {/* ═══════════ CONTACT SHADOW ═══════════ */}
           <ellipse cx="460" cy="510" rx="340" ry="28" fill="#000" opacity="0.5" />
-          <ellipse cx="460" cy="510" rx="220" ry="14" fill="#FF1F45" opacity="0.03" />
+          <ellipse cx="460" cy="510" rx="220" ry="14" fill="var(--primary)" opacity="0.03" />
 
           <g filter="url(#gpuSoft5090)">
 
@@ -1050,8 +1054,8 @@ function HeroSection() {
       <div className="hero-content section-inner" style={{ position:"relative",zIndex:10,maxWidth:1400,margin:"0 auto",padding:"130px 32px 130px",width:"100%" }}>
         <div style={{ maxWidth:640 }}>
           <motion.div initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:.6}} style={{marginBottom:20}}>
-            <span className="glass-red" style={{ display:"inline-flex",alignItems:"center",gap:8,padding:"7px 16px",borderRadius:4,fontFamily:"'Space Grotesk',sans-serif",fontSize:11,fontWeight:600,color:"#FF1F45",letterSpacing:"2.5px",textTransform:"uppercase" }}>
-              <span className="animate-glow" style={{ width:6,height:6,background:"#FF1F45",borderRadius:"50%" }} />
+            <span className="glass-red" style={{ display:"inline-flex",alignItems:"center",gap:8,padding:"7px 16px",borderRadius:4,fontFamily:"'Space Grotesk',sans-serif",fontSize:11,fontWeight:600,color:"var(--primary)",letterSpacing:"2.5px",textTransform:"uppercase" }}>
+              <span className="animate-glow" style={{ width:6,height:6,background:"var(--primary)",borderRadius:"50%" }} />
               Premium Gaming Machines
             </span>
           </motion.div>
@@ -1059,7 +1063,7 @@ function HeroSection() {
           <motion.h1 className="hero-h1 animate-glitch" initial={{opacity:0,y:40}} animate={{opacity:1,y:0}} transition={{duration:.85,delay:.15,ease:[.22,1,.36,1]}}
             style={{ fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(36px,6vw,82px)",fontWeight:900,lineHeight:1.0,letterSpacing:"-1.5px",marginBottom:20 }}>
             <span style={{ display:"block",color:"white" }}>POWER YOUR</span>
-            <span style={{ display:"block",background:"linear-gradient(135deg,#FF1F45 0%,#ff7b90 50%,#FF1F45 100%)",backgroundSize:"200% 100%",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",animation:"shimmer 4s linear infinite" }}>DOMINANCE</span>
+            <span style={{ display:"block",background:"linear-gradient(135deg,var(--primary) 0%,#ff7b90 50%,var(--primary) 100%)",backgroundSize:"200% 100%",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",animation:"shimmer 4s linear infinite" }}>DOMINANCE</span>
             <span style={{ display:"block",color:"rgba(255,255,255,.6)",fontSize:"52%" }}>WITH DESKTO</span>
           </motion.h1>
 
@@ -1084,7 +1088,7 @@ function HeroSection() {
         <div className="hero-stats" style={{ maxWidth:1400,margin:"0 auto",padding:"16px 32px",display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12 }}>
           {[["5,000+","PCs Delivered"],["15K+","Happy Customers"],["98%","Satisfaction Rate"],["8 Yrs","In Business"]].map(([n,l])=>(
             <div key={l} style={{ textAlign:"center" }}>
-              <div className="hero-stats-num" style={{ fontFamily:"'Rajdhani',sans-serif",fontSize:26,fontWeight:700,color:"#FF1F45",lineHeight:1 }}>{n}</div>
+              <div className="hero-stats-num" style={{ fontFamily:"'Rajdhani',sans-serif",fontSize:26,fontWeight:700,color:"var(--primary)",lineHeight:1 }}>{n}</div>
               <div style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:10,color:"#CFCFCF",letterSpacing:"1px",marginTop:3 }}>{l}</div>
             </div>
           ))}
@@ -1129,7 +1133,7 @@ export const PRODUCTS = [
   { id:31,name:"Premium Build Service",type:"general",category:"others",condition:"first-hand",brand:"DESKTO",price:4500,orig:null,rating:4.9,reviews:182,badge:"PRO",inStock:true,warrantyMonths:0,rgb:false,specs:["Cable management","Thermal paste application","Stress test 12h"],img:"https://images.unsplash.com/photo-1587202372616-b43abea06c2a?w=400&h=280&fit=crop&auto=format",createdAt:20240101,popularity:5400,sales:188 },
 ];
 
-export const BADGE_CLR: Record<string,string> = { BESTSELLER:"linear-gradient(135deg,#FF1F45,#cc001a)",HOT:"linear-gradient(135deg,#ff6b00,#cc4400)",NEW:"linear-gradient(135deg,#00b4ff,#0066cc)",VALUE:"linear-gradient(135deg,#00cc66,#006633)",PRO:"linear-gradient(135deg,#7a00ff,#440099)" };
+export const BADGE_CLR: Record<string,string> = { BESTSELLER:"linear-gradient(135deg,var(--primary),#cc001a)",HOT:"linear-gradient(135deg,#ff6b00,#cc4400)",NEW:"linear-gradient(135deg,#00b4ff,#0066cc)",VALUE:"linear-gradient(135deg,#00cc66,#006633)",PRO:"linear-gradient(135deg,#7a00ff,#440099)" };
 export type Product = typeof PRODUCTS[number] & { liveId?: string; sku?: string };
 type ProductType = Product["type"];
 type ProductCondition = Product["condition"];
@@ -1308,6 +1312,15 @@ export const CATEGORY_LABELS: Record<ProductCategory,string> = {
   "accessories":"Accessories", "others":"Others",
 };
 
+// Fixed storefront order requested by the catalog team. Do not derive this
+// list from the current page of products: empty/new categories must remain
+// selectable and the live catalog now contains more than 100 SKUs.
+export const SHOP_CATEGORY_ORDER: ProductCategory[] = [
+  "gaming-pc", "desktop-pc", "gaming-laptop", "laptop", "monitor", "cpu", "gpu", "ram", "nvme",
+  "motherboard", "psu", "cabinet", "keyboard", "mouse", "headset", "router", "ups", "printer",
+  "scanner", "hdd", "ssd", "accessories", "others",
+];
+
 // Top 5 popular companies per category, used to group the Brand filter on the
 // Shop Products page (independent of which brands currently exist in the demo
 // catalogue — this is the curated reference list of trusted brands per category).
@@ -1378,7 +1391,7 @@ export function ProductCard({ p, onAdd }: { p: Product; onAdd?: (product: Produc
           )}
         </div>
         <button onClick={(e)=>{e.preventDefault();e.stopPropagation();toggle(p.id);}} className="glass-pill glass-pill-icon" style={{ position:"absolute",top:10,right:10,zIndex:3,width:32,height:32,fontSize:0 }}>
-          <Heart size={12} style={{ color:wished?"#FF1F45":"#CFCFCF",fill:wished?"#FF1F45":"none" }} />
+          <Heart size={12} style={{ color:wished?"var(--primary)":"#CFCFCF",fill:wished?"var(--primary)":"none" }} />
         </button>
         <div style={{ position:"relative",overflow:"hidden",height:185,background:"#0a0a0a" }}>
           <img src={p.img} alt={p.name} style={{ width:"100%",height:"100%",objectFit:"cover",filter:"brightness(.82)",transition:"transform .5s ease" }}
@@ -1399,7 +1412,7 @@ export function ProductCard({ p, onAdd }: { p: Product; onAdd?: (product: Produc
             ))}
           </div>
           <div style={{ display:"flex",gap:2,marginBottom:11,alignItems:"center" }}>
-            {Array.from({length:5}).map((_,i)=>(<Star key={i} size={9} style={{ fill:i<Math.floor(p.rating)?"#FF1F45":"none",color:"#FF1F45" }} />))}
+            {Array.from({length:5}).map((_,i)=>(<Star key={i} size={9} style={{ fill:i<Math.floor(p.rating)?"var(--primary)":"none",color:"var(--primary)" }} />))}
             <span style={{ fontFamily:"'Rajdhani',sans-serif",fontSize:10,color:"#CFCFCF",marginLeft:4 }}>({p.reviews})</span>
             {p.warrantyMonths > 0 && (
               <span style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:8,color:"#00cc66",marginLeft:8,display:"flex",alignItems:"center",gap:3 }}><ShieldCheck size={9} /> {p.warrantyMonths}mo</span>
@@ -1407,7 +1420,7 @@ export function ProductCard({ p, onAdd }: { p: Product; onAdd?: (product: Produc
           </div>
           <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",gap:6 }}>
             <div>
-              <span style={{ fontFamily:"'Rajdhani',sans-serif",fontSize:19,fontWeight:700,color:"#FF1F45" }}>₹{p.price.toLocaleString("en-IN")}</span>
+              <span style={{ fontFamily:"'Rajdhani',sans-serif",fontSize:19,fontWeight:700,color:"var(--primary)" }}>₹{p.price.toLocaleString("en-IN")}</span>
               {p.orig && p.orig > p.price && (
                 <span style={{ fontFamily:"'Rajdhani',sans-serif",fontSize:10,color:"#444",textDecoration:"line-through",marginLeft:5 }}>₹{p.orig.toLocaleString("en-IN")}</span>
               )}
@@ -1511,14 +1524,14 @@ function ProductCatalogPage({ category }: { category: ProductType | "all" }) {
   const [cart,setCart] = useState<Record<number,number>>(() => loadCart());
   const [status,setStatus] = useState("Select products to add to your cart.");
   const [filtersOpen,setFiltersOpen] = useState(false);
-  const dynamicCategories = Array.from(new Set(catalogProducts.map(p => p.category))) as ProductCategory[];
+  const dynamicCategories = SHOP_CATEGORY_ORDER;
   const allCategoryBrands = Array.from(new Set(Object.values(CATEGORY_BRANDS).flat() as string[])).sort();
 
   const loadLiveProducts = useCallback(async () => {
     setCatalogLoading(true);
     setCatalogError("");
     try {
-      const response = await fetch(`${PUBLIC_PRODUCTS_API_BASE}/products?limit=100`, {
+      const response = await fetch(`${PUBLIC_PRODUCTS_API_BASE}/products?limit=200`, {
         method: "GET",
         headers: { "Content-Type": "application/json" },
         cache: "no-store",
@@ -1629,7 +1642,7 @@ function ProductCatalogPage({ category }: { category: ProductType | "all" }) {
         <Reveal>
           <div className="glass-card" style={{ borderRadius:14,padding:16,display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(220px, 1fr))",gap:12,marginBottom:18 }}>
             <label style={{ display:"flex",alignItems:"center",gap:10 }}>
-              <Search size={15} color="#FF1F45" />
+              <Search size={15} color="var(--primary)" />
               <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search by name, brand or spec"
                 style={{ width:"100%",background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.09)",borderRadius:8,padding:"11px 12px",fontFamily:"'Space Grotesk',sans-serif",fontSize:16,color:"white",outline:"none" }} />
             </label>
@@ -1655,7 +1668,7 @@ function ProductCatalogPage({ category }: { category: ProductType | "all" }) {
         <Reveal>
           <div className="glass-card" style={{ borderRadius:14,padding:16,marginBottom:22 }}>
             <button onClick={() => setFiltersOpen(o => !o)} className="glass-pill glass-pill-outline" style={{ width:"100%",justifyContent:"space-between",padding:"10px 14px",fontSize:10,marginBottom:filtersOpen?16:0 }}>
-              <span style={{ display:"flex",alignItems:"center",gap:8 }}><Settings size={12} color="#FF1F45" /> {filtersOpen?"Hide":"Show"} Filters</span>
+              <span style={{ display:"flex",alignItems:"center",gap:8 }}><Settings size={12} color="var(--primary)" /> {filtersOpen?"Hide":"Show"} Filters</span>
               <span style={{ fontFamily:"'Rajdhani',sans-serif",fontSize:10,color:"#777" }}>{visibleProducts.length} match</span>
             </button>
             {filtersOpen && (
@@ -1738,14 +1751,14 @@ function ProductCatalogPage({ category }: { category: ProductType | "all" }) {
         <div style={{ position:"fixed",bottom:0,left:0,right:0,zIndex:200,background:"rgba(5,5,5,.92)",backdropFilter:"blur(16px)",WebkitBackdropFilter:"blur(16px)",borderTop:"1px solid rgba(255,31,69,.3)",padding:"14px 32px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:14,flexWrap:"wrap" }}>
           <div style={{ display:"flex",alignItems:"center",gap:14 }}>
             <div style={{ position:"relative" }}>
-              <ShoppingCart size={22} color="#FF1F45" />
+              <ShoppingCart size={22} color="var(--primary)" />
               {cartCount>0 && (
-                <div style={{ position:"absolute",top:-6,right:-8,background:"#FF1F45",color:"white",fontFamily:"'Orbitron',sans-serif",fontSize:9,fontWeight:700,padding:"2px 6px",borderRadius:8,minWidth:18,textAlign:"center" }}>{cartCount}</div>
+                <div style={{ position:"absolute",top:-6,right:-8,background:"var(--primary)",color:"white",fontFamily:"'Orbitron',sans-serif",fontSize:9,fontWeight:700,padding:"2px 6px",borderRadius:8,minWidth:18,textAlign:"center" }}>{cartCount}</div>
               )}
             </div>
             <div>
               <div style={{ fontFamily:"'Orbitron',sans-serif",fontSize:11,color:"white",letterSpacing:"1px" }}>YOUR CART</div>
-              <div style={{ fontFamily:"'Rajdhani',sans-serif",fontSize:13,color:"#FF1F45" }}>₹{subtotal.toLocaleString("en-IN")}</div>
+              <div style={{ fontFamily:"'Rajdhani',sans-serif",fontSize:13,color:"var(--primary)" }}>₹{subtotal.toLocaleString("en-IN")}</div>
             </div>
           </div>
           <div style={{ display:"flex",gap:10 }}>
@@ -1825,19 +1838,19 @@ function WorkflowTimeline() {
         <div ref={ref} className="workflow-grid" style={{ display:"grid",gridTemplateColumns:"repeat(9,1fr)",gap:8,position:"relative" }}>
           <div className="workflow-line-abs" style={{ position:"absolute",top:27,left:"5%",right:"5%",height:2,background:"rgba(255,255,255,.06)",zIndex:0 }} />
           <motion.div className="workflow-line-abs" initial={{width:"0%"}} animate={inView?{width:`${(STEPS.filter(s=>s.status==="done").length/STEPS.length)*90}%`}:{width:"0%"}} transition={{duration:2,delay:.3,ease:"easeOut"}}
-            style={{ position:"absolute",top:27,left:"5%",height:2,background:"linear-gradient(90deg,#FF1F45,#ff6b80)",zIndex:1,boxShadow:"0 0 8px rgba(255,31,69,.4)" }} />
+            style={{ position:"absolute",top:27,left:"5%",height:2,background:"linear-gradient(90deg,var(--primary),#ff6b80)",zIndex:1,boxShadow:"0 0 8px rgba(255,31,69,.4)" }} />
           {STEPS.map((step,i)=>(
             <motion.div key={step.label} initial={{opacity:0,y:20}} animate={inView?{opacity:1,y:0}:{opacity:0,y:20}} transition={{duration:.5,delay:.4+i*.1}}
               style={{ display:"flex",flexDirection:"column",alignItems:"center",padding:"0 3px",position:"relative",zIndex:2 }}>
               <div className={step.status==="active" ? "glass-icon-circle glass-icon-circle-red" : "glass-icon-circle"}
                 style={{ width:54,height:54,marginBottom:12,
-                background:step.status==="done"?"linear-gradient(135deg,#FF1F45,#cc001a)":undefined,
-                border:step.status==="active"?"2px solid #FF1F45":step.status==="done"?"none":undefined,
+                background:step.status==="done"?"linear-gradient(135deg,var(--primary),#cc001a)":undefined,
+                border:step.status==="active"?"2px solid var(--primary)":step.status==="done"?"none":undefined,
                 animation:step.status==="active"?"glow-pulse 2s ease-in-out infinite":"none" }}>
-                {step.status==="done"?<CheckCircle size={20} color="white"/>:step.status==="active"?<Zap size={20} color="#FF1F45"/>:<Circle size={20} color="rgba(255,255,255,.2)"/>}
+                {step.status==="done"?<CheckCircle size={20} color="white"/>:step.status==="active"?<Zap size={20} color="var(--primary)"/>:<Circle size={20} color="rgba(255,255,255,.2)"/>}
               </div>
               <div style={{ textAlign:"center" }}>
-                <div style={{ fontFamily:"'Orbitron',sans-serif",fontSize:9,fontWeight:700,color:step.status!=="pending"?"#FF1F45":"#CFCFCF",letterSpacing:".5px",marginBottom:3,lineHeight:1.3 }}>{step.label}</div>
+                <div style={{ fontFamily:"'Orbitron',sans-serif",fontSize:9,fontWeight:700,color:step.status!=="pending"?"var(--primary)":"#CFCFCF",letterSpacing:".5px",marginBottom:3,lineHeight:1.3 }}>{step.label}</div>
                 <div style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:9,color:"#444",lineHeight:1.4,maxWidth:90,margin:"0 auto" }}>{step.desc}</div>
               </div>
             </motion.div>
@@ -1878,14 +1891,14 @@ function CustomPCSection() {
               <div style={{ display:"flex",flexDirection:"column",gap:20 }}>
                 {Object.entries(PC_COMPS).map(([key,comp])=>(
                   <div key={key}>
-                    <div style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:10,color:"#FF1F45",letterSpacing:"2px",textTransform:"uppercase",marginBottom:10,fontWeight:600 }}>{comp.label}</div>
+                    <div style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:10,color:"var(--primary)",letterSpacing:"2px",textTransform:"uppercase",marginBottom:10,fontWeight:600 }}>{comp.label}</div>
                     <div className="pc-opts" style={{ display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8 }}>
                       {comp.opts.map((opt,i)=>(
                         <button key={opt} onClick={()=>setSel(p=>({...p,[key]:i}))}
                           className={sel[key]===i ? "glass-pill glass-pill-primary" : "glass-pill glass-pill-outline"}
                           style={{ padding:"10px 14px",textAlign:"left",borderRadius:9999,justifyContent:"flex-start" }}>
                           <div style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:12,color:sel[key]===i?"white":"#CFCFCF",fontWeight:500 }}>{opt}</div>
-                          <div style={{ fontFamily:"'Rajdhani',sans-serif",fontSize:12,fontWeight:700,color:sel[key]===i?"#FF1F45":"#555",marginTop:2 }}>+₹{comp.prices[i].toLocaleString("en-IN")}</div>
+                          <div style={{ fontFamily:"'Rajdhani',sans-serif",fontSize:12,fontWeight:700,color:sel[key]===i?"var(--primary)":"#555",marginTop:2 }}>+₹{comp.prices[i].toLocaleString("en-IN")}</div>
                         </button>
                       ))}
                     </div>
@@ -1904,17 +1917,17 @@ function CustomPCSection() {
                       <div style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:9,color:"#555",letterSpacing:"1px",textTransform:"uppercase" }}>{c.label}</div>
                       <div style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:11,color:"#CFCFCF" }}>{c.opts[sel[k]]}</div>
                     </div>
-                    <div style={{ fontFamily:"'Rajdhani',sans-serif",fontSize:12,fontWeight:700,color:"#FF1F45" }}>₹{c.prices[sel[k]].toLocaleString("en-IN")}</div>
+                    <div style={{ fontFamily:"'Rajdhani',sans-serif",fontSize:12,fontWeight:700,color:"var(--primary)" }}>₹{c.prices[sel[k]].toLocaleString("en-IN")}</div>
                   </div>
                 ))}
                 <div style={{ display:"flex",justifyContent:"space-between",paddingBottom:9,borderBottom:"1px solid rgba(255,255,255,.05)" }}>
                   <div style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:11,color:"#CFCFCF" }}>Assembly & Testing</div>
-                  <div style={{ fontFamily:"'Rajdhani',sans-serif",fontSize:12,fontWeight:700,color:"#FF1F45" }}>₹8,000</div>
+                  <div style={{ fontFamily:"'Rajdhani',sans-serif",fontSize:12,fontWeight:700,color:"var(--primary)" }}>₹8,000</div>
                 </div>
               </div>
               <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",padding:"11px 0",borderTop:"1px solid rgba(255,31,69,.2)",marginBottom:16 }}>
                 <span style={{ fontFamily:"'Orbitron',sans-serif",fontSize:10,fontWeight:700,color:"white" }}>TOTAL</span>
-                <span style={{ fontFamily:"'Rajdhani',sans-serif",fontSize:24,fontWeight:700,color:"#FF1F45" }}>₹{total.toLocaleString("en-IN")}</span>
+                <span style={{ fontFamily:"'Rajdhani',sans-serif",fontSize:24,fontWeight:700,color:"var(--primary)" }}>₹{total.toLocaleString("en-IN")}</span>
               </div>
               <button className="glass-pill glass-pill-primary glass-pill-block" style={{ marginBottom:9 }}>
                 Order This Build
@@ -2071,7 +2084,7 @@ function HomeContentStatus({ loading, error, source, label }: { loading: boolean
   }
   if (source === "error") {
     return (
-      <div data-testid={`${label}-error`} style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 10, color: "#FF1F45", padding: "4px 0" }}>
+      <div data-testid={`${label}-error`} style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 10, color: "var(--primary)", padding: "4px 0" }}>
         Unable to load {label.toLowerCase()} from server: {error || "unknown error"}
       </div>
     );
@@ -2135,7 +2148,7 @@ function FeaturedBuildsSection() {
                     <div style={{ position:"absolute",inset:0,background:"linear-gradient(to top,rgba(5,5,5,.95) 0%,transparent 55%)" }} />
                     {b.rgb && <div className="rgb-bar" style={{ position:"absolute",bottom:0,left:0,right:0,height:3 }} />}
                     <div style={{ position:"absolute",top:12,right:12 }}>
-                      <span className="glass-red" style={{ display:"inline-block",padding:"4px 10px",borderRadius:4,fontFamily:"'Orbitron',sans-serif",fontSize:8,color:"#FF1F45",letterSpacing:"1.5px",fontWeight:700 }}>SIGNATURE</span>
+                      <span className="glass-red" style={{ display:"inline-block",padding:"4px 10px",borderRadius:4,fontFamily:"'Orbitron',sans-serif",fontSize:8,color:"var(--primary)",letterSpacing:"1.5px",fontWeight:700 }}>SIGNATURE</span>
                     </div>
                     <div style={{ position:"absolute",bottom:0,left:0,right:0,padding:"0 16px 16px" }}>
                       <h3 style={{ fontFamily:"'Orbitron',sans-serif",fontSize:17,fontWeight:900,color:"white",letterSpacing:"2px",marginBottom:3 }}>{b.name}</h3>
@@ -2144,7 +2157,7 @@ function FeaturedBuildsSection() {
                   </div>
                   <div style={{ padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap" }}>
                     <div style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:10,color:"#555" }}>{b.specs}</div>
-                    <a href={buildEnquiryHref(b.name)} target="_blank" rel="noopener noreferrer" style={{ fontFamily:"'Rajdhani',sans-serif",fontSize:17,fontWeight:700,color:"#FF1F45",textDecoration:"none" }}>Enquire</a>
+                    <a href={buildEnquiryHref(b.name)} target="_blank" rel="noopener noreferrer" style={{ fontFamily:"'Rajdhani',sans-serif",fontSize:17,fontWeight:700,color:"var(--primary)",textDecoration:"none" }}>Enquire</a>
                   </div>
                   <div style={{ padding:"0 16px 16px",display:"flex",gap:8 }}>
                     <a href={b.detailsHref} className="glass-pill glass-pill-outline glass-pill-sm" style={{ flex:1,justifyContent:"center",textDecoration:"none" }}>Details</a>
@@ -2174,7 +2187,7 @@ function BrandsSection() {
           {[...BRANDS,...BRANDS].map((b,i)=>(
             <div key={i} style={{ display:"inline-flex",alignItems:"center",padding:"0 34px",borderRight:"1px solid rgba(255,255,255,.05)" }}>
               <span style={{ fontFamily:"'Orbitron',sans-serif",fontSize:11,fontWeight:700,color:"rgba(255,255,255,.18)",letterSpacing:"3px",transition:"color .3s" }}
-                onMouseEnter={e=>(e.currentTarget.style.color="#FF1F45")}
+                onMouseEnter={e=>(e.currentTarget.style.color="var(--primary)")}
                 onMouseLeave={e=>(e.currentTarget.style.color="rgba(255,255,255,.18)")}>{b}</span>
             </div>
           ))}
@@ -2228,11 +2241,11 @@ function OffersSection() {
                 <img src={offer.img} alt={offer.title} style={{ position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:.22 }} />
                 <div style={{ position:"absolute",inset:0,background:"linear-gradient(90deg,rgba(5,5,5,.92) 0%,rgba(5,5,5,.35) 100%)" }} />
                 <div className={i === 0 ? "offer-hero-pad" : ""} style={{ position:"absolute",inset:0,padding:28,display:"flex",flexDirection:"column",justifyContent:"center",paddingRight:i === 0 ? 150 : 28 }}>
-                  <span style={{ fontFamily:"'Orbitron',sans-serif",fontSize:9,color:"#FF1F45",letterSpacing:"3px",marginBottom:10,fontWeight:700 }}>LIMITED TIME OFFER</span>
+                  <span style={{ fontFamily:"'Orbitron',sans-serif",fontSize:9,color:"var(--primary)",letterSpacing:"3px",marginBottom:10,fontWeight:700 }}>LIMITED TIME OFFER</span>
                   <h3 className="offer-h3" style={{ fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(18px,2.7vw,30px)",fontWeight:900,color:"white",marginBottom:8,lineHeight:1.1 }}>{offer.title}</h3>
                   <p style={{ fontFamily:"'Space Grotesk',sans-serif",color:"#CFCFCF",fontSize:13,marginBottom:18,maxWidth:620 }}>{offer.desc}</p>
                   <div style={{ display:"flex",alignItems:"center",gap:12,marginBottom:20,flexWrap:"wrap" }}>
-                    <span className="glass-red" style={{ padding:"3px 8px",borderRadius:3,fontFamily:"'Orbitron',sans-serif",fontSize:9,fontWeight:700,color:"#FF1F45" }}>{offer.discount}</span>
+                    <span className="glass-red" style={{ padding:"3px 8px",borderRadius:3,fontFamily:"'Orbitron',sans-serif",fontSize:9,fontWeight:700,color:"var(--primary)" }}>{offer.discount}</span>
                   </div>
                   <div style={{ display:"flex",gap:10,flexWrap:"wrap" }}>
                     <a href={offerEnquiryHref(offer.title)} target="_blank" rel="noopener noreferrer" className="glass-pill glass-pill-primary" style={{ textDecoration:"none" }}>
@@ -2246,7 +2259,7 @@ function OffersSection() {
                 {i === 0 && (
                   <div style={{ position:"absolute",top:16,right:16 }}>
                     <div className="glass-dark" style={{ padding:"8px 12px",borderRadius:8,textAlign:"center" }}>
-                      <div style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:9,color:"#FF1F45" }}>Ends in</div>
+                      <div style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:9,color:"var(--primary)" }}>Ends in</div>
                       <div style={{ fontFamily:"'Rajdhani',sans-serif",fontSize:22,fontWeight:700,color:"white" }}>23:47:12</div>
                     </div>
                   </div>
@@ -2296,7 +2309,7 @@ function GamingNewsSection() {
                     onMouseEnter={e=>(e.currentTarget.style.transform="scale(1.06)")}
                     onMouseLeave={e=>(e.currentTarget.style.transform="scale(1)")} />
                   <div style={{ position:"absolute",inset:0,background:"linear-gradient(to top,rgba(13,13,13,.8),transparent)" }} />
-                  <span className="glass-red" style={{ position:"absolute",top:12,left:12,padding:"3px 9px",borderRadius:3,fontFamily:"'Orbitron',sans-serif",fontSize:8,fontWeight:700,color:"#FF1F45",letterSpacing:"1px" }}>{n.tag}</span>
+                  <span className="glass-red" style={{ position:"absolute",top:12,left:12,padding:"3px 9px",borderRadius:3,fontFamily:"'Orbitron',sans-serif",fontSize:8,fontWeight:700,color:"var(--primary)",letterSpacing:"1px" }}>{n.tag}</span>
                 </div>
                 <div style={{ padding:16 }}>
                   <h3 style={{ fontFamily:"'Orbitron',sans-serif",fontSize:12,fontWeight:700,color:"white",lineHeight:1.45,marginBottom:10 }}>{n.title}</h3>
@@ -2354,7 +2367,7 @@ function TestimonialsSection() {
             <Reveal key={r.name} delay={i*.08}>
               <div className="card-hover glass-card" style={{ borderRadius:16,padding:22,border:"1px solid rgba(255,255,255,.06)",position:"relative" }}>
                 <div style={{ display:"flex",gap:3,marginBottom:12 }}>
-                  {Array.from({length:r.stars}).map((_,j)=><Star key={j} size={12} style={{ fill:"#FF1F45",color:"#FF1F45" }} />)}
+                  {Array.from({length:r.stars}).map((_,j)=><Star key={j} size={12} style={{ fill:"var(--primary)",color:"var(--primary)" }} />)}
                 </div>
                 <p style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:12,color:"#CFCFCF",lineHeight:1.75,marginBottom:16 }}>&ldquo;{r.text}&rdquo;</p>
                 <div style={{ display:"flex",alignItems:"center",gap:10 }}>
@@ -2364,7 +2377,7 @@ function TestimonialsSection() {
                     <div style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:9,color:"#555" }}>{r.role}</div>
                   </div>
                 </div>
-                <div className="animate-glow" style={{ position:"absolute",top:18,right:18,width:7,height:7,borderRadius:"50%",background:"#FF1F45" }} />
+                <div className="animate-glow" style={{ position:"absolute",top:18,right:18,width:7,height:7,borderRadius:"50%",background:"var(--primary)" }} />
               </div>
             </Reveal>
           ))}
@@ -2403,9 +2416,9 @@ function FAQSection() {
               <div className="glass-card" style={{ borderRadius:12,border:open===i?"1px solid rgba(255,31,69,.35)":"1px solid rgba(255,255,255,.06)",transition:"border-color .3s",overflow:"hidden" }}>
                 <button onClick={()=>setOpen(open===i?null:i)} className="faq-btn"
                   style={{ width:"100%",padding:"16px 18px",background:"none",border:"none",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,textAlign:"left" }}>
-                  <span className="faq-q" style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:13,fontWeight:600,color:open===i?"#FF1F45":"white",transition:"color .3s",flex:1 }}>{f.q}</span>
+                  <span className="faq-q" style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:13,fontWeight:600,color:open===i?"var(--primary)":"white",transition:"color .3s",flex:1 }}>{f.q}</span>
                   <div className={open===i ? "glass-icon-circle glass-icon-circle-red" : "glass-icon-circle"} style={{ flexShrink:0,width:28,height:28,transition:"all .3s" }}>
-                    {open===i?<Minus size={12} color="#FF1F45"/>:<Plus size={12} color="#CFCFCF"/>}
+                    {open===i?<Minus size={12} color="var(--primary)"/>:<Plus size={12} color="#CFCFCF"/>}
                   </div>
                 </button>
                 {open===i && (
@@ -2425,30 +2438,11 @@ function FAQSection() {
 
 // ─────────────── LOCATION ───────────────
 function LocationSection() {
-  const { addServiceRequest } = useDashboardData();
+  const config = useTenantConfig();
   const [enquiry, setEnquiry] = useState({ name: "", contact: "", serviceNeeded: "", requirements: "" });
   const [submittingEnquiry, setSubmittingEnquiry] = useState(false);
   const setEnquiryField = (key: keyof typeof enquiry, value: string) => {
     setEnquiry(prev => ({ ...prev, [key]: value }));
-  };
-  const saveLocalEnquiry = (serviceNumber?: string) => {
-    const contact = enquiry.contact.trim();
-    const isEmail = contact.includes("@");
-    return addServiceRequest({
-      id: serviceNumber,
-      kind: "support",
-      customerId: contact || `quick-enquiry-${Date.now()}`,
-      customerName: enquiry.name.trim(),
-      contactEmail: isEmail ? contact : "",
-      contactPhone: isEmail ? "" : contact,
-      title: `Quick Enquiry: ${enquiry.serviceNeeded.trim()}`,
-      deviceType: "Enquiry",
-      category: enquiry.serviceNeeded.trim(),
-      requirements: enquiry.requirements.trim() || enquiry.serviceNeeded.trim(),
-      serviceMethod: "Quick Enquiry",
-      priority: "Normal",
-      status: "submitted",
-    });
   };
   const submitEnquiry = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -2465,14 +2459,11 @@ function LocationSection() {
     setSubmittingEnquiry(true);
     try {
       const created = await servicesApi.createQuickEnquiry(payload);
-      saveLocalEnquiry(created.serviceNumber);
       toast.success(`Enquiry ${created.serviceNumber} submitted. We will contact you shortly.`);
       setEnquiry({ name: "", contact: "", serviceNeeded: "", requirements: "" });
     } catch (err) {
-      console.warn("[quick-enquiry] backend submit failed; saved locally:", err);
-      const local = saveLocalEnquiry();
-      toast.warning(`Could not reach the server. Enquiry saved locally as ${local.id}; please call us if you need an urgent response.`);
-      setEnquiry({ name: "", contact: "", serviceNeeded: "", requirements: "" });
+      console.warn("[quick-enquiry] backend submit failed:", err);
+      toast.error("Could not submit the enquiry. Please retry; no local-only record was created.");
     } finally {
       setSubmittingEnquiry(false);
     }
@@ -2484,24 +2475,24 @@ function LocationSection() {
         <div className="location-grid" style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:52,alignItems:"center" }}>
           <Reveal dir="left">
             <div>
-              <span className="glass-red" style={{ display:"inline-block",padding:"6px 14px",borderRadius:4,fontFamily:"'Space Grotesk',sans-serif",fontSize:10,fontWeight:600,color:"#FF1F45",letterSpacing:"3px",textTransform:"uppercase",marginBottom:16 }}>Visit Us</span>
-              <h2 style={{ fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(22px,3.5vw,42px)",fontWeight:900,color:"white",lineHeight:1.1,marginBottom:16 }}>Experience DESKTO<br /><span style={{ color:"#FF1F45" }}>In Person</span></h2>
+              <span className="glass-red" style={{ display:"inline-block",padding:"6px 14px",borderRadius:4,fontFamily:"'Space Grotesk',sans-serif",fontSize:10,fontWeight:600,color:"var(--primary)",letterSpacing:"3px",textTransform:"uppercase",marginBottom:16 }}>Visit Us</span>
+              <h2 style={{ fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(22px,3.5vw,42px)",fontWeight:900,color:"white",lineHeight:1.1,marginBottom:16 }}>Experience {config.site.name}<br /><span style={{ color:"var(--primary)" }}>In Person</span></h2>
               <p style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:14,color:"#CFCFCF",lineHeight:1.7,marginBottom:26 }}>Visit our showroom to see our machines running live. Our experts are ready to guide you through every option.</p>
               <div style={{ display:"flex",flexDirection:"column",gap:12 }}>
                 {[
                   {icon:User,text:"Mr. Vishnu — Computer & Gaming Expert"},
                   {icon:Wrench,text:"Gaming PC Builds | Laptop/Desktop Repair"},
                   {icon:Package,text:"Used Laptops (Buy/Sell) | Data Recovery | Gaming Info"},
-                  {icon:Phone,text:"9893543312",link:"https://wa.me/919893543312"},
-                  {icon:Mail,text:"desktogaming@gmail.com",link:"mailto:desktogaming@gmail.com"},
-                  {icon:MapPin,text:"Ground Floor Shop No-9 Block No-8 Dakshin Gangotri Supela Bhilai 490023",link:"https://maps.google.com/?q=21.206030,81.348663"}
+                  {icon:Phone,text:config.site.contact.phone,link:`https://wa.me/${config.site.contact.whatsappNumber || "919893543312"}`},
+                  {icon:Mail,text:config.site.contact.email,link:`mailto:${config.site.contact.email}`},
+                  {icon:MapPin,text:config.site.contact.address,link:`https://maps.google.com/?q=${encodeURIComponent(config.site.contact.address)}`}
                 ].map(({icon:Icon,text,link})=>(
                   <a key={text} href={link} target={link ? "_blank" : undefined} rel="noopener noreferrer" style={{ display:"flex",alignItems:"flex-start",gap:10,textDecoration:"none",cursor:link?"pointer":"default" }}>
                     <div className="glass-icon-circle glass-icon-circle-red" style={{ width:32,height:32,flexShrink:0 }}>
-                      <Icon size={13} color="#FF1F45" />
+                      <Icon size={13} color="var(--primary)" />
                     </div>
                     <span style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:13,color:"#CFCFCF",paddingTop:7,transition:"color .3s" }}
-                          onMouseEnter={e=>{if(link) e.currentTarget.style.color="#FF1F45"}}
+                          onMouseEnter={e=>{if(link) e.currentTarget.style.color="var(--primary)"}}
                           onMouseLeave={e=>{if(link) e.currentTarget.style.color="#CFCFCF"}}>
                       {text}
                     </span>
@@ -2510,6 +2501,7 @@ function LocationSection() {
               </div>
             </div>
           </Reveal>
+
           <Reveal dir="right">
             <form onSubmit={submitEnquiry} className="glass-card" style={{ borderRadius:18,padding:26,border:"1px solid rgba(255,255,255,.07)" }}>
               <h3 style={{ fontFamily:"'Orbitron',sans-serif",fontSize:13,fontWeight:800,color:"white",marginBottom:18,letterSpacing:"1px" }}>QUICK ENQUIRY</h3>
@@ -2569,6 +2561,7 @@ type PendingSignup = {
   role: AuthRole;
   staffId?: string;
   department?: string;
+  adminCode?: string;
   otp: string;
   expiresAt: number;
   attempts: number;
@@ -2604,7 +2597,9 @@ const OTP_TTL_MS = 5 * 60 * 1000;
 const MAX_OTP_ATTEMPTS = 3;
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCK_MS = 10 * 60 * 1000;
-const ADMIN_SIGNUP_CODE = "DESKTO-ADMIN-2026";
+// Must match backend/src/routes/auth.ts. This is only a client-side early
+// validation; the backend remains authoritative.
+const ADMIN_SIGNUP_CODE = "ADMIN-DESKTO-2026";
 
 const emptyAuthState = {
   users: [] as AuthUser[],
@@ -2732,6 +2727,7 @@ function AuthSection({ initialMode="sign-in", initialRole="customer", standalone
         passwordHash: demoHashPassword(signup.password),
         rawPassword: signup.password,
         role: signup.role,
+        adminCode: signup.role === "admin" ? signup.adminCode.trim() : undefined,
         staffId: signup.role === "staff" ? signup.staffId.trim().toUpperCase() : undefined,
         department: signup.role === "staff" ? signup.department.trim() : undefined,
         otp,
@@ -2758,17 +2754,30 @@ function AuthSection({ initialMode="sign-in", initialRole="customer", standalone
       const firstName = nameParts[0];
       const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
 
-      // Build the user locally first so the demo always works even without a backend
-      const newUserId = makeId("usr");
-      const newUser: AuthUser = {
-        id: newUserId,
-        name: pending.name,
+      // Registration must finish in the shared backend before the UI reports
+      // success. Previously this was fire-and-forget, which created accounts
+      // only in localStorage and made them impossible to use on another device.
+      const registered = await apiRegister({
         email: pending.email,
-        phone: pending.phone,
+        password: pending.rawPassword || pending.passwordHash,
         firstName,
         lastName,
-        passwordHash: pending.passwordHash,
+        phone: pending.phone,
         role: pending.role,
+        adminCode: pending.adminCode,
+        staffId: pending.staffId,
+        department: pending.department,
+      });
+
+      const newUser: AuthUser = {
+        id: registered.id,
+        name: registered.name || pending.name,
+        email: registered.email,
+        phone: registered.phone || pending.phone,
+        firstName: registered.firstName || firstName,
+        lastName: registered.lastName || lastName,
+        passwordHash: pending.passwordHash,
+        role: registered.role,
         staffId: pending.staffId,
         department: pending.department,
         emailVerified: true,
@@ -2780,7 +2789,7 @@ function AuthSection({ initialMode="sign-in", initialRole="customer", standalone
       };
       const session: SessionRecord = {
         id: makeId("sess"),
-        userId: newUserId,
+        userId: registered.id,
         refreshToken: makeId("refresh"),
         device: "Browser demo",
         ip: "127.0.0.1",
@@ -2793,21 +2802,9 @@ function AuthSection({ initialMode="sign-in", initialRole="customer", standalone
         users: [...prev.users, newUser],
         pendingSignup: null,
         sessions: [...prev.sessions, session],
-        currentUserId: newUserId,
-        accessToken: makeId("jwt"),
+        currentUserId: registered.id,
+        accessToken: "backend-managed",
       }));
-
-      // Also attempt real backend registration (non-blocking — failure is OK in demo mode)
-      apiRegister({
-        email: pending.email,
-        password: pending.rawPassword || pending.passwordHash,
-        firstName,
-        lastName,
-        phone: pending.phone,
-        role: pending.role,
-        staffId: pending.staffId,
-        department: pending.department
-      }).catch(() => { /* backend not available in demo mode — that's fine */ });
 
       setMessage(`${signupRoleMeta[pending.role].label} account created! Redirecting to dashboard…`);
       addLog("signup_completed", `${pending.role} ${pending.email} verified by OTP`);
@@ -2956,7 +2953,7 @@ function AuthSection({ initialMode="sign-in", initialRole="customer", standalone
           {mode === "sign-up" && (
           <Reveal>
             <div className="glass-card" style={{ borderRadius:14,padding:20 }}>
-              <h3 style={{ fontFamily:"'Orbitron',sans-serif",fontSize:12,color:"white",letterSpacing:"1px",marginBottom:14,display:"flex",alignItems:"center",gap:8 }}><CurrentSignupIcon size={15} color="#FF1F45" /> {currentSignupRole.label.toUpperCase()} SIGN UP</h3>
+              <h3 style={{ fontFamily:"'Orbitron',sans-serif",fontSize:12,color:"white",letterSpacing:"1px",marginBottom:14,display:"flex",alignItems:"center",gap:8 }}><CurrentSignupIcon size={15} color="var(--primary)" /> {currentSignupRole.label.toUpperCase()} SIGN UP</h3>
               <div style={{ display:"flex",flexDirection:"column",gap:11 }}>
                 <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8 }}>
                   {(Object.keys(signupRoleMeta) as AuthRole[]).map(role => {
@@ -2973,7 +2970,7 @@ function AuthSection({ initialMode="sign-in", initialRole="customer", standalone
                 <AuthField label="Email" value={signup.email} onChange={v=>setSignup(p=>({...p,email:v}))} />
                 <AuthField label="Mobile Number" value={signup.phone} onChange={v=>setSignup(p=>({...p,phone:v}))} />
                 {signup.role === "admin" && (
-                  <AuthField label="Admin Signup Code" value={signup.adminCode} onChange={v=>setSignup(p=>({...p,adminCode:v}))} placeholder={ADMIN_SIGNUP_CODE} />
+                  <AuthField label="Admin Signup Code" value={signup.adminCode} onChange={v=>setSignup(p=>({...p,adminCode:v}))} placeholder="Enter admin signup code" />
                 )}
                 {signup.role === "staff" && (
                   <>
@@ -3001,7 +2998,7 @@ function AuthSection({ initialMode="sign-in", initialRole="customer", standalone
           {mode === "sign-in" && (
           <Reveal delay={.08}>
             <div className="glass-card" style={{ borderRadius:14,padding:20 }}>
-              <h3 style={{ fontFamily:"'Orbitron',sans-serif",fontSize:12,color:"white",letterSpacing:"1px",marginBottom:14,display:"flex",alignItems:"center",gap:8 }}><LogIn size={15} color="#FF1F45" /> CUSTOMER SIGN IN</h3>
+              <h3 style={{ fontFamily:"'Orbitron',sans-serif",fontSize:12,color:"white",letterSpacing:"1px",marginBottom:14,display:"flex",alignItems:"center",gap:8 }}><LogIn size={15} color="var(--primary)" /> CUSTOMER SIGN IN</h3>
               <div style={{ display:"flex",flexDirection:"column",gap:11 }}>
                 <AuthField label="Email or Mobile" value={login.identifier} onChange={v=>setLogin(p=>({...p,identifier:v}))} />
                 <AuthField label="Password" type="password" value={login.password} onChange={v=>setLogin(p=>({...p,password:v}))} />
@@ -3029,7 +3026,7 @@ function AuthSection({ initialMode="sign-in", initialRole="customer", standalone
           {mode === "forgot-password" && (
           <Reveal delay={.16}>
             <div className="glass-card" style={{ borderRadius:14,padding:20 }}>
-              <h3 style={{ fontFamily:"'Orbitron',sans-serif",fontSize:12,color:"white",letterSpacing:"1px",marginBottom:14,display:"flex",alignItems:"center",gap:8 }}><KeyRound size={15} color="#FF1F45" /> FORGOT PASSWORD</h3>
+              <h3 style={{ fontFamily:"'Orbitron',sans-serif",fontSize:12,color:"white",letterSpacing:"1px",marginBottom:14,display:"flex",alignItems:"center",gap:8 }}><KeyRound size={15} color="var(--primary)" /> FORGOT PASSWORD</h3>
               <div style={{ display:"flex",flexDirection:"column",gap:11 }}>
                 <AuthField label="Email" value={forgot.email} onChange={v=>setForgot(p=>({...p,email:v}))} />
                 <button className="glass-pill glass-pill-outline" onClick={requestPasswordReset}>Send Reset OTP</button>
@@ -3055,6 +3052,7 @@ function AuthSection({ initialMode="sign-in", initialRole="customer", standalone
 
 // ─────────────── FOOTER ───────────────
 export function FooterSection() {
+  const config = useTenantConfig();
   const cols = [
     { title:"Products",links:["Gaming PCs","General PCs","Laptops","Components","Peripherals","Monitors"] },
     { title:"Services",links:["PC Repair","Custom Builds","PC Rental","Remote Support","PC Assembly","Buy Second-Hand"] },
@@ -3068,14 +3066,19 @@ export function FooterSection() {
           <div className="footer-brand">
             <div style={{ display:"flex",alignItems:"center",gap:10,marginBottom:14 }}>
               <BrandMark size={34} />
-              <span style={{ fontFamily:"'Orbitron',sans-serif",fontSize:14,fontWeight:900,letterSpacing:"4px",color:"white" }}>DESKTO</span>
+              <span style={{ fontFamily:"'Orbitron',sans-serif",fontSize:14,fontWeight:900,letterSpacing:"4px",color:"white" }}>{config.site.name}</span>
             </div>
-            <p style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:12,color:"#555",lineHeight:1.7,marginBottom:16,maxWidth:200 }}>Premium gaming computers & tech services. Built for those who demand perfection.</p>
+            <p style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:12,color:"#555",lineHeight:1.7,marginBottom:16,maxWidth:200 }}>{config.site.description}</p>
             <div style={{ display:"flex",gap:8 }}>
-              {[Instagram,Twitter,Youtube,Facebook].map((Icon,i)=>(
-                <button key={i} className="glass-pill glass-pill-icon" style={{ width:34,height:34,fontSize:0 }}>
+              {[
+                { Icon: Instagram, link: config.site.socials.instagram },
+                { Icon: Twitter, link: config.site.socials.twitter },
+                { Icon: Youtube, link: config.site.socials.youtube },
+                { Icon: Facebook, link: config.site.socials.facebook }
+              ].map(({ Icon, link }, i) => (
+                <a key={i} href={link || "#"} target={link ? "_blank" : undefined} rel="noopener noreferrer" className="glass-pill glass-pill-icon" style={{ display:"inline-flex",alignItems:"center",justifyContent:"center",width:34,height:34,fontSize:0,color:"white",textDecoration:"none" }}>
                   <Icon size={13} />
-                </button>
+                </a>
               ))}
             </div>
           </div>
@@ -3093,7 +3096,7 @@ export function FooterSection() {
           ))}
         </div>
         <div className="footer-bottom" style={{ borderTop:"1px solid rgba(255,255,255,.05)",paddingTop:20,display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12 }}>
-          <span style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:11,color:"#444" }}>© 2026 DESKTO Computer & Gaming. All rights reserved.</span>
+          <span style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:11,color:"#444" }}>© 2026 {config.site.name}. All rights reserved.</span>
           <div className="footer-bottom-links" style={{ display:"flex",gap:20 }}>
             {["Privacy Policy","Terms of Service","Sitemap"].map(l=>(
               <a key={l} href="#" style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:10,color:"#444",textDecoration:"none",transition:"color .3s" }}
@@ -3107,6 +3110,7 @@ export function FooterSection() {
     </footer>
   );
 }
+
 
 // ─────────────── SCROLL TO TOP ───────────────
 export function ScrollToTop() {
@@ -3549,7 +3553,8 @@ function CheckoutPage() {
         window.dispatchEvent(new PopStateEvent("popstate"));
         return;
       }
-      // Place order: try the real backend first, fall back to local-only if it fails.
+      // A confirmed order must exist in the shared backend. Never report a
+      // browser-only success because other devices cannot see or track it.
       dispatch({ type:"setPayment", payment:{ processing:true, error:undefined } });
       const placeOrderAsync = async () => {
         const firstAddress = store.addresses.find(a => a.id === `${user.id}-checkout`) || store.addresses.find(a => a.id.startsWith(`${user.id}-`));
@@ -3664,6 +3669,13 @@ function CheckoutPage() {
           }
         }
 
+        if (!isApiAuthenticated() || !serverOrder) {
+          dispatch({ type:"setPayment", payment:{ processing:false, error:serverError || "Shared order service is unavailable" } });
+          setError(serverError || "Could not save the order. Please try again.");
+          toast.error(serverError || "Order was not placed. Please try again.");
+          return;
+        }
+
         addOrder({
           ...baseOrder,
           id: serverOrder?.orderNumber || localId,
@@ -3680,11 +3692,7 @@ function CheckoutPage() {
         saveCart({});
         dispatch({ type:"goto", step:"done" });
 
-        if (serverError) {
-          toast.warning(`Order saved locally — server sync failed: ${serverError}`);
-        } else if (serverOrder) {
-          toast.success(`Order ${serverOrder.orderNumber} placed`);
-        }
+        toast.success(`Order ${serverOrder.orderNumber} placed`);
       };
       void placeOrderAsync();
     }
@@ -3701,14 +3709,14 @@ function CheckoutPage() {
           const active = i === currentIdx;
           return (
             <div key={s.key} className="checkout-step-item">
-              <div style={{ width:30,height:30,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",background:done?"linear-gradient(135deg,#00cc66,#006633)":active?"linear-gradient(135deg,#FF1F45,#cc001a)":"rgba(255,255,255,.05)",border:done||active?"none":"1px solid rgba(255,255,255,.12)",color:"white",flexShrink:0 }}>
+              <div style={{ width:30,height:30,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",background:done?"linear-gradient(135deg,#00cc66,#006633)":active?"linear-gradient(135deg,var(--primary),#cc001a)":"rgba(255,255,255,.05)",border:done||active?"none":"1px solid rgba(255,255,255,.12)",color:"white",flexShrink:0 }}>
                 {done ? <Check size={14} /> : <Icon size={13} />}
               </div>
               <div className="checkout-step-copy">
                 <div style={{ fontFamily:"'Orbitron',sans-serif",fontSize:8,color:done||active?"white":"#555",letterSpacing:"1.5px" }}>STEP {i+1}</div>
-                <div style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:11,color:done?"#00cc66":active?"#FF1F45":"#777",fontWeight:600 }}>{s.label.toUpperCase()}</div>
+                <div style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:11,color:done?"#00cc66":active?"var(--primary)":"#777",fontWeight:600 }}>{s.label.toUpperCase()}</div>
               </div>
-              {i < CHECKOUT_STEPS.length-1 && <div className="checkout-step-line" style={{ flex:1,height:1,background:i<currentIdx?"linear-gradient(90deg,#00cc66,#FF1F45)":"rgba(255,255,255,.08)",minWidth:20 }} />}
+              {i < CHECKOUT_STEPS.length-1 && <div className="checkout-step-line" style={{ flex:1,height:1,background:i<currentIdx?"linear-gradient(90deg,#00cc66,var(--primary))":"rgba(255,255,255,.08)",minWidth:20 }} />}
             </div>
           );
         })}
@@ -3719,7 +3727,7 @@ function CheckoutPage() {
   const OrderSummary = () => (
     <div className="glass-card checkout-summary">
       <h3 style={{ fontFamily:"'Orbitron',sans-serif",fontSize:12,color:"white",letterSpacing:"1px",marginBottom:14,display:"flex",alignItems:"center",gap:8 }}>
-        <ShoppingCart size={15} color="#FF1F45" /> ORDER SUMMARY
+        <ShoppingCart size={15} color="var(--primary)" /> ORDER SUMMARY
       </h3>
       <div style={{ display:"flex",flexDirection:"column",gap:8,marginBottom:14,maxHeight:220,overflowY:"auto" }}>
         {cartRows.length === 0 ? (
@@ -3730,7 +3738,7 @@ function CheckoutPage() {
               <div style={{ fontFamily:"'Orbitron',sans-serif",fontSize:9,color:"white",marginBottom:3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{product.name}</div>
               <div style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:10,color:"#777" }}>Qty {qty} · ₹{product.price.toLocaleString("en-IN")}</div>
             </div>
-            <div style={{ fontFamily:"'Rajdhani',sans-serif",fontSize:13,color:"#FF1F45",fontWeight:700,flexShrink:0 }}>₹{(product.price * qty).toLocaleString("en-IN")}</div>
+            <div style={{ fontFamily:"'Rajdhani',sans-serif",fontSize:13,color:"var(--primary)",fontWeight:700,flexShrink:0 }}>₹{(product.price * qty).toLocaleString("en-IN")}</div>
           </div>
         ))}
       </div>
@@ -3776,7 +3784,7 @@ function CheckoutPage() {
           <div className="glass-card checkout-card">
             {state.step === "cart" && (
               <div>
-                <h3 style={{ fontFamily:"'Orbitron',sans-serif",fontSize:14,color:"white",marginBottom:16,display:"flex",alignItems:"center",gap:8 }}><ShoppingCart size={16} color="#FF1F45" /> Your Cart</h3>
+                <h3 style={{ fontFamily:"'Orbitron',sans-serif",fontSize:14,color:"white",marginBottom:16,display:"flex",alignItems:"center",gap:8 }}><ShoppingCart size={16} color="var(--primary)" /> Your Cart</h3>
                 {cartRows.length === 0 ? (
                   <div style={{ textAlign:"center",padding:40 }}>
                     <ShoppingCart size={36} color="#444" style={{marginBottom:12}} />
@@ -3797,7 +3805,7 @@ function CheckoutPage() {
                           <span style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:12,color:"#CFCFCF",minWidth:18,textAlign:"center" }}>{qty}</span>
                           <button className="glass-pill glass-pill-outline" onClick={() => dispatch({ type:"load", cart:{ ...state.cart, [product.id]: qty+1 } })} style={{ width:28,height:28,padding:0,fontSize:0 }}><Plus size={11} /></button>
                         </div>
-                        <div className="checkout-line-price" style={{ fontFamily:"'Rajdhani',sans-serif",fontSize:14,color:"#FF1F45",fontWeight:700,minWidth:90,textAlign:"right" }}>₹{(product.price*qty).toLocaleString("en-IN")}</div>
+                        <div className="checkout-line-price" style={{ fontFamily:"'Rajdhani',sans-serif",fontSize:14,color:"var(--primary)",fontWeight:700,minWidth:90,textAlign:"right" }}>₹{(product.price*qty).toLocaleString("en-IN")}</div>
                       </div>
                     ))}
                   </div>
@@ -3807,7 +3815,7 @@ function CheckoutPage() {
 
             {state.step === "address" && (
               <div>
-                <h3 style={{ fontFamily:"'Orbitron',sans-serif",fontSize:14,color:"white",marginBottom:16,display:"flex",alignItems:"center",gap:8 }}><MapPin size={16} color="#FF1F45" /> Delivery Address</h3>
+                <h3 style={{ fontFamily:"'Orbitron',sans-serif",fontSize:14,color:"white",marginBottom:16,display:"flex",alignItems:"center",gap:8 }}><MapPin size={16} color="var(--primary)" /> Delivery Address</h3>
                 <div className="checkout-address-grid">
                   <AuthField label="Full Name" value={state.address.name} onChange={v=>dispatch({type:"setAddress",address:{name:v}})} />
                   <AuthField label="Phone Number" value={state.address.phone} onChange={v=>dispatch({type:"setAddress",address:{phone:v}})} />
@@ -3824,7 +3832,7 @@ function CheckoutPage() {
 
             {state.step === "delivery" && (
               <div>
-                <h3 style={{ fontFamily:"'Orbitron',sans-serif",fontSize:14,color:"white",marginBottom:16,display:"flex",alignItems:"center",gap:8 }}><Truck size={16} color="#FF1F45" /> Delivery Method</h3>
+                <h3 style={{ fontFamily:"'Orbitron',sans-serif",fontSize:14,color:"white",marginBottom:16,display:"flex",alignItems:"center",gap:8 }}><Truck size={16} color="var(--primary)" /> Delivery Method</h3>
                 <div className="glass" style={{ borderRadius:10,padding:12,marginBottom:14,fontFamily:"'Space Grotesk',sans-serif",fontSize:12,color:"#CFCFCF",lineHeight:1.6 }}>
                   Cart size category: <strong style={{ color:"white" }}>{productSizeCategory}</strong>. Small covers RAM, SSD, mouse, keyboard and accessories. Medium covers laptops, GPU, motherboard, PSU and printers. Heavy covers monitors, cabinets, assembled PCs and fragile items.
                 </div>
@@ -3858,10 +3866,10 @@ function CheckoutPage() {
                         }}>
                         <span style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10 }}>
                           <span style={{ display:"flex",alignItems:"center",gap:8,minWidth:0 }}>
-                            <Icon size={16} color="#FF1F45" />
+                            <Icon size={16} color="var(--primary)" />
                             <span style={{ fontFamily:"'Orbitron',sans-serif",fontSize:11,letterSpacing:"1px",lineHeight:1.35 }}>{opt.label}</span>
                           </span>
-                          <span style={{ fontFamily:"'Rajdhani',sans-serif",fontSize:15,color:quote.deliveryChargeStatus === "MANUAL_QUOTE" ? "#FFC0C8" : quote.deliveryCharge === 0 ? "#00cc66" : "#FF1F45",fontWeight:800,whiteSpace:"nowrap" }}>{priceLabel}</span>
+                          <span style={{ fontFamily:"'Rajdhani',sans-serif",fontSize:15,color:quote.deliveryChargeStatus === "MANUAL_QUOTE" ? "#FFC0C8" : quote.deliveryCharge === 0 ? "#00cc66" : "var(--primary)",fontWeight:800,whiteSpace:"nowrap" }}>{priceLabel}</span>
                         </span>
                         <span style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:11,color:"#CFCFCF",lineHeight:1.55 }}>{opt.description}</span>
                         <span style={{ marginTop:"auto",fontFamily:"'Space Grotesk',sans-serif",fontSize:10,color:"#888" }}>Estimated: {quote.deliveryChargeStatus === "MANUAL_QUOTE" ? "Admin will confirm" : opt.estimatedDeliveryTime}</span>
@@ -3889,9 +3897,9 @@ function CheckoutPage() {
 
             {state.step === "coupon" && (
               <div>
-                <h3 style={{ fontFamily:"'Orbitron',sans-serif",fontSize:14,color:"white",marginBottom:16,display:"flex",alignItems:"center",gap:8 }}><Circle size={16} color="#FF1F45" /> Have a Coupon?</h3>
+                <h3 style={{ fontFamily:"'Orbitron',sans-serif",fontSize:14,color:"white",marginBottom:16,display:"flex",alignItems:"center",gap:8 }}><Circle size={16} color="var(--primary)" /> Have a Coupon?</h3>
                 <p style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:12,color:"#CFCFCF",marginBottom:14,lineHeight:1.7 }}>
-                  Try <strong style={{color:"#FF1F45"}}>DESKTO10</strong> for 10% off, or <strong style={{color:"#FF1F45"}}>WELCOME5</strong> for ₹5,000 off on orders above ₹50,000.
+                  Try <strong style={{color:"var(--primary)"}}>DESKTO10</strong> for 10% off, or <strong style={{color:"var(--primary)"}}>WELCOME5</strong> for ₹5,000 off on orders above ₹50,000.
                 </p>
                 <div style={{ display:"flex",gap:10,flexWrap:"wrap" }}>
                   <input value={couponInput} onChange={e=>setCouponInput(e.target.value.toUpperCase())} placeholder="Enter coupon code"
@@ -3919,7 +3927,7 @@ function CheckoutPage() {
 
             {state.step === "payment" && (
               <div>
-                <h3 style={{ fontFamily:"'Orbitron',sans-serif",fontSize:14,color:"white",marginBottom:16,display:"flex",alignItems:"center",gap:8 }}><CreditCard size={16} color="#FF1F45" /> Payment Method</h3>
+                <h3 style={{ fontFamily:"'Orbitron',sans-serif",fontSize:14,color:"white",marginBottom:16,display:"flex",alignItems:"center",gap:8 }}><CreditCard size={16} color="var(--primary)" /> Payment Method</h3>
                 {isManualDeliveryQuote && (
                   <div className="glass-red" style={{ borderRadius:10,padding:12,marginBottom:14,fontFamily:"'Space Grotesk',sans-serif",fontSize:12,color:"#FFC0C8",lineHeight:1.6 }}>
                     Final payable amount may change after admin confirms delivery charge. Online full payment is disabled until the delivery charge is confirmed.
@@ -3985,7 +3993,7 @@ function CheckoutPage() {
 
             {state.step === "review" && (
               <div>
-                <h3 style={{ fontFamily:"'Orbitron',sans-serif",fontSize:14,color:"white",marginBottom:16,display:"flex",alignItems:"center",gap:8 }}><Eye size={16} color="#FF1F45" /> Review Your Order</h3>
+                <h3 style={{ fontFamily:"'Orbitron',sans-serif",fontSize:14,color:"white",marginBottom:16,display:"flex",alignItems:"center",gap:8 }}><Eye size={16} color="var(--primary)" /> Review Your Order</h3>
                 <div className="checkout-review-grid">
                   <div>
                     <div style={{ fontFamily:"'Orbitron',sans-serif",fontSize:9,color:"#777",letterSpacing:"1.5px",marginBottom:6 }}>SHIP TO</div>
@@ -4001,8 +4009,8 @@ function CheckoutPage() {
                     <div style={{ fontFamily:"'Orbitron',sans-serif",fontSize:9,color:"#777",letterSpacing:"1.5px",marginBottom:6 }}>DELIVERY</div>
                     <div className="glass" style={{ borderRadius:9,padding:12,fontFamily:"'Space Grotesk',sans-serif",fontSize:12,color:"#CFCFCF",lineHeight:1.7 }}>
                       {state.delivery.method === "ship"
-                        ? <><Truck size={12} color="#FF1F45" /> {deliveryOption.label} · {isManualDeliveryQuote ? "Admin will confirm" : deliveryOption.estimatedDeliveryTime}</>
-                        : <><MapPin size={12} color="#FF1F45" /> Store Pickup · {STORES.find(s => s.id === state.delivery.storeId)?.name ?? "—"}</>}
+                        ? <><Truck size={12} color="var(--primary)" /> {deliveryOption.label} · {isManualDeliveryQuote ? "Admin will confirm" : deliveryOption.estimatedDeliveryTime}</>
+                        : <><MapPin size={12} color="var(--primary)" /> Store Pickup · {STORES.find(s => s.id === state.delivery.storeId)?.name ?? "—"}</>}
                       <br />
                       Product size: {productSizeCategory} · Delivery: {deliverySummaryLabel}
                       {isManualDeliveryQuote && <><br /><span style={{ color:"#FFC0C8" }}>Final payable amount may change after admin confirms delivery charge.</span></>}
@@ -4021,7 +4029,7 @@ function CheckoutPage() {
                     {cartRows.map(({product,qty}) => (
                       <div key={product.id} className="glass" style={{ borderRadius:9,padding:10,display:"flex",justifyContent:"space-between",alignItems:"center",fontFamily:"'Space Grotesk',sans-serif",fontSize:12,color:"#CFCFCF" }}>
                         <span>{product.name} <span style={{ color:"#777" }}>× {qty}</span></span>
-                        <span style={{ color:"#FF1F45",fontWeight:700 }}>₹{(product.price*qty).toLocaleString("en-IN")}</span>
+                        <span style={{ color:"var(--primary)",fontWeight:700 }}>₹{(product.price*qty).toLocaleString("en-IN")}</span>
                       </div>
                     ))}
                   </div>
@@ -4036,7 +4044,7 @@ function CheckoutPage() {
                 </div>
                 <h2 style={{ fontFamily:"'Orbitron',sans-serif",fontSize:24,color:"white",marginBottom:8,fontWeight:900 }}>ORDER PLACED</h2>
                 <p style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:13,color:"#CFCFCF",marginBottom:18 }}>Order ID</p>
-                <div className="glass" style={{ display:"inline-block",padding:"10px 20px",borderRadius:8,fontFamily:"'Orbitron',sans-serif",fontSize:14,color:"#FF1F45",letterSpacing:"2px",marginBottom:24 }}>{state.orderId}</div>
+                <div className="glass" style={{ display:"inline-block",padding:"10px 20px",borderRadius:8,fontFamily:"'Orbitron',sans-serif",fontSize:14,color:"var(--primary)",letterSpacing:"2px",marginBottom:24 }}>{state.orderId}</div>
                 <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:10,marginBottom:24,textAlign:"left" }}>
                   {[
                     { label:"Order Created", status:true, icon:ClipboardCheck },
@@ -4100,41 +4108,26 @@ function CheckoutPage() {
 // ─────────────── DASHBOARD ROUTER ───────────────
 function DashboardRouter({ kind, tab }: { kind: "customer" | "staff" | "admin"; tab?: string | null }) {
   const user = useCurrentUser();
-  // Give auth state 600 ms to propagate from localStorage after a fresh signup/login redirect
+  // A token can be written immediately while `/api/auth/me` is still in
+  // flight. Never redirect a valid API session merely because verification
+  // takes longer than a fixed animation delay on another device/network.
   const [ready, setReady] = useState(false);
+  const [authWaitExpired, setAuthWaitExpired] = useState(false);
   useEffect(() => {
-    const t = setTimeout(() => setReady(true), 600);
-    return () => clearTimeout(t);
+    const readyTimer = setTimeout(() => setReady(true), 200);
+    const expiryTimer = setTimeout(() => setAuthWaitExpired(true), 10_000);
+    return () => {
+      clearTimeout(readyTimer);
+      clearTimeout(expiryTimer);
+    };
   }, []);
 
-  if (!ready) {
+  if (!ready || (!user && isApiAuthenticated() && !authWaitExpired)) {
     return (
       <div style={{ background: "#050505", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#888", fontFamily: "'Space Grotesk', sans-serif" }}>
         Loading dashboard…
       </div>
     );
-  }
-
-  // For admin dashboard, create a demo user if not logged in.
-  // Keep this render-only so the route never updates state during render.
-  if (kind === "admin" && !user) {
-    const demoUser: any = {
-      id: "demo-admin",
-      name: "Admin Demo",
-      email: "admin@deskto.com",
-      phone: "+91 98765 43210",
-      passwordHash: "",
-      role: "admin" as const,
-      staffId: "STAFF-001",
-      department: "Management",
-      emailVerified: true,
-      phoneVerified: true,
-      status: "active",
-      loginAttempts: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    return <AdminDashboard user={demoUser} initialTab={tab} />;
   }
 
   if (!user) {
@@ -4144,7 +4137,7 @@ function DashboardRouter({ kind, tab }: { kind: "customer" | "staff" | "admin"; 
       window.dispatchEvent(new PopStateEvent("popstate"));
     }, 0);
     return (
-      <div style={{ background: "#050505", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#FF1F45", fontFamily: "'Space Grotesk', sans-serif" }}>
+      <div style={{ background: "#050505", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--primary)", fontFamily: "'Space Grotesk', sans-serif" }}>
         Redirecting to sign-in…
       </div>
     );
@@ -4156,7 +4149,7 @@ function DashboardRouter({ kind, tab }: { kind: "customer" | "staff" | "admin"; 
       window.dispatchEvent(new PopStateEvent("popstate"));
     }, 0);
     return (
-      <div style={{ background: "#050505", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#FF1F45", fontFamily: "'Space Grotesk', sans-serif" }}>
+      <div style={{ background: "#050505", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--primary)", fontFamily: "'Space Grotesk', sans-serif" }}>
         Role mismatch — redirecting to your dashboard…
       </div>
     );

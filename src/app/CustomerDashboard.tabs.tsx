@@ -86,7 +86,7 @@ export function CustomerOverview({ user, data, onTab }: { user: AuthUser; data: 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
       <div className="dash-kpi-grid">
-        <KPICard label="Active Orders" value={activeOrders} icon={<ShoppingBag size={14} />} color="#FF1F45" hint={`${myOrders.length} total orders`} onClick={() => onTab("orders")} />
+        <KPICard label="Active Orders" value={activeOrders} icon={<ShoppingBag size={14} />} color="var(--primary)" hint={`${myOrders.length} total orders`} onClick={() => onTab("orders")} />
         <KPICard label="Open Repairs" value={openRepairs} icon={<Wrench size={14} />} color="#ff6b00" hint={`${myRepairs.length} repair tickets`} onClick={() => onTab("repairs")} />
         <KPICard label="Active Services" value={activeServices + activeRentals} icon={<Zap size={14} />} color="#00b4ff" hint="Upgrades, builds & rentals" onClick={() => onTab("upgrades")} />
         <KPICard label="Pending Payments" value={pendingPayments} icon={<Clock size={14} />} color="#ffd700" hint="Awaiting your action" onClick={() => onTab("orders")} />
@@ -112,7 +112,7 @@ export function CustomerOverview({ user, data, onTab }: { user: AuthUser; data: 
             {myOrders.filter(o => o.status === "verified" || o.status === "packing").map(o => (
               <div key={o.id} className="glass" style={{ padding: 12, borderRadius: 8, display: "flex", justifyContent: "space-between", alignItems: "center", borderColor: "rgba(255,215,0,.2)" }}>
                 <div><span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 11, color: "#ffd700" }}>ORDER</span><br/><span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 12 }}>{o.items[0]?.name || "Order"}</span></div>
-                <div style={{ textAlign: "right" }}><StatusBadge status={o.status} /><br/><span style={{ fontFamily: "'Rajdhani', sans-serif", color: "#FF1F45" }}>{inr(o.total)}</span></div>
+                <div style={{ textAlign: "right" }}><StatusBadge status={o.status} /><br/><span style={{ fontFamily: "'Rajdhani', sans-serif", color: "var(--primary)" }}>{inr(o.total)}</span></div>
               </div>
             ))}
             {myRepairs.filter(r => r.status === "quotation").map(r => (
@@ -138,7 +138,7 @@ export function CustomerOverview({ user, data, onTab }: { user: AuthUser; data: 
             data={activity}
             onRowClick={a => onTab(a.tab)}
             columns={[
-              { key: "type", label: "Type", render: a => <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 10, color: "#FF1F45" }}>{a.type}</span> },
+              { key: "type", label: "Type", render: a => <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 10, color: "var(--primary)" }}>{a.type}</span> },
               { key: "id", label: "Ref", render: a => <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 10 }}>{a.id.slice(-8).toUpperCase()}</span> },
               { key: "title", label: "Item", render: a => <span style={{ maxWidth: 260, display: "inline-block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.title}</span> },
               { key: "status", label: "Status", render: a => <StatusBadge status={a.status} /> },
@@ -194,7 +194,7 @@ export function CustomerProfile({ user }: { user: AuthUser }) {
 
       <SectionCard title="Profile Photo" subtitle="Add a personal touch">
         <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
-          <div style={{ width: 72, height: 72, borderRadius: "50%", background: "linear-gradient(135deg, #FF1F45, #5a0008)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Orbitron', sans-serif", fontSize: 24, color: "white", fontWeight: 800 }}>
+          <div style={{ width: 72, height: 72, borderRadius: "50%", background: "linear-gradient(135deg, var(--primary), #5a0008)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Orbitron', sans-serif", fontSize: 24, color: "white", fontWeight: 800 }}>
             {user.name.split(" ").map(s => s[0]).join("").slice(0, 2).toUpperCase()}
           </div>
           <div style={{ display: "flex", gap: 10 }}>
@@ -288,7 +288,7 @@ export function CustomerAddresses({ user, store, addAddress, deleteAddress }: { 
           <div key={a.id} className="glass-card" style={{ padding: 16 }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <MapPin size={14} color="#FF1F45" />
+                <MapPin size={14} color="var(--primary)" />
                 <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 12, color: "white" }}>{a.label}</span>
                 {a.isDefault && <span className="glass-pill glass-pill-sm glass-pill-primary" style={{ pointerEvents: "none" }}>Default</span>}
               </div>
@@ -313,7 +313,7 @@ export function CustomerAddresses({ user, store, addAddress, deleteAddress }: { 
 
 // ─── Orders ───────────────────────────────────────────────────────────────
 
-export function CustomerOrders({ user, store, updateOrderStatus }: { user: AuthUser; store: DashboardStore; updateOrderStatus: (id: string, status: Order["status"]) => void }) {
+export function CustomerOrders({ user, store, updateOrderStatus }: { user: AuthUser; store: DashboardStore; updateOrderStatus: (id: string, status: Order["status"]) => Promise<void> }) {
   const [filter, setFilter] = useState<string>("all");
   const [open, setOpen] = useState<Order | null>(null);
   const myOrders = store.orders.filter(o => o.customerId === user.id).sort((a, b) => b.createdAt - a.createdAt);
@@ -356,7 +356,7 @@ export function CustomerOrders({ user, store, updateOrderStatus }: { user: AuthU
                   </div>
                 </div>
                 <div style={{ textAlign: "right" }}>
-                  <div style={{ fontFamily: "'Rajdhani', sans-serif", color: "#FF1F45", fontSize: 18, fontWeight: 700 }}>{inr(order.total)}</div>
+                  <div style={{ fontFamily: "'Rajdhani', sans-serif", color: "var(--primary)", fontSize: 18, fontWeight: 700 }}>{inr(order.total)}</div>
                   <div style={{ fontFamily: "'Space Grotesk', sans-serif", color: "#777", fontSize: 11, marginTop: 4 }}>View Details</div>
                 </div>
               </button>
@@ -419,7 +419,7 @@ export function CustomerOrders({ user, store, updateOrderStatus }: { user: AuthU
             <div style={{ display: "flex", gap: 8, marginTop: 24 }}>
               {active.invoiceId && <button className="glass-pill glass-pill-primary" onClick={() => toast.success(`Invoice ${active.invoiceId} ready`)}><Download size={13} /> Invoice</button>}
               {active.warrantyEndsAt && <button className="glass-pill glass-pill-outline" onClick={() => toast.success(`Warranty valid until ${formatDate(active.warrantyEndsAt!)}`)}><ShieldCheck size={13} /> Warranty</button>}
-              {["placed", "verified"].includes(active.status) && <button className="glass-pill glass-pill-red" onClick={() => { updateOrderStatus(active.id, "cancelled"); toast.success("Order cancelled"); }}>Cancel Order</button>}
+              {["placed", "verified"].includes(active.status) && <button className="glass-pill glass-pill-red" onClick={async () => { try { await updateOrderStatus(active.id, "cancelled"); toast.success("Order cancelled"); } catch (error: any) { toast.error(error?.message || "Cancellation failed"); } }}>Cancel Order</button>}
               <button className="glass-pill glass-pill-outline">Write Review</button>
             </div>
           </div>
@@ -627,7 +627,7 @@ function Stat({ label, value, highlight }: { label: string; value: string; highl
   return (
     <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, padding: 12 }}>
       <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 9, color: "#888", letterSpacing: 1.2, textTransform: "uppercase" }}>{label}</div>
-      <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 14, color: highlight ? "#FF1F45" : "white", marginTop: 4 }}>{value}</div>
+      <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 14, color: highlight ? "var(--primary)" : "white", marginTop: 4 }}>{value}</div>
     </div>
   );
 }
@@ -646,7 +646,7 @@ export function CustomerPCBuilds({ user, store, patchPCBuild }: { user: AuthUser
                 <div key={c.name} style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: 12 }}>
                   <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 9, color: "#888", letterSpacing: 1.2, textTransform: "uppercase" }}>{c.type}</div>
                   <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 13, color: "white", marginTop: 4 }}>{c.name}</div>
-                  <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 11, color: "#FF1F45", marginTop: 4 }}>{inr(c.price)}</div>
+                  <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 11, color: "var(--primary)", marginTop: 4 }}>{inr(c.price)}</div>
                 </div>
               ))}
             </div>
@@ -678,7 +678,7 @@ export function CustomerPCBuilds({ user, store, patchPCBuild }: { user: AuthUser
             </div>
             <div style={{ marginTop: 16, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
               <SectionCard title="Validation">
-                {(b.validationReport || []).map(v => <div key={v.label} style={{ display: "flex", gap: 8, fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, color: "#ddd", marginBottom: 8 }}><CheckCircle size={13} color={v.pass ? "#00cc66" : "#FF1F45"} /> {v.label}</div>)}
+                {(b.validationReport || []).map(v => <div key={v.label} style={{ display: "flex", gap: 8, fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, color: "#ddd", marginBottom: 8 }}><CheckCircle size={13} color={v.pass ? "#00cc66" : "var(--primary)"} /> {v.label}</div>)}
               </SectionCard>
               <SectionCard title="Timeline">
                 <div className="dash-timeline">
@@ -881,7 +881,7 @@ export function CustomerWishlist() {
             <div key={p.id} className="glass-card" style={{ padding: 14 }}>
               <div style={{ width: "100%", aspectRatio: "16/10", borderRadius: 10, background: `linear-gradient(135deg, #1a1a1a, #0a0a0a)`, display: "flex", alignItems: "center", justifyContent: "center", color: "#666", fontSize: 11, marginBottom: 10 }}>{p.category}</div>
               <h4 style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 12, color: "white", margin: "0 0 6px" }}>{p.name}</h4>
-              <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 14, color: "#FF1F45" }}>{inr(p.price)}</div>
+              <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 14, color: "var(--primary)" }}>{inr(p.price)}</div>
               <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
                 <button className="glass-pill glass-pill-sm glass-pill-primary" onClick={() => {
                   const cart = readCart();
@@ -972,7 +972,7 @@ export function CustomerCart() {
                     <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 12, color: "white", minWidth: 18, textAlign: "center" }}>{i.qty}</span>
                     <button className="glass-pill glass-pill-icon glass-pill-sm" onClick={() => setQty(i.id, i.qty + 1)} style={{ width: 26, height: 26 }} aria-label="Increase quantity"><Plus size={11} /></button>
                   </div>
-                  <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 13, color: "#FF1F45", minWidth: 80, textAlign: "right" }}>{inr(i.price * i.qty)}</span>
+                  <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 13, color: "var(--primary)", minWidth: 80, textAlign: "right" }}>{inr(i.price * i.qty)}</span>
                   <button className="glass-pill glass-pill-icon glass-pill-sm" onClick={() => remove(i.id)} style={{ width: 26, height: 26 }} aria-label="Remove item">
                     <Trash2 size={11} />
                   </button>
@@ -1003,7 +1003,7 @@ export function CustomerNotifications({ user, store, markRead, archive }: { user
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <Bell size={12} color={n.read ? "#666" : "#FF1F45"} />
+                    <Bell size={12} color={n.read ? "#666" : "var(--primary)"} />
                     <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 12, color: "white" }}>{n.title}</div>
                   </div>
                   <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, color: "#aaa", marginTop: 4 }}>{n.detail}</div>
@@ -1142,7 +1142,7 @@ export function CustomerRewards({ user, store, redeemCoupon }: { user: AuthUser;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
       <SectionCard title="Reward Points">
-        <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 38, color: "#FF1F45", fontWeight: 900 }}>{reward?.points || 0}</div>
+        <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 38, color: "var(--primary)", fontWeight: 900 }}>{reward?.points || 0}</div>
         <p style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, color: "#888", margin: "6px 0" }}>Earn 50 points for every ₹1,000 spent. Redeem for coupons below.</p>
         {reward && (
           <div style={{ marginTop: 12 }}>
@@ -1151,7 +1151,7 @@ export function CustomerRewards({ user, store, redeemCoupon }: { user: AuthUser;
               {reward.history.map((h, i) => (
                 <div key={i} style={{ display: "flex", justifyContent: "space-between", fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
                   <span style={{ color: "#ddd" }}>{h.label}</span>
-                  <span style={{ color: h.delta > 0 ? "#00cc66" : "#FF1F45" }}>{h.delta > 0 ? "+" : ""}{h.delta}</span>
+                  <span style={{ color: h.delta > 0 ? "#00cc66" : "var(--primary)" }}>{h.delta > 0 ? "+" : ""}{h.delta}</span>
                 </div>
               ))}
             </div>
@@ -1165,7 +1165,7 @@ export function CustomerRewards({ user, store, redeemCoupon }: { user: AuthUser;
             {available.map(c => (
               <div key={c.id} className="glass-card" style={{ padding: 16 }}>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 16, color: "#FF1F45", letterSpacing: 1 }}>{c.code}</div>
+                  <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 16, color: "var(--primary)", letterSpacing: 1 }}>{c.code}</div>
                   <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 18, color: "white", fontWeight: 800 }}>{c.discountPercent}% OFF</div>
                 </div>
                 <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, color: "#aaa", marginTop: 6 }}>{c.description}</div>
@@ -1186,7 +1186,7 @@ export function CustomerLogout({ onConfirm, user }: { onConfirm: () => void; use
   return (
     <SectionCard title="Sign Out" subtitle="End your session">
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16, padding: "30px 0" }}>
-        <LogOutIcon size={40} color="#FF1F45" />
+        <LogOutIcon size={40} color="var(--primary)" />
         <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 14, color: "white" }}>Goodbye, {user.name.split(" ")[0]}!</div>
         <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 13, color: "#888", textAlign: "center", maxWidth: 380 }}>
           You can always come back by signing in again. Your cart and wishlist will be saved.
