@@ -54,6 +54,7 @@ DB_NAME=$(ssm_value "/${PROJECT_NAME}/production/database-name")
 DB_USER=$(ssm_value "/${PROJECT_NAME}/production/database-user")
 DB_PASSWORD=$(ssm_value "/${PROJECT_NAME}/production/database-password")
 JWT_SECRET=$(ssm_value "/${PROJECT_NAME}/production/jwt-secret")
+ADMIN_SIGNUP_CODE=$(ssm_value "/${PROJECT_NAME}/production/admin-signup-code")
 PRODUCT_IMAGE_BUCKET=$(ssm_value "/${PROJECT_NAME}/production/product-image-bucket")
 PRODUCT_IMAGE_CDN_URL=$(ssm_value "/${PROJECT_NAME}/production/product-image-cdn-url")
 FRONTEND_URLS=${FRONTEND_URLS_VALUE}
