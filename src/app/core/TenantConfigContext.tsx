@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { BusinessConfig, validateBusinessConfig } from "./config.schema";
 import { DESKTO_CONFIG_PRESET } from "./desktoconfig";
+import { siteConfigApi } from "../lib/api";
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Tenant Config Context
@@ -102,6 +104,21 @@ export const TenantConfigProvider: React.FC<ProviderProps> = ({ children, initia
     }
   });
 
+  useEffect(() => {
+    async function loadConfig() {
+      try {
+        const data = await siteConfigApi.getPublishedConfig();
+        if (data && data.config) {
+          const validated = validateBusinessConfig(data.config);
+          setConfig(validated);
+        }
+      } catch (err) {
+        console.warn("[TenantConfigProvider] Backend site config load failed, using local presets:", err);
+      }
+    }
+    loadConfig();
+  }, []);
+
   return (
     <TenantConfigContext.Provider value={config}>
       <ThemeProvider>
@@ -110,3 +127,4 @@ export const TenantConfigProvider: React.FC<ProviderProps> = ({ children, initia
     </TenantConfigContext.Provider>
   );
 };
+

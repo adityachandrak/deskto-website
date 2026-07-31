@@ -2,7 +2,6 @@ import { Component, type FormEvent, type ReactNode, useState, useEffect, useRef,
 import { motion, useInView, useScroll, useTransform } from "motion/react";
 import { useWishlist } from "@/app/lib/wishlist";
 import ProductDetailPage from "@/app/ProductDetailPage";
-import ServicesPage from "@/app/ServicesPage";
 import { SERVICES } from "@/app/lib/services";
 import { useDashboardData, type CatalogProduct } from "@/app/lib/dashboardData";
 import { homepageContentApi as cmsApi } from "@/app/lib/api";
@@ -14,10 +13,13 @@ import { toast } from "sonner";
 import { AUTH_STATE_CHANGED_EVENT, logout, useCurrentUser, login as apiLogin, register as apiRegister } from "@/app/lib/currentUser";
 import { useTenantConfig, useFeatureFlags } from "@/app/core/TenantConfigContext";
 import { ordersApi, servicesApi, isAuthenticated as isApiAuthenticated } from "@/app/lib/api";
+import { packRegistry } from "@/app/core/industryPackRegistry";
+
 
 import CustomerDashboard from "@/app/CustomerDashboard";
 import StaffDashboard from "@/app/StaffDashboard";
 import AdminDashboard from "@/app/AdminDashboard";
+import VideoScrollHomePage from "@/app/VideoScrollHomePage";
 import {
   HardDrive, Zap, Wrench, ChevronRight, ChevronUp,
   Star, ArrowRight, Wifi, Clock, CheckCircle, Circle,
@@ -599,14 +601,27 @@ export function Navbar() {
     return () => window.removeEventListener("scroll", fn);
   }, []);
 
+  const [activePackId, setActivePackId] = useState(() => packRegistry.getActivePackId());
+  useEffect(() => {
+    const handle = () => setActivePackId(packRegistry.getActivePackId());
+    window.addEventListener("industry-pack-changed", handle);
+    return () => window.removeEventListener("industry-pack-changed", handle);
+  }, []);
+
+  const hasComputerRetail = activePackId === "computer-retail";
+
+
   const links = [
     { label:"Home", href:"/" },
     { label:"Sign In", href:"/sign-in" },
     { label:"Shop Products", href:"/products" },
-    { label:"Services", href:"/services" },
-    { label:"Gaming Info", href:"#news" },
+    ...(hasComputerRetail ? [
+      { label:"Services", href:"/services" },
+      { label:"Gaming Info", href:"#news" }
+    ] : []),
     { label:"Contact", href:"#contact" },
   ];
+
 
   return (
     <nav style={{ position:"fixed",top:0,left:0,right:0,zIndex:500,transition:"all .4s ease",background:scrolled?"rgba(5,5,5,.92)":"transparent",backdropFilter:scrolled?"blur(24px) saturate(200%)":"none",WebkitBackdropFilter:scrolled?"blur(24px) saturate(200%)":"none",borderBottom:scrolled?"1px solid rgba(255,255,255,.05)":"none" }}>
@@ -4164,17 +4179,45 @@ function DashboardRouter({ kind, tab }: { kind: "customer" | "staff" | "admin"; 
 // ─────────────── APP ───────────────
 export default function App() {
   const [pathname,setPathname] = useState(window.location.pathname);
+  const [activePackId, setActivePackId] = useState(() => packRegistry.getActivePackId());
+  
+  console.log("[App Render] activePackId:", activePackId, "pathname:", pathname);
+
   useEffect(() => {
     const syncPath = () => setPathname(window.location.pathname);
+    const handlePack = () => {
+      const nextPackId = packRegistry.getActivePackId();
+      console.log("[App Listener] Pack changed event received. Setting state to:", nextPackId);
+      setActivePackId(nextPackId);
+    };
+    
     window.addEventListener("popstate", syncPath);
-    return () => window.removeEventListener("popstate", syncPath);
+    window.addEventListener("industry-pack-changed", handlePack);
+    
+    return () => {
+      window.removeEventListener("popstate", syncPath);
+      window.removeEventListener("industry-pack-changed", handlePack);
+    };
   }, []);
+
+
   const authRoute = getAuthRouteFromPath(pathname);
   const productCategory = getProductCategoryFromPath(pathname);
   const checkout = isCheckoutPath(pathname);
   const productDetailId = getProductDetailFromPath(pathname);
   const servicesRoute = getServicesRouteFromPath(pathname);
   const dashboardRoute = getDashboardRouteFromPath(pathname);
+
+  // Resolve a pack route component for the current pathname (e.g. /services/*).
+  // The pack's route path is used as a prefix match so sub-paths also match.
+  const PackRouteComponent = useMemo(() => {
+    if (!servicesRoute) return null;
+    const activePack = packRegistry.getActivePack();
+    const matched = activePack?.routes.find(
+      (r) => pathname === r.path || pathname.startsWith(r.path + "/")
+    );
+    return matched?.component ?? null;
+  }, [servicesRoute, activePackId, pathname]);
 
   return (
     <AppErrorBoundary>
@@ -4189,11 +4232,11 @@ export default function App() {
           ? <CheckoutPage />
           : productDetailId !== null
           ? <ProductDetailPage productId={productDetailId} />
-          : servicesRoute
-          ? <ServicesPage slug={servicesRoute.slug} child={servicesRoute.child} />
+          : PackRouteComponent
+          ? <PackRouteComponent />
           : productCategory
           ? <ProductCatalogPage category={productCategory} />
-          : <HomePage />}
+          : <VideoScrollHomePage />}
       </div>
     </AppErrorBoundary>
   );

@@ -614,3 +614,24 @@ export const homepageContentApi = {
     });
   },
 };
+
+export const siteConfigApi = {
+  async getPublishedConfig(): Promise<{ version: number; publishedAt: string; config: any }> {
+    return apiFetch<{ version: number; publishedAt: string; config: any }>("/config");
+  },
+  async getAdminConfig(): Promise<{ draft: any; published: any }> {
+    return apiFetch<{ draft: any; published: any }>("/admin/config");
+  },
+  async saveDraft(configData: any): Promise<{ message: string; draft: any }> {
+    return apiFetch<{ message: string; draft: any }>("/admin/config/draft", {
+      method: "PUT",
+      json: { configData },
+    });
+  },
+  async publishDraft(): Promise<{ message: string; version: number; publishedAt: string; config: any }> {
+    return apiFetch<{ message: string; version: number; publishedAt: string; config: any }>("/admin/config/publish", {
+      method: "POST",
+    });
+  },
+};
+

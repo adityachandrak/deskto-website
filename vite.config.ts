@@ -38,6 +38,7 @@ export default defineConfig({
   // Vite's SPA fallback (which returns index.html) and the
   // 'API route not reachable' guard fires.
   server: {
+    host: process.env.VITE_DEV_HOST || '127.0.0.1',
     proxy: {
       '/api': {
         target: process.env.VITE_API_PROXY_TARGET || 'http://localhost:3001',

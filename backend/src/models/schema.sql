@@ -109,6 +109,8 @@ CREATE TABLE IF NOT EXISTS products (
     market_tag VARCHAR(50),
     is_active BOOLEAN DEFAULT TRUE,
     is_featured BOOLEAN DEFAULT FALSE,
+    status VARCHAR(20) DEFAULT 'published',
+    published_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     weight DECIMAL(8,2),
     dimensions JSONB,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

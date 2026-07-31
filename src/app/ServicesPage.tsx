@@ -2433,7 +2433,21 @@ function GamingHubPage({ service, postSlug }: { service: Service; postSlug?: str
 }
 
 // ─────────────── MAIN PAGE ───────────────
-export default function ServicesPage({ slug, child }: { slug: string | null; child?: string | null }) {
+function useServicesRoute(): { slug: string | null; child: string | null } {
+  const [pathname, setPathname] = useState(() => window.location.pathname);
+  useEffect(() => {
+    const sync = () => setPathname(window.location.pathname);
+    window.addEventListener("popstate", sync);
+    return () => window.removeEventListener("popstate", sync);
+  }, []);
+  if (pathname === "/services" || pathname === "/services/") return { slug: null, child: null };
+  const m = pathname.match(/^\/services\/([a-z0-9-]+)(?:\/([a-z0-9-]+))?\/?$/);
+  if (!m) return { slug: null, child: null };
+  return { slug: m[1], child: m[2] ?? null };
+}
+
+export default function ServicesPage() {
+  const { slug, child } = useServicesRoute();
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [slug, child]);

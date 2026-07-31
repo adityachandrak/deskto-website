@@ -22,6 +22,11 @@ if ! command -v docker >/dev/null 2>&1; then
   exit 1
 fi
 
+if ! docker info >/dev/null 2>&1; then
+  echo "❌ Docker daemon is not reachable. Start Docker Desktop, then rerun this script." >&2
+  exit 1
+fi
+
 if ! docker ps -a --format '{{.Names}}' | grep -qx "$CONTAINER_NAME"; then
   echo "ℹ️  No running container named $CONTAINER_NAME — building image only."
   docker build -t "$IMAGE_NAME" .

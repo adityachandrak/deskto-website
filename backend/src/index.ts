@@ -67,6 +67,7 @@ import serviceRoutes from './routes/services';
 import backupRoutes from './routes/backup';
 import homepageContentRoutes from './routes/homepageContent';
 import adminCoreRoutes from './routes/adminCore';
+import siteConfigRoutes from './routes/siteConfig';
 
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
@@ -75,6 +76,8 @@ app.use('/api/services', serviceRoutes);
 app.use('/api', backupRoutes);
 app.use('/api', homepageContentRoutes);
 app.use('/api', adminCoreRoutes);
+app.use('/api', siteConfigRoutes);
+
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -89,15 +92,13 @@ app.use((req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-// Start server only if not in test mode
-if (require.main === module) {
-  app.listen(PORT, HOST, () => {
-    console.log(`\n========================================`);
-    console.log(`  Deskto Backend API Server`);
-    console.log(`  Running on ${HOST}:${PORT}`);
-    console.log(`  Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`========================================\n`);
-  });
-}
+app.listen(PORT, HOST, () => {
+  console.log(`\n========================================`);
+  console.log(`  Deskto Backend API Server`);
+  console.log(`  Running on ${HOST}:${PORT}`);
+  console.log(`  Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`========================================\n`);
+});
+
 
 export default app;
