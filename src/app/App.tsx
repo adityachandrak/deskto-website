@@ -14,8 +14,6 @@ import { AUTH_STATE_CHANGED_EVENT, logout, useCurrentUser, login as apiLogin, re
 import { useTenantConfig, useFeatureFlags } from "@/app/core/TenantConfigContext";
 import { ordersApi, servicesApi, isAuthenticated as isApiAuthenticated } from "@/app/lib/api";
 import { packRegistry } from "@/app/core/industryPackRegistry";
-
-
 import CustomerDashboard from "@/app/CustomerDashboard";
 import StaffDashboard from "@/app/StaffDashboard";
 import AdminDashboard from "@/app/AdminDashboard";

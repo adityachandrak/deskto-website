@@ -177,6 +177,23 @@ export interface OrderItem {
   img: string;
 }
 
+export interface ServiceAddress {
+  line1: string;
+  area: string;
+  city: string;
+  state: string;
+  pincode: string;
+}
+
+export interface ServicePaymentInfo {
+  method: "online" | "cod";
+  status: "paid" | "cod" | "pending";
+  amount: number;
+  invoiceId: string;
+  invoiceEmailStatus: "queued" | "sent" | "failed";
+  invoiceEmailSentAt?: number;
+}
+
 export interface Order {
   id: string;
   customerId: string;
@@ -226,6 +243,9 @@ export interface Order {
   addressId: string;
   trackingSteps: { label: string; at: number; done: boolean }[];
   invoiceId?: string;
+  invoiceUrl?: string;
+  invoiceEmailStatus?: "queued" | "sent" | "failed";
+  invoiceEmailSentAt?: number;
   warrantyEndsAt?: number;
 }
 
@@ -271,6 +291,8 @@ export interface Repair {
   reviewRequested?: boolean;
   technicianNotes?: string;
   technicianLastStatusAt?: number;
+  serviceAddress?: ServiceAddress;
+  paymentInfo?: ServicePaymentInfo;
   timeline: { label: string; at: number; done: boolean }[];
   createdAt: number;
   updatedAt?: number;
@@ -325,6 +347,8 @@ export interface PCBuild {
   createdAt: number;
   warrantyEndsAt?: number;
   updatedAt?: number;
+  serviceAddress?: ServiceAddress;
+  paymentInfo?: ServicePaymentInfo;
 }
 
 export interface ServiceRequest {
@@ -373,6 +397,8 @@ export interface ServiceRequest {
   qaChecks?: { label: string; done: boolean; at?: number }[];
   technicianNotes?: string;
   technicianLastStatusAt?: number;
+  serviceAddress?: ServiceAddress;
+  paymentInfo?: ServicePaymentInfo;
   timeline: { label: string; at: number; done: boolean }[];
   createdAt: number;
   updatedAt?: number;
@@ -396,6 +422,16 @@ export interface SupportTicket {
   status: TicketStatus;
   meetingLink?: string;
   staffId?: string;
+  createdAt: number;
+}
+
+export interface QuickEnquiry {
+  id: string;
+  name: string;
+  contact: string;
+  serviceNeeded: string;
+  message: string;
+  status: "new" | "contacted" | "closed";
   createdAt: number;
 }
 
@@ -722,6 +758,7 @@ export interface DashboardStore {
   settings: DashboardSettings;
   products: CatalogProduct[];
   gamingHub: GamingHubItem[];
+  enquiries: QuickEnquiry[];
   offers: { id: string; title: string; detail: string; expiresAt: number; code: string; discount?: string; linkedTo?: string; startsAt?: number; active?: boolean; createdAt?: number; updatedAt?: number }[];
   customBuilderConfig: CustomBuilderConfig;
 }
@@ -763,6 +800,7 @@ const emptyStore = (): DashboardStore => ({
   },
   products: [],
   gamingHub: [],
+  enquiries: [],
   offers: [],
   customBuilderConfig: createDefaultBuilderConfig(),
 });
@@ -4633,6 +4671,7 @@ function readAuthStaff(): StaffMember[] {
 }
 
 function migrateStore(store: DashboardStore): DashboardStore {
+  store.enquiries = store.enquiries || [];
   let changed = false;
   const orders = (store.orders || []).map(order => {
     const hasCanonicalTimeline = order.trackingSteps?.length === ORDER_TIMELINE_LABELS.length
@@ -4890,6 +4929,33 @@ export function useDashboardData() {
     saveStore(next);
     setStore(next);
   }, []);
+
+  const addQuickEnquiry = useCallback((input: Omit<QuickEnquiry, "id" | "status" | "createdAt">) => {
+    const enquiry: QuickEnquiry = { ...input, id: rid("enq"), status: "new", createdAt: Date.now() };
+    setStore(prev => {
+      const next = {
+        ...prev,
+        enquiries: [enquiry, ...(prev.enquiries || [])],
+        notifications: [
+          { id: rid("ntf"), audience: "admins" as const, title: "New quick enquiry", detail: `${enquiry.name} asked about ${enquiry.serviceNeeded}.`, type: "system" as const, read: false, archived: false, createdAt: enquiry.createdAt },
+          ...prev.notifications,
+        ],
+      };
+      saveStore(next);
+      return next;
+    });
+    addLog("quick_enquiry", `${enquiry.name} submitted quick enquiry for ${enquiry.serviceNeeded}`);
+    return enquiry;
+  }, [addLog]);
+
+  const updateQuickEnquiryStatus = useCallback((id: string, status: QuickEnquiry["status"]) => {
+    setStore(prev => {
+      const next = { ...prev, enquiries: (prev.enquiries || []).map(e => e.id === id ? { ...e, status } : e) };
+      saveStore(next);
+      return next;
+    });
+    addLog("quick_enquiry_status", `Quick enquiry ${id.slice(-8).toUpperCase()} → ${status}`);
+  }, [addLog]);
   
   const autoNotifyStatusChange = useCallback((
     type: "order" | "repair" | "rental" | "support" | "system",
@@ -6450,6 +6516,8 @@ export function useDashboardData() {
     patchPCBuild,
     addServiceRequest,
     patchServiceRequest,
+    addQuickEnquiry,
+    updateQuickEnquiryStatus,
     addCatalogProduct,
     patchCatalogProduct,
     deleteCatalogProduct,

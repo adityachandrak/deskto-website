@@ -1548,7 +1548,6 @@ export const AdminFAQ = (props: Omit<Parameters<typeof TypeFilteredAdmin>[0], "t
 // The admin tabs call these from their save() flows; after every mutation
 // they invoke refetchCmsList(type) so the UI re-renders with canonical
 // server data and the cross-device requirement is satisfied.
-
 type CmsRefetchListener = (type: ApiHomepageContentType) => void;
 const cmsRefetchListeners = new Set<CmsRefetchListener>();
 export function subscribeCmsRefetch(listener: CmsRefetchListener) {
@@ -2137,6 +2136,42 @@ export function AdminOrders({ store, updateOrderStatus, patchOrder }: { store: D
       toast.success(`Order ${order.id.slice(-8).toUpperCase()} synced to ${status}`);
     } catch (error: any) {
       toast.error(error?.message || "Order status update failed");
+    }
+  };
+  const confirmDeliveryCharge = async (order: Order) => {
+    const raw = deliveryChargeDrafts[order.id] ?? "";
+    const charge = Number(raw);
+    if (!Number.isFinite(charge) || charge < 0) {
+      toast.error("Enter a valid delivery charge");
+      return;
+    }
+
+    const nextTotal = (order.subtotal || 0) - (order.discount || 0) + (order.gst || 0) + charge;
+    const nextShippingAddress = order.shippingAddress ? {
+      ...order.shippingAddress,
+      deliveryCharge: charge,
+      deliveryChargeStatus: "FIXED" as const,
+      deliveryNote: "Delivery charge confirmed by admin.",
+    } : order.shippingAddress;
+
+    patchOrder(order.id, {
+      deliveryCharge: charge,
+      deliveryChargeStatus: "FIXED",
+      deliveryNote: "Delivery charge confirmed by admin.",
+      shipping: charge,
+      total: nextTotal,
+      shippingAddress: nextShippingAddress,
+    });
+    setDeliveryChargeDrafts(prev => ({ ...prev, [order.id]: "" }));
+    toast.success("Delivery charge confirmed");
+
+    if (isApiAuthenticated()) {
+      try {
+        await ordersApi.updateDeliveryCharge(order.id, charge);
+      } catch (err) {
+        console.warn("[admin] failed to sync delivery charge:", err);
+        toast.warning("Saved locally, but backend sync failed");
+      }
     }
   };
   const confirmDeliveryCharge = async (order: Order) => {

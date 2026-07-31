@@ -11,7 +11,8 @@ import {
 import { SERVICES, Service, ServicePricingTier } from "@/app/lib/services";
 import { useCurrentUser } from "@/app/lib/currentUser";
 import { useDashboardData } from "@/app/lib/dashboardData";
-import type { GamingHubItem } from "@/app/lib/dashboardData";
+import type { GamingHubItem, ServiceAddress, ServicePaymentInfo } from "@/app/lib/dashboardData";
+import { homepageContentApi } from "@/app/lib/api";
 import { saveMediaFile } from "@/app/lib/mediaStore";
 import { useTenantConfig } from "@/app/core/TenantConfigContext";
 
@@ -25,6 +26,83 @@ function RepairField({ label, value, onChange, placeholder, type = "text" }: { l
       <input type={type} value={value} placeholder={placeholder} onChange={e => onChange(e.target.value)}
         style={{ width: "100%", background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.09)", borderRadius: 8, padding: "11px 12px", fontFamily: "'Space Grotesk', sans-serif", fontSize: 16, color: "white", outline: "none" }} />
     </label>
+  );
+}
+
+const emptyServiceAddress = (): ServiceAddress => ({ line1: "", area: "", city: "", state: "", pincode: "" });
+
+function validateServiceAddress(address: ServiceAddress) {
+  if (!address.line1.trim()) return "Enter full address.";
+  if (!address.area.trim()) return "Enter area/locality.";
+  if (!address.city.trim()) return "Enter city.";
+  if (!address.state.trim()) return "Enter state.";
+  if (!/^\d{6}$/.test(address.pincode.trim())) return "Enter valid 6-digit pincode.";
+  return "";
+}
+
+function createServicePaymentInfo(method: ServicePaymentInfo["method"], amount: number, requestId: string): ServicePaymentInfo {
+  const invoiceId = `INV-${requestId.slice(-8).toUpperCase()}`;
+  return {
+    method,
+    status: method === "cod" ? "cod" : "pending",
+    amount,
+    invoiceId,
+    invoiceEmailStatus: "queued",
+  };
+}
+
+function serviceMethodBaseAmount(method: string, base = 499) {
+  const normalized = method.toLowerCase();
+  if (normalized.includes("pickup")) return base + 300;
+  if (normalized.includes("home") || normalized.includes("onsite") || normalized.includes("on-site")) return base + 500;
+  if (normalized.includes("delivery")) return base + 300;
+  if (normalized.includes("remote")) return base;
+  return base;
+}
+
+function ServiceAddressPaymentBox({ address, setAddress, accent }: { address: ServiceAddress; setAddress: (address: ServiceAddress) => void; accent: string }) {
+  const set = (key: keyof ServiceAddress, value: string) => setAddress({ ...address, [key]: value });
+  return (
+    <div className="glass" style={{ borderRadius: 12, padding: 14, marginTop: 16, border: `1px solid ${accent}35` }}>
+      <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 12, color: "white", marginBottom: 12 }}>Service Address</div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
+        <RepairField label="Address" value={address.line1} onChange={v => set("line1", v)} placeholder="House/shop, street" />
+        <RepairField label="Area / Locality" value={address.area} onChange={v => set("area", v)} placeholder="Supela, Nehru Nagar..." />
+        <RepairField label="City" value={address.city} onChange={v => set("city", v)} />
+        <RepairField label="State" value={address.state} onChange={v => set("state", v)} />
+        <RepairField label="Pincode" value={address.pincode} onChange={v => set("pincode", v)} placeholder="490023" />
+      </div>
+      <div style={{ marginTop: 12, fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, color: "#CFCFCF" }}>
+        Admin will verify the request and send the final quotation amount.
+      </div>
+    </div>
+  );
+}
+
+function ServiceActionButtons({ onSubmit }: { onSubmit: (method?: ServicePaymentInfo["method"]) => void }) {
+  return (
+    <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 }}>
+      <button className="glass-pill glass-pill-outline" onClick={() => onSubmit()} style={{ padding: "13px 18px", fontSize: 10 }}>
+        <CheckCircle size={14} /> Submit Request
+      </button>
+      <button className="glass-pill glass-pill-primary" onClick={() => onSubmit("online")} style={{ padding: "13px 18px", fontSize: 10 }}>
+        Pay Online
+      </button>
+      <button className="glass-pill glass-pill-outline" onClick={() => onSubmit("cod")} style={{ padding: "13px 18px", fontSize: 10 }}>
+        Cash on Delivery
+      </button>
+    </div>
+  );
+}
+
+function QuotationBox({ accent, requestId }: { accent: string; requestId?: string }) {
+  return (
+    <div className="glass" style={{ borderRadius: 10, padding: 14, marginTop: 18, border: `1px solid ${accent}35` }}>
+      <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 12, color: "white", marginBottom: 8 }}>Quotation</div>
+      <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, color: "#CFCFCF", lineHeight: 1.6 }}>
+        {requestId ? "Request submitted. Admin will send the quotation amount to your customer dashboard." : "Pending admin verification. Submit the request to receive quotation amount."}
+      </div>
+    </div>
   );
 }
 
@@ -835,6 +913,7 @@ function RepairBookingPage({ kind }: { kind: "pc-repair" | "laptop-repair" }) {
     preferredSlot: "",
   });
   const [requestId, setRequestId] = useState("");
+  const [serviceAddress, setServiceAddress] = useState<ServiceAddress>(emptyServiceAddress);
   const serviceCharge = form.serviceType === "Home Visit" ? 999 : form.serviceType === "Pickup & Delivery" ? 799 : 499;
   const title = isLaptop ? "Laptop Repair" : "PC Repair";
   const accent = isLaptop ? "#00b4ff" : "var(--primary)";
@@ -868,7 +947,7 @@ function RepairBookingPage({ kind }: { kind: "pc-repair" | "laptop-repair" }) {
       return { ...prev, uploadFiles: next };
     });
   };
-  const submit = async () => {
+  const submit = async (paymentMethod?: ServicePaymentInfo["method"]) => {
     if (!form.name.trim() || !form.phone.trim() || !form.brand.trim() || !form.model.trim() || !form.issue.trim() || !form.preferredSlot.trim()) {
       toast.error("Complete customer, device, issue, and preferred slot details.");
       return;
@@ -881,6 +960,13 @@ function RepairBookingPage({ kind }: { kind: "pc-repair" | "laptop-repair" }) {
       toast.error("Repair uploads must be JPG, JPEG, PNG, or WEBP images.");
       return;
     }
+    const addressError = validateServiceAddress(serviceAddress);
+    if (addressError) {
+      toast.error(addressError);
+      return;
+    }
+    const tempId = `rep_${Date.now().toString(36)}`;
+    const paymentInfo = paymentMethod ? createServicePaymentInfo(paymentMethod, 0, tempId) : undefined;
     const repair = await addRepairRequest({
       customerId: user?.id || `guest_${Date.now()}`,
       customerName: form.name.trim(),
@@ -895,10 +981,13 @@ function RepairBookingPage({ kind }: { kind: "pc-repair" | "laptop-repair" }) {
       issue: form.issue.trim(),
       serviceType: form.serviceType as any,
       preferredSlot: form.preferredSlot,
-      estimatedCharge: serviceCharge,
       uploadedFiles: repairImages,
       qualityChecks: ["Stress Testing", "Temperature Test", "Performance Benchmark", "Hardware Verification", "Software Verification"].map(label => ({ label, done: false })),
       deliveryMode: form.serviceType === "Pickup & Delivery" ? "Home Delivery" : "Pickup",
+      serviceAddress,
+      paymentInfo,
+      invoiceId: paymentInfo?.invoiceId,
+      paidAmount: 0,
     });
     setRequestId(repair.id);
     toast.success(`Repair request ${repair.id.slice(-8).toUpperCase()} submitted.`);
@@ -977,9 +1066,8 @@ function RepairBookingPage({ kind }: { kind: "pc-repair" | "laptop-repair" }) {
                   <button key={v} className={form.serviceType === v ? "glass-pill glass-pill-primary" : "glass-pill glass-pill-outline"} onClick={() => set("serviceType", v)} style={{ padding: "10px 14px", fontSize: 9 }}>{v}</button>
                 ))}
               </div>
-              <button className="glass-pill glass-pill-primary" onClick={submit} style={{ padding: "13px 22px", fontSize: 10, marginTop: 18 }}>
-                <CheckCircle size={13} /> Submit Repair Request
-              </button>
+              <ServiceAddressPaymentBox address={serviceAddress} setAddress={setServiceAddress} accent={accent} />
+              <ServiceActionButtons onSubmit={submit} />
             </div>
 
             <div className="glass-card" style={{ borderRadius: 14, padding: 22, border: `1px solid ${accent}35` }}>
@@ -994,10 +1082,7 @@ function RepairBookingPage({ kind }: { kind: "pc-repair" | "laptop-repair" }) {
                   <span style={{ color: "#777" }}>{k}</span><span style={{ color: "white", textAlign: "right" }}>{v}</span>
                 </div>
               ))}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 18 }}>
-                <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 11 }}>Estimated Service Charge</span>
-                <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 26, color: accent, fontWeight: 800 }}>₹{serviceCharge}</span>
-              </div>
+              <QuotationBox accent={accent} requestId={requestId} />
               <div className="glass" style={{ borderRadius: 10, padding: 12, marginTop: 18, fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, color: "#CFCFCF", lineHeight: 1.6 }}>
                 <Upload size={13} color={accent} /> Admin verifies the request, assigns a technician, sends diagnosis and quotation, then QA generates invoice and warranty.
               </div>
@@ -1257,6 +1342,7 @@ function CustomPCBuildPage({ service }: { service: Service }) {
     return acc;
   }, {} as Record<string, number>);
   const [selected, setSelected] = useState<Record<string, number>>(defaultSelected);
+  const [serviceAddress, setServiceAddress] = useState<ServiceAddress>(emptyServiceAddress);
   const [requestId, setRequestId] = useState("");
   const set = (key: keyof typeof form, value: string) => setForm(prev => ({ ...prev, [key]: value }));
 
@@ -1288,11 +1374,18 @@ function CustomPCBuildPage({ service }: { service: Service }) {
     return acc;
   }, {} as Record<string, string>);
 
-  const submit = async () => {
+  const submit = async (paymentMethod?: ServicePaymentInfo["method"]) => {
     if (!form.name.trim() || !form.phone.trim()) {
       toast.error("Enter customer name and phone.");
       return;
     }
+    const addressError = validateServiceAddress(serviceAddress);
+    if (addressError) {
+      toast.error(addressError);
+      return;
+    }
+    const tempId = `pcb_${Date.now().toString(36)}`;
+    const paymentInfo = paymentMethod ? createServicePaymentInfo(paymentMethod, 0, tempId) : undefined;
     const buildComponents = components.map(c => ({ type: c.type, name: c.name, price: c.price }));
     const build = await addPCBuildRequest({
       customerId: user?.id || `guest_${Date.now()}`,
@@ -1314,9 +1407,12 @@ function CustomPCBuildPage({ service }: { service: Service }) {
       gst,
       shipping: shippingCharge,
       estimatedDelivery: "5-7 working days",
-      quotation: total,
       quotationNote: "Initial automated estimate. Admin will verify inventory and send final quotation.",
       total,
+      serviceAddress,
+      paymentInfo,
+      invoiceId: paymentInfo?.invoiceId,
+      paidAmount: 0,
     });
     setRequestId(build.id);
     toast.success(`Build request ${build.id.slice(-8).toUpperCase()} submitted.`);
@@ -1376,7 +1472,8 @@ function CustomPCBuildPage({ service }: { service: Service }) {
                 <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 11 }}>Final Estimate</span>
                 <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 28, color: "#7a00ff", fontWeight: 800 }}>₹{total.toLocaleString("en-IN")}</span>
               </div>
-              <button className="glass-pill glass-pill-primary" onClick={submit} style={{ padding: "13px 20px", fontSize: 10, marginTop: 18, width: "100%" }}>{ctaText}</button>
+              <ServiceAddressPaymentBox address={serviceAddress} setAddress={setServiceAddress} accent="#7a00ff" />
+              <ServiceActionButtons onSubmit={submit} />
               {requestId && <div className="glass-red" style={{ borderRadius: 10, padding: 12, marginTop: 14, fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, color: "#FFC0C8", lineHeight: 1.6 }}>Build ID: <strong style={{ color: "white" }}>{requestId.slice(-8).toUpperCase()}</strong><br />Track it in Customer Dashboard → PC Builds.</div>}
             </div>
           </div>
@@ -1520,6 +1617,7 @@ function UpgradeOptimizationPage({ service }: { service: Service }) {
   });
   const [uploads, setUploads] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [serviceAddress, setServiceAddress] = useState<ServiceAddress>(emptyServiceAddress);
   const [requestId, setRequestId] = useState("");
   const set = (key: keyof typeof form, value: string) => setForm(prev => ({ ...prev, [key]: value }));
 
@@ -1541,11 +1639,15 @@ function UpgradeOptimizationPage({ service }: { service: Service }) {
     }
   };
 
-  const submit = async () => {
+  const submit = async (paymentMethod?: ServicePaymentInfo["method"]) => {
     if (!form.name.trim() || !form.phone.trim() || !form.requirements.trim()) {
       toast.error("Enter customer name, phone, and upgrade requirements.");
       return;
     }
+    const addressError = validateServiceAddress(serviceAddress);
+    if (addressError) { toast.error(addressError); return; }
+    const tempId = `upg_${Date.now().toString(36)}`;
+    const paymentInfo = paymentMethod ? createServicePaymentInfo(paymentMethod, 0, tempId) : undefined;
     const request = await addServiceRequest({
       kind: "upgrade",
       customerId: user?.id || `guest_${Date.now()}`,
@@ -1560,6 +1662,10 @@ function UpgradeOptimizationPage({ service }: { service: Service }) {
       serviceMethod: form.serviceMethod,
       preferredSlot: form.slot,
       uploads: uploads.filter(Boolean),
+      paidAmount: 0,
+      invoiceId: paymentInfo?.invoiceId,
+      serviceAddress,
+      paymentInfo,
     });
     setRequestId(request.id);
     toast.success(`Upgrade request ${request.id.slice(-8).toUpperCase()} submitted.`);
@@ -1601,7 +1707,8 @@ function UpgradeOptimizationPage({ service }: { service: Service }) {
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 }}>
                 {["Shop Visit", "Home Visit", "Pickup & Delivery"].map(v => <button key={v} className={form.serviceMethod === v ? "glass-pill glass-pill-primary" : "glass-pill glass-pill-outline"} onClick={() => set("serviceMethod", v)} style={{ padding: "10px 14px", fontSize: 9 }}>{v}</button>)}
               </div>
-              <button className="glass-pill glass-pill-primary" onClick={submit} style={{ padding: "13px 22px", fontSize: 10, marginTop: 20 }}><CheckCircle size={14} /> Submit Upgrade Request</button>
+              <ServiceAddressPaymentBox address={serviceAddress} setAddress={setServiceAddress} accent={accent} />
+              <ServiceActionButtons onSubmit={submit} />
             </div>
             <WorkflowSummary accent={accent} title="Upgrade Status Timeline" timeline={UPGRADE_TIMELINE} requestId={requestId} dashboardText="Admin will verify compatibility, assign a technician, send quotation, complete optimization, and generate invoice/warranty." />
           </div>
@@ -1643,6 +1750,7 @@ function AssemblyServicePage({ service }: { service: Service }) {
   const [equipment, setEquipment] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(ASSEMBLY_EQUIPMENT["Home Setup"].map(item => [item, true])));
   const [uploads, setUploads] = useState<string[]>([]);
+  const [serviceAddress, setServiceAddress] = useState<ServiceAddress>(emptyServiceAddress);
   const [requestId, setRequestId] = useState("");
   const set = (key: keyof typeof form, value: string) => setForm(prev => ({ ...prev, [key]: value }));
 
@@ -1652,11 +1760,13 @@ function AssemblyServicePage({ service }: { service: Service }) {
   };
   const toggleItem = (item: string) => setEquipment(prev => ({ ...prev, [item]: !prev[item] }));
 
-  const submit = async () => {
+  const submit = async (paymentMethod?: ServicePaymentInfo["method"]) => {
     if (!form.name.trim() || !form.phone.trim()) {
       toast.error("Enter customer name and phone number.");
       return;
     }
+    const addressError = validateServiceAddress(serviceAddress);
+    if (addressError) { toast.error(addressError); return; }
     if (form.serviceMethod === "On-site Setup" && !form.address.trim()) {
       toast.error("Enter the on-site address for the assembly visit.");
       return;
@@ -1667,6 +1777,8 @@ function AssemblyServicePage({ service }: { service: Service }) {
       toast.error("Tick at least one equipment item you are providing.");
       return;
     }
+    const tempId = `asm_${Date.now().toString(36)}`;
+    const paymentInfo = paymentMethod ? createServicePaymentInfo(paymentMethod, 0, tempId) : undefined;
     const request = await addServiceRequest({
       kind: "assembly",
       customerId: user?.id || `guest_${Date.now()}`,
@@ -1684,6 +1796,10 @@ function AssemblyServicePage({ service }: { service: Service }) {
       assemblyType: form.assemblyType,
       equipmentChecklist: checklist,
       uploads: uploads.filter(Boolean),
+      paidAmount: 0,
+      invoiceId: paymentInfo?.invoiceId,
+      serviceAddress,
+      paymentInfo,
     });
     setRequestId(request.id);
     toast.success(`Assembly request ${request.id.slice(-8).toUpperCase()} submitted.`);
@@ -1730,7 +1846,8 @@ function AssemblyServicePage({ service }: { service: Service }) {
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 }}>
                 {["On-site Setup", "In-Shop Setup"].map(v => <button key={v} className={form.serviceMethod === v ? "glass-pill glass-pill-primary" : "glass-pill glass-pill-outline"} onClick={() => set("serviceMethod", v)} style={{ padding: "10px 14px", fontSize: 9 }}>{v}</button>)}
               </div>
-              <button className="glass-pill glass-pill-primary" onClick={submit} style={{ padding: "13px 22px", fontSize: 10, marginTop: 20 }}><CheckCircle size={14} /> Submit Assembly Request</button>
+              <ServiceAddressPaymentBox address={serviceAddress} setAddress={setServiceAddress} accent={accent} />
+              <ServiceActionButtons onSubmit={submit} />
             </div>
             <WorkflowSummary accent={accent} title="Assembly Status Timeline" timeline={ASSEMBLY_TIMELINE} requestId={requestId} dashboardText="Admin will validate equipment, send a quotation, assign staff, and track assembly, testing, invoice, and warranty in your dashboard." />
           </div>
@@ -1765,6 +1882,7 @@ function SoftwareDataServicePage({ service }: { service: Service }) {
   });
   const [uploads, setUploads] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [serviceAddress, setServiceAddress] = useState<ServiceAddress>(emptyServiceAddress);
   const [requestId, setRequestId] = useState("");
   const set = (key: keyof typeof form, value: string) => setForm(prev => ({ ...prev, [key]: value }));
 
@@ -1786,11 +1904,15 @@ function SoftwareDataServicePage({ service }: { service: Service }) {
     }
   };
 
-  const submit = async () => {
+  const submit = async (paymentMethod?: ServicePaymentInfo["method"]) => {
     if (!form.name.trim() || !form.phone.trim() || !form.problem.trim()) {
       toast.error("Enter customer name, phone, and problem description.");
       return;
     }
+    const addressError = validateServiceAddress(serviceAddress);
+    if (addressError) { toast.error(addressError); return; }
+    const tempId = `sft_${Date.now().toString(36)}`;
+    const paymentInfo = paymentMethod ? createServicePaymentInfo(paymentMethod, 0, tempId) : undefined;
     const request = await addServiceRequest({
       kind: "software",
       customerId: user?.id || `guest_${Date.now()}`,
@@ -1804,6 +1926,10 @@ function SoftwareDataServicePage({ service }: { service: Service }) {
       serviceMethod: form.serviceMethod,
       preferredSlot: form.slot,
       uploads: uploads.filter(Boolean),
+      paidAmount: 0,
+      invoiceId: paymentInfo?.invoiceId,
+      serviceAddress,
+      paymentInfo,
     });
     setRequestId(request.id);
     toast.success(`Software request ${request.id.slice(-8).toUpperCase()} submitted.`);
@@ -1843,7 +1969,8 @@ function SoftwareDataServicePage({ service }: { service: Service }) {
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 }}>
                 {["Remote Support", "Shop Visit", "Home Visit", "Pickup & Delivery"].map(v => <button key={v} className={form.serviceMethod === v ? "glass-pill glass-pill-primary" : "glass-pill glass-pill-outline"} onClick={() => set("serviceMethod", v)} style={{ padding: "10px 14px", fontSize: 9 }}>{v}</button>)}
               </div>
-              <button className="glass-pill glass-pill-primary" onClick={submit} style={{ padding: "13px 22px", fontSize: 10, marginTop: 20 }}><CheckCircle size={14} /> Submit Service Request</button>
+              <ServiceAddressPaymentBox address={serviceAddress} setAddress={setServiceAddress} accent={accent} />
+              <ServiceActionButtons onSubmit={submit} />
             </div>
             <WorkflowSummary accent={accent} title="Software Status Timeline" timeline={SOFTWARE_TIMELINE} requestId={requestId} dashboardText="Admin will review, assign a software technician, send quotation, complete service, and generate invoice/report." />
           </div>
@@ -1865,6 +1992,7 @@ function RentalSolutionsPage({ service }: { service: Service }) {
   });
   const [uploads, setUploads] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [serviceAddress, setServiceAddress] = useState<ServiceAddress>(emptyServiceAddress);
   const [requestId, setRequestId] = useState("");
   const set = (key: keyof typeof form, value: string) => setForm(prev => ({ ...prev, [key]: value }));
   const handleFiles = async (files: FileList | null) => {
@@ -1884,12 +2012,18 @@ function RentalSolutionsPage({ service }: { service: Service }) {
       setUploading(false);
     }
   };
-  const submit = async () => {
+  const rentalAmount = Number(form.quantity || 1) * (form.duration === "Hour" ? 249 : form.duration === "Week" ? 2499 : form.duration === "Month" ? 7999 : 499) + (form.serviceMethod === "Home Delivery" ? 300 : 0);
+  const submit = async (paymentMethod?: ServicePaymentInfo["method"]) => {
     if (!form.name.trim() || !form.phone.trim() || !form.startDate || !form.endDate) { toast.error("Enter customer, phone, start date, and end date."); return; }
+    const addressError = validateServiceAddress(serviceAddress);
+    if (addressError) { toast.error(addressError); return; }
+    const tempId = `rnt_${Date.now().toString(36)}`;
+    const paymentInfo = paymentMethod ? createServicePaymentInfo(paymentMethod, 0, tempId) : undefined;
     const request = await addServiceRequest({
       kind: "rental", customerId: user?.id || `guest_${Date.now()}`, customerName: form.name.trim(), contactPhone: form.phone.trim(), contactEmail: form.email.trim(),
       title: `${form.category} Rental`, deviceType: form.category, category: form.category, requirements: form.requirements || `${form.quantity} unit(s), ${form.duration} rental`, serviceMethod: form.serviceMethod,
       companyName: form.companyName, quantity: Number(form.quantity || 1), rentalDuration: form.duration, startDate: form.startDate, endDate: form.endDate, uploads: uploads.filter(Boolean),
+      paidAmount: 0, invoiceId: paymentInfo?.invoiceId, serviceAddress, paymentInfo,
     });
     setRequestId(request.id);
     toast.success(`Rental request ${request.id.slice(-8).toUpperCase()} submitted.`);
@@ -1922,7 +2056,8 @@ function RentalSolutionsPage({ service }: { service: Service }) {
               </div>
               <WorkflowTextarea label="Rental Requirements" value={form.requirements} onChange={v => set("requirements", v)} placeholder="Software needed, event/office use, accessories, delivery address, business details..." />
               <ServiceImageSlots label="Upload Rental Document Images Optional (5 Slots)" uploads={uploads} setUploads={setUploads} accent={service.color} />
-              <button className="glass-pill glass-pill-primary" onClick={submit} style={{ padding: "13px 22px", fontSize: 10, marginTop: 20 }}><CheckCircle size={14} /> Submit Rental Request</button>
+              <ServiceAddressPaymentBox address={serviceAddress} setAddress={setServiceAddress} accent={service.color} />
+              <ServiceActionButtons onSubmit={submit} />
             </div>
             <WorkflowSummary accent={service.color} title="Rental Status Timeline" timeline={["Rental Request Submitted", "Request Received", "Documents Verified", "Rental Approved", "Rental Agreement Generated", "Payment Successful", "Product Reserved", "Product Prepared", "Product Shipped", "Rental Active", "Return Requested", "Product Received", "Inspection Completed", "Final Invoice Generated", "Security Deposit Refunded", "Rental Closed", "Review Requested"]} requestId={requestId} dashboardText="Track verification, agreement, deposit, delivery, return inspection, final invoice, and refund in your dashboard." />
           </div>
@@ -1938,6 +2073,7 @@ function SellUsedProductsPage({ service }: { service: Service }) {
   const [form, setForm] = useState({ name: user?.name || "", phone: user?.phone || "", email: user?.email || "", category: "Laptop", brand: "", model: "", specs: "", age: "", condition: "Good", serialNumber: "", expectedPrice: "", serviceMethod: "Pickup", requirements: "" });
   const [uploads, setUploads] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [serviceAddress, setServiceAddress] = useState<ServiceAddress>(emptyServiceAddress);
   const [requestId, setRequestId] = useState("");
   const set = (key: keyof typeof form, value: string) => setForm(prev => ({ ...prev, [key]: value }));
   const handleFiles = async (files: FileList | null) => {
@@ -1957,12 +2093,18 @@ function SellUsedProductsPage({ service }: { service: Service }) {
       setUploading(false);
     }
   };
-  const submit = async () => {
+  const inspectionAmount = form.serviceMethod === "Pickup" ? 299 : 0;
+  const submit = async (paymentMethod?: ServicePaymentInfo["method"]) => {
     if (!form.name.trim() || !form.phone.trim() || !form.brand.trim() || !form.model.trim()) { toast.error("Enter customer, phone, brand, and model."); return; }
+    const addressError = validateServiceAddress(serviceAddress);
+    if (addressError) { toast.error(addressError); return; }
+    const tempId = `sel_${Date.now().toString(36)}`;
+    const paymentInfo = paymentMethod ? createServicePaymentInfo(paymentMethod, 0, tempId) : undefined;
     const request = await addServiceRequest({
       kind: "sell", customerId: user?.id || `guest_${Date.now()}`, customerName: form.name.trim(), contactPhone: form.phone.trim(), contactEmail: form.email.trim(),
       title: `Sell ${form.brand} ${form.model}`, deviceType: form.category, category: form.category, requirements: `${form.condition} condition · ${form.age || "Age not specified"} · ${form.requirements || "No notes"}`,
       currentSpecs: form.specs, serialNumber: form.serialNumber, expectedPrice: Number(form.expectedPrice || 0), serviceMethod: form.serviceMethod, uploads: uploads.filter(Boolean),
+      paidAmount: 0, invoiceId: paymentInfo?.invoiceId, serviceAddress, paymentInfo,
     });
     setRequestId(request.id);
     toast.success(`Sell request ${request.id.slice(-8).toUpperCase()} submitted.`);
@@ -1983,7 +2125,8 @@ function SellUsedProductsPage({ service }: { service: Service }) {
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>{["Excellent", "Good", "Fair", "Needs Repair"].map(v => <button key={v} className={form.condition === v ? "glass-pill glass-pill-primary" : "glass-pill glass-pill-outline"} onClick={() => set("condition", v)} style={{ padding: "9px 13px", fontSize: 9 }}>{v}</button>)}{["Pickup", "Shop Visit"].map(v => <button key={v} className={form.serviceMethod === v ? "glass-pill glass-pill-primary" : "glass-pill glass-pill-outline"} onClick={() => set("serviceMethod", v)} style={{ padding: "9px 13px", fontSize: 9 }}>{v}</button>)}</div>
               <WorkflowTextarea label="Specs / Notes" value={form.specs} onChange={v => set("specs", v)} placeholder="CPU, RAM, GPU, storage, bill availability, accessories, condition notes..." />
               <ServiceImageSlots label="Upload Product Photos / Invoice Images Optional (5 Slots)" uploads={uploads} setUploads={setUploads} accent={service.color} />
-              <button className="glass-pill glass-pill-primary" onClick={submit} style={{ padding: "13px 22px", fontSize: 10, marginTop: 20 }}><CheckCircle size={14} /> Submit Sell Request</button>
+              <ServiceAddressPaymentBox address={serviceAddress} setAddress={setServiceAddress} accent={service.color} />
+              <ServiceActionButtons onSubmit={submit} />
             </div>
             <WorkflowSummary accent={service.color} title="Sell Request Timeline" timeline={["Sell Request Submitted", "Admin Review", "Inspection Scheduled", "Product Inspected", "Price Offer Sent", "Offer Accepted", "Payment Completed", "Added to Inventory", "Published for Resale", "Request Closed"]} requestId={requestId} dashboardText="Track inspection, price offer, acceptance, payment, inventory certification, and resale publishing in your dashboard." />
           </div>
@@ -2000,6 +2143,7 @@ function RemoteBusinessSupportPage({ service }: { service: Service }) {
   const [form, setForm] = useState({ name: user?.name || "", phone: user?.phone || "", email: user?.email || "", category: "Software Issue", deviceType: "Laptop", priority: "Normal", preferredSlot: "", companyName: "", businessSize: "", deviceCount: "", serviceMethod: "Remote", requirements: "" });
   const [uploads, setUploads] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [serviceAddress, setServiceAddress] = useState<ServiceAddress>(emptyServiceAddress);
   const [requestId, setRequestId] = useState("");
   const set = (key: keyof typeof form, value: string) => setForm(prev => ({ ...prev, [key]: value }));
   const handleFiles = async (files: FileList | null) => {
@@ -2019,12 +2163,18 @@ function RemoteBusinessSupportPage({ service }: { service: Service }) {
       setUploading(false);
     }
   };
-  const submit = async () => {
+  const supportAmount = mode === "Business IT Support" ? serviceMethodBaseAmount(form.serviceMethod, 1499) : serviceMethodBaseAmount(form.serviceMethod, 499);
+  const submit = async (paymentMethod?: ServicePaymentInfo["method"]) => {
     if (!form.name.trim() || !form.phone.trim() || !form.requirements.trim()) { toast.error("Enter customer, phone, and issue details."); return; }
+    const addressError = validateServiceAddress(serviceAddress);
+    if (addressError) { toast.error(addressError); return; }
+    const tempId = `sup_${Date.now().toString(36)}`;
+    const paymentInfo = paymentMethod ? createServicePaymentInfo(paymentMethod, 0, tempId) : undefined;
     const request = await addServiceRequest({
       kind: "support", customerId: user?.id || `guest_${Date.now()}`, customerName: form.name.trim(), contactPhone: form.phone.trim(), contactEmail: form.email.trim(),
       title: `${mode}: ${form.category}`, deviceType: form.deviceType, category: form.category, requirements: form.requirements, serviceMethod: form.serviceMethod,
       preferredSlot: form.preferredSlot, companyName: form.companyName, priority: form.priority, quantity: Number(form.deviceCount || 0), uploads: uploads.filter(Boolean),
+      paidAmount: 0, invoiceId: paymentInfo?.invoiceId, serviceAddress, paymentInfo,
     });
     setRequestId(request.id);
     toast.success(`Support ticket ${request.id.slice(-8).toUpperCase()} submitted.`);
@@ -2051,7 +2201,8 @@ function RemoteBusinessSupportPage({ service }: { service: Service }) {
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>{["Remote", "Onsite", "Hybrid"].map(v => <button key={v} className={form.serviceMethod === v ? "glass-pill glass-pill-primary" : "glass-pill glass-pill-outline"} onClick={() => set("serviceMethod", v)} style={{ padding: "9px 13px", fontSize: 9 }}>{v}</button>)}</div>
               <WorkflowTextarea label={mode === "Remote Support" ? "Describe Issue" : "Current Problems / Requirements"} value={form.requirements} onChange={v => set("requirements", v)} placeholder="Error messages, infrastructure, devices, software, network, server, SLA or AMC needs..." />
               <ServiceImageSlots label="Upload Support Screenshots Optional (5 Slots)" uploads={uploads} setUploads={setUploads} accent={service.color} />
-              <button className="glass-pill glass-pill-primary" onClick={submit} style={{ padding: "13px 22px", fontSize: 10, marginTop: 20 }}><CheckCircle size={14} /> Submit Support Request</button>
+              <ServiceAddressPaymentBox address={serviceAddress} setAddress={setServiceAddress} accent={service.color} />
+              <ServiceActionButtons onSubmit={submit} />
             </div>
             <WorkflowSummary accent={service.color} title="Support Status Timeline" timeline={["Ticket Submitted", "Ticket Assigned", "Session Scheduled", "Technician Connected", "Issue Resolved", "Invoice Generated", "Payment Completed", "Ticket Closed"]} requestId={requestId} dashboardText="Track assignment, remote session, work notes, report, invoice, payment, and closure in your dashboard." />
           </div>
@@ -2337,11 +2488,69 @@ function GamingHubPage({ service, postSlug }: { service: Service; postSlug?: str
   const { store, trackGamingHubMetric, patchGamingHubItem } = useDashboardData();
 
   const [selected, setSelected] = useState("All");
+  // Article fetch from API — used as fallback when the local store doesn't
+  // contain a published item that the homepage/API is referencing. Without
+  // this, an anonymous visitor landing on /services/gaming-hub/<slug> would
+  // see "Not found" because the local store is only hydrated for
+  // authenticated admins. The API is the public source of truth.
+  const [apiArticle, setApiArticle] = useState<GamingHubItem | null>(null);
+  const [apiArticleLoading, setApiArticleLoading] = useState<boolean>(false);
+  const [apiArticleMissing, setApiArticleMissing] = useState<boolean>(false);
+  useEffect(() => {
+    if (!postSlug) { setApiArticle(null); setApiArticleMissing(false); return; }
+    let cancelled = false;
+    setApiArticleLoading(true);
+    setApiArticleMissing(false);
+    homepageContentApi.getBySlug(postSlug)
+      .then((row) => {
+        if (cancelled) return;
+        if (!row) { setApiArticle(null); setApiArticleMissing(true); return; }
+        // Adapt the API row into a GamingHubItem so the article page can render it.
+        const adapted: GamingHubItem = {
+          id: row.id,
+          type: row.type as GamingHubItem["type"],
+          title: row.title,
+          slug: row.slug,
+          category: row.category || "",
+          shortDescription: row.shortDescription || "",
+          body: row.body || "",
+          intro: row.intro || "",
+          specs: row.specs || "",
+          benchmarkData: row.benchmarkData || "",
+          tags: row.tags || [],
+          pros: row.pros || [],
+          cons: row.cons || [],
+          tips: row.tips || [],
+          offerDetails: row.offerDetails || "",
+          discount: row.discount || "",
+          ctaText: row.ctaText || "",
+          ctaHref: row.ctaHref || "",
+          coverImage: row.coverImage || "",
+          thumbnailImage: row.thumbnailImage || "",
+          bannerImage: row.bannerImage || "",
+          gallery: row.gallery || [],
+          status: (row.status as GamingHubItem["status"]) || "published",
+          publishDate: row.publishDate ? new Date(row.publishDate).getTime() : Date.now(),
+          updatedAt: Date.now(),
+          views: 0, reads: 0, shares: 0,
+          whatsappClicks: 0, callClicks: 0, offerClicks: 0, ctaClicks: 0,
+          comments: [],
+        } as unknown as GamingHubItem;
+        setApiArticle(adapted);
+      })
+      .catch(() => { if (!cancelled) setApiArticleMissing(true); })
+      .finally(() => { if (!cancelled) setApiArticleLoading(false); });
+    return () => { cancelled = true; };
+  }, [postSlug]);
+
   const allPublished = (store.gamingHub || []).filter(item => item.status === "published");
   const published = allPublished.filter(item => item.showOnHub);
   // Resolve a direct article link against ALL published items (not only those
   // flagged to show in the hub listing) so homepage "Details" links always open.
-  const target = postSlug ? allPublished.find(item => item.slug === postSlug) : null;
+  const localTarget = postSlug ? allPublished.find(item => item.slug === postSlug) : null;
+  // Prefer local row; if missing, fall back to API row so anonymous visitors
+  // opening /services/gaming-hub/<slug> still see the article.
+  const target = localTarget || apiArticle;
   const visible = published.filter(item => gamingCategoryMatches(item, selected));
   const news = published.filter(item => item.showInLatestNews || ["gaming-news", "latest-hardware", "gaming-tip"].includes(item.type)).slice(0, 3);
   const builds = published.filter(item => item.showInSignatureMachines || item.type === "featured-build").slice(0, 3);
@@ -2350,6 +2559,17 @@ function GamingHubPage({ service, postSlug }: { service: Service; postSlug?: str
   const faqs = published.filter(item => item.type === "faq").slice(0, 6);
 
   if (postSlug) {
+    if (apiArticleLoading && !target) {
+      // Brief loading state while we fetch the article from the API.
+      return (
+        <div style={{ background: "#050505", color: "white", minHeight: "100vh", paddingBottom: 70 }}>
+          <Navbar />
+          <section style={{ maxWidth: 1180, margin: "0 auto", padding: "120px 20px", textAlign: "center" }}>
+            <p style={{ fontFamily: "'Space Grotesk', sans-serif", color: "#aaa" }}>Loading article…</p>
+          </section>
+        </div>
+      );
+    }
     if (!target) return <NotFoundView />;
     return <GamingHubArticlePage item={target} related={published.filter(item => item.id !== target.id)} track={trackGamingHubMetric} patchGamingHubItem={patchGamingHubItem} />;
   }
