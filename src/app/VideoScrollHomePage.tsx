@@ -88,15 +88,15 @@ export default function VideoScrollHomePage() {
           width:100%;
           height:100%;
           object-fit:cover;
-          filter:saturate(1.18) contrast(1.1) brightness(1.04);
+          filter:saturate(1.24) contrast(1.12) brightness(1.16);
         }
         .video-home-bg::after{
           content:"";
           position:absolute;
           inset:0;
           background:
-            linear-gradient(90deg,rgba(3,4,5,.64) 0%,rgba(3,4,5,.32) 46%,rgba(3,4,5,.54) 100%),
-            linear-gradient(180deg,rgba(0,0,0,.30),rgba(0,0,0,.40));
+            linear-gradient(90deg,rgba(3,4,5,.56) 0%,rgba(3,4,5,.24) 46%,rgba(3,4,5,.46) 100%),
+            linear-gradient(180deg,rgba(0,0,0,.22),rgba(0,0,0,.32));
           pointer-events:none;
         }
         .video-home-scan{
