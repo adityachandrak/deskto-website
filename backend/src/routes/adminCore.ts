@@ -210,6 +210,45 @@ router.post('/admin/staff', authenticate, authorize('admin'), async (req: AuthRe
   }
 });
 
+// There is currently no email/SMS service wired up (see the audit), so a
+// self-service "forgot password" flow that emails or texts a reset link
+// isn't possible yet. Until that exists, support fields this by phone: an
+// admin or staff member verifies the customer's identity on the call, then
+// uses this to issue a fresh temporary password. Staff may only reset
+// customer passwords — not other staff or admin accounts — to avoid a
+// compromised staff account being able to take over higher-privileged
+// accounts.
+router.post('/admin/users/:id/reset-password', authenticate, authorize('admin', 'staff'), async (req: AuthRequest, res: Response) => {
+  try {
+    const target = await query('SELECT id, email, role FROM users WHERE id = $1', [req.params.id]);
+    if (!target.rows.length) return res.status(404).json({ error: 'User not found' });
+
+    const targetRole = target.rows[0].role;
+    if (req.user!.role === 'staff' && targetRole !== 'customer') {
+      return res.status(403).json({ error: 'Staff may only reset customer passwords' });
+    }
+
+    const temporaryPassword = `Dk${Math.random().toString(36).slice(2, 8)}${Math.floor(Math.random() * 90 + 10)}!`;
+    const passwordHash = await bcrypt.hash(temporaryPassword, 12);
+
+    await query(
+      `UPDATE users SET password_hash = $1, failed_login_attempts = 0, locked_until = NULL,
+              status = CASE WHEN status = 'locked' THEN 'active' ELSE status END, updated_at = NOW()
+        WHERE id = $2`,
+      [passwordHash, req.params.id]
+    );
+    // Force re-login everywhere — a password reset should invalidate any
+    // session that might belong to someone who is no longer the account
+    // owner.
+    await query('UPDATE refresh_tokens SET revoked = TRUE WHERE user_id = $1', [req.params.id]);
+
+    res.json({ email: target.rows[0].email, temporaryPassword });
+  } catch (error) {
+    console.error('Admin reset password error:', error);
+    res.status(500).json({ error: 'Failed to reset password' });
+  }
+});
+
 router.get('/admin/crm-notes', authenticate, authorize('admin', 'staff'), async (req, res) => {
   const params: any[] = [];
   const where = req.query.customerId ? 'WHERE n.customer_id=$1' : '';

@@ -67,9 +67,13 @@ check("signup awaits shared backend registration before redirecting", () => {
   assert.match(appTsx, /const registered = await apiRegister\(/);
   assert.doesNotMatch(appTsx, /apiRegister\([\s\S]{0,400}\.catch\(\(\) => \{ \/\* backend not available/);
 });
-check("admin signup code is passed to the backend and not exposed as a placeholder", () => {
-  assert.match(appTsx, /adminCode: pending\.adminCode/);
+check("admin signup code is passed to the backend and never hardcoded client-side", () => {
+  assert.match(appTsx, /adminCode: signup\.role === "admin" \? signup\.adminCode\.trim\(\) : undefined/);
   assert.doesNotMatch(appTsx, /placeholder=\{ADMIN_SIGNUP_CODE\}/);
+  // The admin signup code must never be embedded in the shipped bundle — the
+  // backend (ADMIN_SIGNUP_CODE env var) is the sole authority on whether a
+  // given code is correct.
+  assert.doesNotMatch(appTsx, /const ADMIN_SIGNUP_CODE\s*=\s*["']/);
 });
 
 // 1. Admin save handler: saveCmsItem calls publish() then notifyCmsRefetch()

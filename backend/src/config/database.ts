@@ -3,6 +3,12 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+if (!process.env.DATABASE_URL && !process.env.DB_PASSWORD) {
+  throw new Error(
+    'DATABASE_URL or DB_PASSWORD must be set — refusing to start with a default database password.'
+  );
+}
+
 const poolConfig: PoolConfig = process.env.DATABASE_URL
   ? {
       connectionString: process.env.DATABASE_URL,
@@ -15,7 +21,7 @@ const poolConfig: PoolConfig = process.env.DATABASE_URL
       port: parseInt(process.env.DB_PORT || '5432'),
       database: process.env.DB_NAME || 'deskto_db',
       user: process.env.DB_USER || 'postgres',
-      password: process.env.DB_PASSWORD || 'password',
+      password: process.env.DB_PASSWORD,
       max: 20,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 2000,

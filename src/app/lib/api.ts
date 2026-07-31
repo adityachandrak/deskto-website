@@ -247,6 +247,7 @@ export const adminApi = {
   deleteBrand: (id: string) => apiFetch<any>(`/admin/brands/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   users: (role?: string) => apiFetch<{ users: any[] }>(`/admin/users${role ? `?role=${encodeURIComponent(role)}` : ''}`),
   updateUser: (id: string, data: Record<string, unknown>) => apiFetch<any>(`/admin/users/${encodeURIComponent(id)}`, { method: 'PATCH', json: data }),
+  resetUserPassword: (id: string) => apiFetch<{ email: string; temporaryPassword: string }>(`/admin/users/${encodeURIComponent(id)}/reset-password`, { method: 'POST' }),
   createStaff: (data: Record<string, unknown>) => apiFetch<any>('/admin/staff', { method: 'POST', json: data }),
   crmNotes: (customerId?: string) => apiFetch<{ notes: any[] }>(`/admin/crm-notes${customerId ? `?customerId=${encodeURIComponent(customerId)}` : ''}`),
   createCrmNote: (data: Record<string, unknown>) => apiFetch<any>('/admin/crm-notes', { method: 'POST', json: data }),

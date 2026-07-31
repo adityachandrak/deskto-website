@@ -4,6 +4,17 @@ import { AuthRequest } from '../models/types';
 
 export type { AuthRequest };
 
+// A weak or missing JWT secret lets anyone forge a valid token for any
+// role. Fail fast at startup rather than silently signing/verifying with a
+// hardcoded fallback that's visible in this repo.
+if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 16) {
+  throw new Error(
+    'JWT_SECRET must be set to a value at least 16 characters long — refusing to start with a missing or weak secret.'
+  );
+}
+
+export const JWT_SECRET: string = process.env.JWT_SECRET;
+
 export const authenticate = (
   req: AuthRequest,
   res: Response,
@@ -18,7 +29,7 @@ export const authenticate = (
     }
 
     const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'default-secret') as {
+    const decoded = jwt.verify(token, JWT_SECRET) as {
       id: string;
       email: string;
       role: string;
@@ -57,7 +68,7 @@ export const optionalAuth = (
 
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.split(' ')[1];
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'default-secret') as {
+      const decoded = jwt.verify(token, JWT_SECRET) as {
         id: string;
         email: string;
         role: string;

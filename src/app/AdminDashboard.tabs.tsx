@@ -4320,6 +4320,18 @@ export function AdminCustomers({ store, addLog }: { store: DashboardStore; addLo
     toast.success(`Customer ${status}`);
   };
 
+  const resetPassword = async (user: DemoUser) => {
+    if (!window.confirm(`Reset ${user.name}'s password? They'll be signed out everywhere and need the new temporary password to log back in.`)) return;
+    try {
+      const result = await adminApi.resetUserPassword(user.id);
+      await navigator.clipboard?.writeText(result.temporaryPassword).catch(() => {});
+      addLog("customer_password_reset", `${user.email} password reset by admin`, "admin");
+      toast.success(`Temporary password for ${result.email}: ${result.temporaryPassword} (copied to clipboard — share it securely)`, { duration: 20000 });
+    } catch (error: any) {
+      toast.error(error?.message || "Could not reset password");
+    }
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
       <SectionCard title="Customer Directory" subtitle={`${users.length} registered`}>
@@ -4336,6 +4348,7 @@ export function AdminCustomers({ store, addLog }: { store: DashboardStore; addLo
               <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                 <button className="glass-pill glass-pill-sm glass-pill-outline" onClick={(e) => { e.stopPropagation(); setStatus(u, u.status === "locked" ? "active" : "locked"); }}>{u.status === "locked" ? <Unlock size={10} /> : <Lock size={10} />} {u.status === "locked" ? "Unlock" : "Lock"}</button>
                 <button className="glass-pill glass-pill-sm glass-pill-success" onClick={(e) => { e.stopPropagation(); setStatus(u, "active"); }}>Verify</button>
+                <button className="glass-pill glass-pill-sm glass-pill-outline" onClick={(e) => { e.stopPropagation(); resetPassword(u); }}>Reset Password</button>
                 <button className="glass-pill glass-pill-sm glass-pill-info" onClick={(e) => { e.stopPropagation(); setSelectedId(u.id); }}>History</button>
               </div>
             )},
@@ -4392,6 +4405,16 @@ export function AdminStaff({ store, addStaffMember }: { store: DashboardStore; a
     await reload();
     toast.success("Staff account and profile created");
   };
+  const resetPassword = async (id: string, name: string) => {
+    if (!window.confirm(`Reset ${name}'s password? They'll be signed out everywhere and need the new temporary password to log back in.`)) return;
+    try {
+      const result = await adminApi.resetUserPassword(id);
+      await navigator.clipboard?.writeText(result.temporaryPassword).catch(() => {});
+      toast.success(`Temporary password for ${result.email}: ${result.temporaryPassword} (copied to clipboard — share it securely)`, { duration: 20000 });
+    } catch (error: any) {
+      toast.error(error?.message || "Could not reset password");
+    }
+  };
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
       <SectionCard title="Staff Directory" subtitle={`${staffRows.length} members`}
@@ -4420,6 +4443,7 @@ export function AdminStaff({ store, addStaffMember }: { store: DashboardStore; a
             { key: "rating", label: "Rating", align: "right", render: s => `${s.performance.rating}★` },
             { key: "jobs", label: "Jobs", align: "right", render: s => s.performance.jobs },
             { key: "attendance", label: "Attend.", align: "right", render: s => `${s.performance.attendancePct}%` },
+            { key: "actions", label: "", align: "right", render: s => <button className="glass-pill glass-pill-outline glass-pill-sm" onClick={() => resetPassword(s.id, s.name)}>Reset Password</button> },
           ]}
         />
       </SectionCard>

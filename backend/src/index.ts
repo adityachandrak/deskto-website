@@ -11,6 +11,12 @@ const app = express();
 const PORT = Number(process.env.PORT || 3001);
 const HOST = process.env.HOST || '0.0.0.0';
 
+// The app sits behind an ALB/CloudFront, so req.ip is otherwise always the
+// load balancer's address — trust the single hop of X-Forwarded-For it sets
+// so rate limiting (and any future IP-based logic) sees the real client IP
+// instead of throttling all traffic as if it came from one source.
+app.set('trust proxy', 1);
+
 // Security middleware
 app.use(helmet());
 

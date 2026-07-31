@@ -19,6 +19,8 @@ CREATE TABLE IF NOT EXISTS users (
     role VARCHAR(20) NOT NULL CHECK (role IN ('admin', 'staff', 'customer')),
     status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'suspended', 'locked')),
     is_verified BOOLEAN DEFAULT FALSE,
+    failed_login_attempts INT NOT NULL DEFAULT 0,
+    locked_until TIMESTAMP,
     avatar_url VARCHAR(500),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

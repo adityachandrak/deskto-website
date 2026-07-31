@@ -2555,8 +2555,6 @@ type AuthUser = {
   phone: string;
   passwordHash: string;
   role: AuthRole;
-  staffId?: string;
-  department?: string;
   emailVerified: boolean;
   phoneVerified: boolean;
   status: "active" | "locked";
@@ -2564,29 +2562,6 @@ type AuthUser = {
   lockedUntil?: number;
   createdAt: string;
   updatedAt: string;
-};
-
-type PendingSignup = {
-  name: string;
-  email: string;
-  phone: string;
-  passwordHash: string;
-  role: AuthRole;
-  staffId?: string;
-  department?: string;
-  adminCode?: string;
-  otp: string;
-  expiresAt: number;
-  attempts: number;
-  rawPassword?: string;
-};
-
-type ResetRequest = {
-  email: string;
-  otp: string;
-  expiresAt: number;
-  attempts: number;
-  verified: boolean;
 };
 
 type SessionRecord = {
@@ -2606,18 +2581,9 @@ type AuditLog = {
 };
 
 const AUTH_STORAGE_KEY = "deskto-auth-demo-state";
-const OTP_TTL_MS = 5 * 60 * 1000;
-const MAX_OTP_ATTEMPTS = 3;
-const MAX_LOGIN_ATTEMPTS = 5;
-const LOCK_MS = 10 * 60 * 1000;
-// Must match backend/src/routes/auth.ts. This is only a client-side early
-// validation; the backend remains authoritative.
-const ADMIN_SIGNUP_CODE = "ADMIN-DESKTO-2026";
 
 const emptyAuthState = {
   users: [] as AuthUser[],
-  pendingSignup: null as PendingSignup | null,
-  resetRequest: null as ResetRequest | null,
   sessions: [] as SessionRecord[],
   auditLogs: [] as AuditLog[],
   currentUserId: null as string | null,
@@ -2626,14 +2592,6 @@ const emptyAuthState = {
 
 function makeId(prefix: string) {
   return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
-}
-
-function demoHashPassword(password: string) {
-  return `demo_bcrypt_${btoa(unescape(encodeURIComponent(password))).slice(0, 28)}`;
-}
-
-function generateOtp() {
-  return String(Math.floor(100000 + Math.random() * 900000));
 }
 
 function isEmail(value: string) {
@@ -2661,11 +2619,15 @@ function AuthField({ label, type="text", value, onChange, placeholder }: { label
 type AuthMode = "sign-in" | "sign-up" | "forgot-password";
 type AuthRole = "customer" | "admin" | "staff";
 
+// "staff" is intentionally not offered here — staff accounts are created by
+// an administrator from the Admin Dashboard (Staff → Add Staff), never
+// through public self-registration. The backend rejects role:"staff" on
+// POST /auth/register regardless of what a direct API call sends.
 const signupRoleMeta = {
   customer: { label:"Customer", path:"/sign-up/customer", icon:UserPlus },
   admin: { label:"Admin", path:"/sign-up/admin", icon:ShieldCheck },
-  staff: { label:"Staff", path:"/sign-up/staff", icon:ClipboardCheck },
-} satisfies Record<AuthRole, { label:string; path:string; icon:typeof UserPlus }>;
+} satisfies Partial<Record<AuthRole, { label:string; path:string; icon:typeof UserPlus }>>;
+type SignupRole = keyof typeof signupRoleMeta;
 
 function AuthSection({ initialMode="sign-in", initialRole="customer", standalone=false }: { initialMode?: AuthMode; initialRole?: AuthRole; standalone?: boolean }) {
   const [state,setState] = useState(() => {
@@ -2676,10 +2638,8 @@ function AuthSection({ initialMode="sign-in", initialRole="customer", standalone
       return emptyAuthState;
     }
   });
-  const [signup,setSignup] = useState({ name:"", email:"", phone:"", password:"", confirm:"", terms:false, role:initialRole, adminCode:"", staffId:"", department:"" });
-  const [signupOtp,setSignupOtp] = useState("");
+  const [signup,setSignup] = useState({ name:"", email:"", phone:"", password:"", confirm:"", terms:false, role:initialRole, adminCode:"" });
   const [login,setLogin] = useState({ identifier:"", password:"", remember:true });
-  const [forgot,setForgot] = useState({ email:"", otp:"", password:"", confirm:"" });
   const [message,setMessage] = useState("Ready to validate customer authentication.");
   const [mode,setMode] = useState<AuthMode>(initialMode);
 
@@ -2700,7 +2660,7 @@ function AuthSection({ initialMode="sign-in", initialRole="customer", standalone
     }
   };
 
-  const goSignupRole = (role: AuthRole) => {
+  const goSignupRole = (role: SignupRole) => {
     setMode("sign-up");
     setSignup(prev => ({ ...prev, role }));
     if (standalone) {
@@ -2715,7 +2675,7 @@ function AuthSection({ initialMode="sign-in", initialRole="customer", standalone
     }));
   };
 
-  const runSignup = () => {
+  const runSignup = async () => {
     const phone = normalizePhone(signup.phone);
     if (signup.name.trim().length < 2) return setMessage("Name is required.");
     if (!isEmail(signup.email)) return setMessage("Enter a valid email address.");
@@ -2723,78 +2683,36 @@ function AuthSection({ initialMode="sign-in", initialRole="customer", standalone
     if (!strongPassword(signup.password)) return setMessage("Password needs 8+ chars with upper, lower, number, and symbol.");
     if (signup.password !== signup.confirm) return setMessage("Confirm password must match.");
     if (!signup.terms) return setMessage("Accept Terms and Privacy Policy.");
-    if (signup.role === "admin" && signup.adminCode.trim() !== ADMIN_SIGNUP_CODE) return setMessage("Enter the valid admin signup code.");
-    if (signup.role === "staff" && !/^STF-\d{4,}$/i.test(signup.staffId.trim())) return setMessage("Staff ID must use the format STF-1001.");
-    if (signup.role === "staff" && signup.department.trim().length < 2) return setMessage("Department is required for staff signup.");
-    if (state.users.some(u => u.email.toLowerCase() === signup.email.toLowerCase())) return setMessage("Duplicate email blocked.");
-    if (state.users.some(u => normalizePhone(u.phone) === phone)) return setMessage("Duplicate mobile blocked.");
-    if (signup.role === "staff" && state.users.some(u => u.staffId?.toLowerCase() === signup.staffId.trim().toLowerCase())) return setMessage("Duplicate staff ID blocked.");
+    if (signup.role === "admin" && !signup.adminCode.trim()) return setMessage("Enter the admin signup code.");
 
-    const otp = generateOtp();
-    setState(prev => ({
-      ...prev,
-      pendingSignup: {
-        name: signup.name.trim(),
-        email: signup.email.trim().toLowerCase(),
-        phone,
-        passwordHash: demoHashPassword(signup.password),
-        rawPassword: signup.password,
-        role: signup.role,
-        adminCode: signup.role === "admin" ? signup.adminCode.trim() : undefined,
-        staffId: signup.role === "staff" ? signup.staffId.trim().toUpperCase() : undefined,
-        department: signup.role === "staff" ? signup.department.trim() : undefined,
-        otp,
-        expiresAt: Date.now() + OTP_TTL_MS,
-        attempts: 0,
-      },
-    }));
-    setSignupOtp(otp);
-    setMessage(`OTP generated and stored with expiry. Demo OTP: ${otp}`);
-    addLog("signup_otp_sent", `${signup.role} OTP sent to ${signup.email}`);
-  };
+    const name = signup.name.trim();
+    const email = signup.email.trim().toLowerCase();
+    const nameParts = name.split(' ');
+    const firstName = nameParts[0];
+    const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
 
-  const verifySignupOtp = async () => {
-    const pending = state.pendingSignup;
-    if (!pending) return setMessage("Create a signup request first.");
-    if (Date.now() > pending.expiresAt) return setMessage("Signup OTP expired.");
-    if (pending.attempts >= MAX_OTP_ATTEMPTS) return setMessage("Maximum OTP attempts reached.");
-    if (signupOtp !== pending.otp) {
-      setState(prev => prev.pendingSignup ? { ...prev, pendingSignup:{ ...prev.pendingSignup, attempts:prev.pendingSignup.attempts + 1 } } : prev);
-      return setMessage("Wrong OTP.");
-    }
     try {
-      const nameParts = pending.name.trim().split(' ');
-      const firstName = nameParts[0];
-      const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
-
-      // Registration must finish in the shared backend before the UI reports
-      // success. Previously this was fire-and-forget, which created accounts
-      // only in localStorage and made them impossible to use on another device.
       const registered = await apiRegister({
-        email: pending.email,
-        password: pending.rawPassword || pending.passwordHash,
+        email,
+        password: signup.password,
         firstName,
         lastName,
-        phone: pending.phone,
-        role: pending.role,
-        adminCode: pending.adminCode,
-        staffId: pending.staffId,
-        department: pending.department,
+        phone,
+        role: signup.role,
+        adminCode: signup.role === "admin" ? signup.adminCode.trim() : undefined,
       });
 
       const newUser: AuthUser = {
         id: registered.id,
-        name: registered.name || pending.name,
+        name: registered.name || name,
         email: registered.email,
-        phone: registered.phone || pending.phone,
+        phone: registered.phone || phone,
         firstName: registered.firstName || firstName,
         lastName: registered.lastName || lastName,
-        passwordHash: pending.passwordHash,
+        passwordHash: "",
         role: registered.role,
-        staffId: pending.staffId,
-        department: pending.department,
-        emailVerified: true,
-        phoneVerified: true,
+        emailVerified: false,
+        phoneVerified: false,
         status: "active",
         loginAttempts: 0,
         createdAt: new Date().toISOString(),
@@ -2809,21 +2727,18 @@ function AuthSection({ initialMode="sign-in", initialRole="customer", standalone
         expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
       };
 
-      // Persist to demo state (used by useCurrentUser / DashboardRouter)
       setState(prev => ({
         ...prev,
         users: [...prev.users, newUser],
-        pendingSignup: null,
         sessions: [...prev.sessions, session],
         currentUserId: registered.id,
         accessToken: "backend-managed",
       }));
 
-      setMessage(`${signupRoleMeta[pending.role].label} account created! Redirecting to dashboard…`);
-      addLog("signup_completed", `${pending.role} ${pending.email} verified by OTP`);
+      setMessage(`${signupRoleMeta[registered.role as SignupRole]?.label || "Account"} created! Redirecting to dashboard…`);
+      addLog("signup_completed", `${registered.role} ${email} account created`);
 
-      // Redirect to the correct role dashboard
-      const dashPath = `/dashboard/${pending.role}`;
+      const dashPath = `/dashboard/${registered.role}`;
       setTimeout(() => {
         window.history.pushState(null, "", dashPath);
         window.dispatchEvent(new PopStateEvent("popstate"));
@@ -2831,7 +2746,7 @@ function AuthSection({ initialMode="sign-in", initialRole="customer", standalone
     } catch (error: any) {
       const errorMsg = error?.message || "Failed to create account.";
       setMessage(errorMsg);
-      addLog("signup_failure", `${pending.email} failed to create account: ${errorMsg}`);
+      addLog("signup_failure", `${email} failed to create account: ${errorMsg}`);
     }
   };
 
@@ -2862,49 +2777,6 @@ function AuthSection({ initialMode="sign-in", initialRole="customer", standalone
     }
   };
 
-  const requestPasswordReset = () => {
-    const email = forgot.email.trim().toLowerCase();
-    if (!isEmail(email)) return setMessage("Enter a valid reset email.");
-    if (!state.users.some(u => u.email === email)) return setMessage("No customer exists with that email.");
-    const otp = generateOtp();
-    setState(prev => ({ ...prev, resetRequest:{ email, otp, expiresAt:Date.now() + OTP_TTL_MS, attempts:0, verified:false } }));
-    setForgot(prev => ({ ...prev, otp }));
-    setMessage(`Password reset OTP generated. Demo OTP: ${otp}`);
-    addLog("reset_otp_sent", `Password reset OTP sent to ${email}`);
-  };
-
-  const verifyResetOtp = () => {
-    const reset = state.resetRequest;
-    if (!reset) return setMessage("Request password reset first.");
-    if (Date.now() > reset.expiresAt) return setMessage("Reset OTP expired.");
-    if (reset.attempts >= MAX_OTP_ATTEMPTS) return setMessage("Maximum reset OTP attempts reached.");
-    if (forgot.otp !== reset.otp) {
-      setState(prev => prev.resetRequest ? { ...prev, resetRequest:{ ...prev.resetRequest, attempts:prev.resetRequest.attempts + 1 } } : prev);
-      return setMessage("Wrong reset OTP.");
-    }
-    setState(prev => prev.resetRequest ? { ...prev, resetRequest:{ ...prev.resetRequest, verified:true } } : prev);
-    setMessage("Reset OTP verified. Enter a new password.");
-  };
-
-  const resetPassword = () => {
-    const reset = state.resetRequest;
-    if (!reset?.verified) return setMessage("Verify reset OTP before updating password.");
-    if (!strongPassword(forgot.password)) return setMessage("New password is not strong enough.");
-    if (forgot.password !== forgot.confirm) return setMessage("Confirm password must match.");
-    const user = state.users.find(u => u.email === reset.email);
-    if (!user) return setMessage("User no longer exists.");
-    setState(prev => ({
-      ...prev,
-      users: prev.users.map(u => u.id === user.id ? { ...u, passwordHash:demoHashPassword(forgot.password), updatedAt:new Date().toISOString(), loginAttempts:0, status:"active", lockedUntil:undefined } : u),
-      sessions: prev.sessions.filter(s => s.userId !== user.id),
-      currentUserId: prev.currentUserId === user.id ? null : prev.currentUserId,
-      accessToken: prev.currentUserId === user.id ? "" : prev.accessToken,
-      resetRequest: null,
-    }));
-    setMessage("Password reset complete. Old sessions invalidated.");
-    addLog("password_reset", `${reset.email} reset password and sessions were revoked`);
-  };
-
   const logout = () => {
     const userId = state.currentUserId;
     setState(prev => ({ ...prev, currentUserId:null, accessToken:"", sessions: prev.sessions.filter(s => s.userId !== userId) }));
@@ -2912,19 +2784,10 @@ function AuthSection({ initialMode="sign-in", initialRole="customer", standalone
     addLog("logout", "Current customer logged out");
   };
 
-  const refreshAccessToken = () => {
-    if (!state.currentUserId || !state.sessions.some(s => s.userId === state.currentUserId)) return setMessage("No refresh token session available.");
-    setState(prev => ({ ...prev, accessToken:makeId("jwt") }));
-    setMessage("Access token refreshed using stored refresh token.");
-    addLog("token_refreshed", "JWT access token rotated");
-  };
-
   const resetDemo = () => {
     setState(emptyAuthState);
-    setSignup({ name:"", email:"", phone:"", password:"", confirm:"", terms:false, role:initialRole, adminCode:"", staffId:"", department:"" });
+    setSignup({ name:"", email:"", phone:"", password:"", confirm:"", terms:false, role:initialRole, adminCode:"" });
     setLogin({ identifier:"", password:"", remember:true });
-    setForgot({ email:"", otp:"", password:"", confirm:"" });
-    setSignupOtp("");
     setMessage("Demo state cleared.");
   };
 
@@ -2957,19 +2820,14 @@ function AuthSection({ initialMode="sign-in", initialRole="customer", standalone
             ))}
           </div>
         </Reveal>
-        <Reveal>
-          <div className="glass-red" style={{ borderRadius:10,padding:"12px 16px",marginBottom:22,fontFamily:"'Space Grotesk',sans-serif",fontSize:12,color:"#FFC0C8",lineHeight:1.6 }}>
-            Browser demo only: real production bcrypt hashing, JWT signing, HTTPS, CSRF protection, rate limits, SMS/email delivery, SQL constraints, and audit storage must run on a backend service.
-          </div>
-        </Reveal>
         <div style={{ display:"grid",gridTemplateColumns:standalone ? "minmax(290px,460px)" : "repeat(auto-fit,minmax(290px,1fr))",gap:18,justifyContent:standalone ? "center" : undefined }}>
           {mode === "sign-up" && (
           <Reveal>
             <div className="glass-card" style={{ borderRadius:14,padding:20 }}>
               <h3 style={{ fontFamily:"'Orbitron',sans-serif",fontSize:12,color:"white",letterSpacing:"1px",marginBottom:14,display:"flex",alignItems:"center",gap:8 }}><CurrentSignupIcon size={15} color="var(--primary)" /> {currentSignupRole.label.toUpperCase()} SIGN UP</h3>
               <div style={{ display:"flex",flexDirection:"column",gap:11 }}>
-                <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8 }}>
-                  {(Object.keys(signupRoleMeta) as AuthRole[]).map(role => {
+                <div style={{ display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8 }}>
+                  {(Object.keys(signupRoleMeta) as SignupRole[]).map(role => {
                     const meta = signupRoleMeta[role];
                     const Icon = meta.icon;
                     return (
@@ -2985,25 +2843,15 @@ function AuthSection({ initialMode="sign-in", initialRole="customer", standalone
                 {signup.role === "admin" && (
                   <AuthField label="Admin Signup Code" value={signup.adminCode} onChange={v=>setSignup(p=>({...p,adminCode:v}))} placeholder="Enter admin signup code" />
                 )}
-                {signup.role === "staff" && (
-                  <>
-                    <AuthField label="Staff ID" value={signup.staffId} onChange={v=>setSignup(p=>({...p,staffId:v}))} placeholder="STF-1001" />
-                    <AuthField label="Department" value={signup.department} onChange={v=>setSignup(p=>({...p,department:v}))} placeholder="Sales, Support, Service" />
-                  </>
-                )}
                 <AuthField label="Password" type="password" value={signup.password} onChange={v=>setSignup(p=>({...p,password:v}))} />
                 <AuthField label="Confirm Password" type="password" value={signup.confirm} onChange={v=>setSignup(p=>({...p,confirm:v}))} />
                 <label style={{ display:"flex",alignItems:"center",gap:9,fontFamily:"'Space Grotesk',sans-serif",fontSize:12,color:"#CFCFCF" }}>
                   <input type="checkbox" checked={signup.terms} onChange={e=>setSignup(p=>({...p,terms:e.target.checked}))} /> Accept Terms and Privacy Policy
                 </label>
                 <button className="glass-pill glass-pill-primary" onClick={runSignup}>Create {currentSignupRole.label} Account</button>
-                <div style={{ display:"grid",gridTemplateColumns:"1fr auto",gap:8 }}>
-                  <input value={signupOtp} onChange={e=>setSignupOtp(e.target.value)} placeholder="Enter OTP"
-                    style={{ background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.09)",borderRadius:8,padding:"11px 12px",fontFamily:"'Space Grotesk',sans-serif",fontSize:13,color:"white",outline:"none" }} />
-                  <button className="glass-pill glass-pill-outline" onClick={verifySignupOtp} style={{ padding:"10px 13px",fontSize:9 }}>Verify</button>
-                </div>
                 <div className="glass" style={{ borderRadius:10,padding:13,fontFamily:"'Space Grotesk',sans-serif",fontSize:12,color:"#FFC0C8",lineHeight:1.6 }}>{message}</div>
                 <button className="glass-pill glass-pill-outline" onClick={() => goMode("sign-in")} style={{ padding:"10px 13px",fontSize:9 }}>Already have an account</button>
+                <p style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:11,color:"#666",lineHeight:1.6,margin:0 }}>Joining the team? Staff accounts are set up by a DESKTO administrator — ask your manager to add you from the Admin Dashboard.</p>
               </div>
             </div>
           </Reveal>
@@ -3020,12 +2868,10 @@ function AuthSection({ initialMode="sign-in", initialRole="customer", standalone
                 </label>
                 <button className="glass-pill glass-pill-primary" onClick={runLogin}>Login</button>
                 <div className="glass" style={{ borderRadius:9,padding:12,fontFamily:"'Space Grotesk',sans-serif",fontSize:12,color:"#CFCFCF",lineHeight:1.6 }}>
-                  <strong style={{ color:"white" }}>Dashboard:</strong> {currentUser ? `${currentUser.name} is signed in as ${signupRoleMeta[currentUser.role].label}` : "No active session"}<br />
-                  <strong style={{ color:"white" }}>JWT:</strong> {state.accessToken ? state.accessToken.slice(0, 18) + "..." : "Not issued"}
+                  {currentUser ? `Signed in as ${currentUser.name} (${currentUser.role}).` : "No active session."}
                 </div>
                 <div className="glass" style={{ borderRadius:10,padding:13,fontFamily:"'Space Grotesk',sans-serif",fontSize:12,color:"#FFC0C8",lineHeight:1.6 }}>{message}</div>
                 <div style={{ display:"flex",gap:8,flexWrap:"wrap" }}>
-                  <button className="glass-pill glass-pill-outline" onClick={refreshAccessToken} style={{ padding:"9px 12px",fontSize:9 }}><RefreshCw size={11} /> Refresh</button>
                   <button className="glass-pill glass-pill-red" onClick={logout} style={{ padding:"9px 12px",fontSize:9 }}><LogOut size={11} /> Logout</button>
                 </div>
                 <div style={{ display:"flex",gap:8,flexWrap:"wrap" }}>
@@ -3041,17 +2887,14 @@ function AuthSection({ initialMode="sign-in", initialRole="customer", standalone
             <div className="glass-card" style={{ borderRadius:14,padding:20 }}>
               <h3 style={{ fontFamily:"'Orbitron',sans-serif",fontSize:12,color:"white",letterSpacing:"1px",marginBottom:14,display:"flex",alignItems:"center",gap:8 }}><KeyRound size={15} color="var(--primary)" /> FORGOT PASSWORD</h3>
               <div style={{ display:"flex",flexDirection:"column",gap:11 }}>
-                <AuthField label="Email" value={forgot.email} onChange={v=>setForgot(p=>({...p,email:v}))} />
-                <button className="glass-pill glass-pill-outline" onClick={requestPasswordReset}>Send Reset OTP</button>
-                <div style={{ display:"grid",gridTemplateColumns:"1fr auto",gap:8 }}>
-                  <input value={forgot.otp} onChange={e=>setForgot(p=>({...p,otp:e.target.value}))} placeholder="Reset OTP"
-                    style={{ background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.09)",borderRadius:8,padding:"11px 12px",fontFamily:"'Space Grotesk',sans-serif",fontSize:13,color:"white",outline:"none" }} />
-                  <button className="glass-pill glass-pill-outline" onClick={verifyResetOtp} style={{ padding:"10px 13px",fontSize:9 }}>Verify</button>
+                <p style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:13,color:"#CFCFCF",lineHeight:1.7,margin:0 }}>
+                  We don't have automated email/SMS reset in place yet, so password resets are handled directly by DESKTO support — this keeps your account secure rather than faking a self-service flow that can't actually verify it's you.
+                </p>
+                <div className="glass" style={{ borderRadius:10,padding:14,fontFamily:"'Space Grotesk',sans-serif",fontSize:13,color:"white",lineHeight:1.8 }}>
+                  <div><strong>Call or WhatsApp:</strong> +91 62604 69111</div>
+                  <div><strong>Email:</strong> support@deskto.in</div>
+                  <div style={{ color:"#999", fontSize:11, marginTop:6 }}>Have your registered email or phone number ready — we'll verify it's you and issue a new temporary password.</div>
                 </div>
-                <AuthField label="New Password" type="password" value={forgot.password} onChange={v=>setForgot(p=>({...p,password:v}))} />
-                <AuthField label="Confirm New Password" type="password" value={forgot.confirm} onChange={v=>setForgot(p=>({...p,confirm:v}))} />
-                <button className="glass-pill glass-pill-primary" onClick={resetPassword}>Reset Password</button>
-                <div className="glass" style={{ borderRadius:10,padding:13,fontFamily:"'Space Grotesk',sans-serif",fontSize:12,color:"#FFC0C8",lineHeight:1.6 }}>{message}</div>
                 <button className="glass-pill glass-pill-outline" onClick={() => goMode("sign-in")} style={{ padding:"10px 13px",fontSize:9 }}>Back to Sign In</button>
               </div>
             </div>
@@ -3146,7 +2989,8 @@ export function ScrollToTop() {
 function getAuthRouteFromPath(pathname: string): { mode: AuthMode; role: AuthRole } | null {
   if (pathname === "/sign-up" || pathname === "/sign-up/customer") return { mode:"sign-up", role:"customer" };
   if (pathname === "/sign-up/admin") return { mode:"sign-up", role:"admin" };
-  if (pathname === "/sign-up/staff") return { mode:"sign-up", role:"staff" };
+  // /sign-up/staff intentionally does not route to a form — staff accounts
+  // are created by an administrator, not through public self-registration.
   if (pathname === "/sign-in" || pathname === "/auth") return { mode:"sign-in", role:"customer" };
   if (pathname === "/forgot-password") return { mode:"forgot-password", role:"customer" };
   return null;
