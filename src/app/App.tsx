@@ -2806,7 +2806,7 @@ function AuthSection({ initialMode="sign-in", initialRole="customer", standalone
             </a>
           </Reveal>
         )}
-        <SectionHeader eyebrow="Secure Account Access" title={mode === "sign-up" ? currentSignupRole.label : "Customer"} accent={mode === "sign-up" ? "Sign Up" : "Authentication"} sub="Sign in, create an account, or reset your password with validated OTP and session flows." />
+        <SectionHeader eyebrow="Secure Account Access" title={mode === "sign-up" ? currentSignupRole.label : "Customer"} accent={mode === "sign-up" ? "Sign Up" : "Authentication"} sub="Sign in or create an account to manage your orders, services, and dashboard." />
         <Reveal>
           <div style={{ display:"flex",justifyContent:"center",gap:10,flexWrap:"wrap",marginBottom:22 }}>
             {[
