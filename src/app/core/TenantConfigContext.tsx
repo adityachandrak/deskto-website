@@ -40,6 +40,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     
     // Inject dynamic CSS custom properties
     root.style.setProperty("--primary", theme.primaryColor);
+    root.style.setProperty("--accent", "#56d6ff");
+    root.style.setProperty("--ring", "rgba(86, 214, 255, 0.45)");
     root.style.setProperty("--secondary", theme.secondaryColor);
     root.style.setProperty("--background", theme.backgroundColor);
     root.style.setProperty("--foreground", theme.textColor);
@@ -61,8 +63,20 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         background: var(--primary) !important;
       }
       .glass-pill-primary {
-        background: var(--primary) !important;
-        border-color: var(--primary) !important;
+        color: #fff !important;
+        background: rgba(5, 7, 9, 0.52) !important;
+        border-color: rgba(255, 45, 85, 0.62) !important;
+        box-shadow: 0 0 0 1px rgba(86,214,255,.08), 0 0 24px rgba(255,45,85,.10) !important;
+      }
+      .glass-pill-primary:hover {
+        background: rgba(86,214,255,.08) !important;
+        border-color: rgba(86,214,255,.58) !important;
+        color: #fff !important;
+      }
+      .glass-pill-primary:focus-visible {
+        outline: none !important;
+        border-color: rgba(86,214,255,.76) !important;
+        box-shadow: 0 0 0 3px rgba(86,214,255,.16), 0 0 24px rgba(86,214,255,.18) !important;
       }
       .glass-red {
         color: var(--primary) !important;
@@ -127,4 +141,3 @@ export const TenantConfigProvider: React.FC<ProviderProps> = ({ children, initia
     </TenantConfigContext.Provider>
   );
 };
-

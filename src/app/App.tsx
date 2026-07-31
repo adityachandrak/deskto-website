@@ -121,11 +121,11 @@ function GlobalStyles() {
         border:1px solid rgba(255,31,69,0.22);
       }
       .glass-card{
-        background:rgba(255,255,255,0.025);
+        background:rgba(4,6,8,0.46);
         backdrop-filter:blur(28px) saturate(200%);
         -webkit-backdrop-filter:blur(28px) saturate(200%);
-        border:1px solid rgba(255,255,255,0.08);
-        box-shadow:0 8px 32px rgba(0,0,0,0.4),inset 0 1px 0 rgba(255,255,255,0.06);
+        border:1px solid rgba(255,255,255,0.14);
+        box-shadow:0 20px 70px rgba(0,0,0,0.28),inset 0 1px 0 rgba(255,255,255,0.06);
       }
 
       /* ── Glass Button Base ── */
@@ -133,8 +133,8 @@ function GlobalStyles() {
       .glass-pill{
         position:relative;display:inline-flex;align-items:center;justify-content:center;gap:8px;
         font-family:'Orbitron',sans-serif;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;
-        background:transparent;
-        border:1px solid rgba(255,255,255,0.18);
+        background:rgba(5,7,9,.32);
+        border:1px solid rgba(255,255,255,0.14);
         color:white;
         transition:all .25s ease;
         backdrop-filter:blur(20px) saturate(180%);
@@ -143,36 +143,46 @@ function GlobalStyles() {
         padding:11px 22px;border-radius:9999px;font-size:10px;
       }
       .glass-pill:hover{
-        background:rgba(255,255,255,0.06);
-        border-color:rgba(255,255,255,0.32);
+        background:rgba(255,255,255,0.07);
+        border-color:rgba(86,214,255,0.44);
+        color:white;
         transform:translateY(-1px);
       }
       .glass-pill:active{transform:translateY(0) scale(.98);}
+      .glass-pill:focus-visible{
+        outline:none;
+        border-color:rgba(86,214,255,0.76);
+        box-shadow:0 0 0 3px rgba(86,214,255,.16),0 0 24px rgba(86,214,255,.18);
+      }
 
       .glass-pill-primary{
-        border-color:rgba(255,31,69,0.6);
-        color:var(--primary);
-        background:rgba(255,31,69,0.06);
+        border-color:rgba(255,45,85,0.62);
+        color:#fff;
+        background:rgba(5,7,9,.52);
+        box-shadow:0 0 0 1px rgba(86,214,255,.08),0 0 24px rgba(255,45,85,.10);
       }
       .glass-pill-primary:hover{
-        background:rgba(255,31,69,0.14);
-        border-color:var(--primary);
-        box-shadow:0 0 24px rgba(255,31,69,0.4);
+        background:rgba(86,214,255,.08);
+        border-color:rgba(86,214,255,.58);
+        box-shadow:0 0 28px rgba(86,214,255,.18),0 0 24px rgba(255,45,85,0.16);
+        color:#fff;
       }
       .glass-pill-outline{
         border-color:rgba(255,255,255,0.18);
       }
       .glass-pill-outline:hover{
-        border-color:rgba(255,31,69,0.45);
-        background:rgba(255,31,69,0.04);
+        border-color:rgba(86,214,255,0.45);
+        background:rgba(86,214,255,0.06);
       }
       .glass-pill-red{
         border-color:rgba(255,31,69,0.45);
         color:var(--primary);
+        background:rgba(255,45,85,.04);
       }
       .glass-pill-red:hover{
-        background:rgba(255,31,69,0.1);
+        background:rgba(255,31,69,0.08);
         border-color:rgba(255,31,69,0.7);
+        color:#fff;
       }
       .glass-pill-success{
         border-color:rgba(0,204,102,0.55);
@@ -209,9 +219,9 @@ function GlobalStyles() {
         border:1px solid rgba(255,255,255,0.18);
       }
       .glass-pill-icon:hover{
-        background:rgba(255,31,69,0.1);
-        border-color:rgba(255,31,69,0.45);
-        color:var(--primary);
+        background:rgba(86,214,255,0.08);
+        border-color:rgba(86,214,255,0.45);
+        color:#fff;
       }
       .glass-pill-sm{padding:7px 14px;font-size:9px;}
       .glass-pill-lg{padding:14px 28px;font-size:11px;}
@@ -260,7 +270,7 @@ function GlobalStyles() {
 
       /* ── Cyber grid ── */
       .cyber-grid{
-        background-image:linear-gradient(rgba(255,31,69,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,31,69,.025) 1px,transparent 1px);
+        background-image:linear-gradient(rgba(86,214,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,45,85,.02) 1px,transparent 1px);
         background-size:44px 44px;
       }
 
@@ -355,13 +365,13 @@ function GlobalStyles() {
       }
 
       /* ── DASHBOARD SHELL ── */
-      .dash-shell{display:grid;grid-template-columns:240px 1fr;min-height:100vh;background:#050505;}
-      .dash-sidebar{position:sticky;top:0;height:100vh;overflow:hidden;border-right:1px solid rgba(255,255,255,0.06);padding:20px 14px;background:rgba(10,10,10,0.6);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);}
+      .dash-shell{display:grid;grid-template-columns:240px 1fr;min-height:100vh;background:#030405;}
+      .dash-sidebar{position:sticky;top:0;height:100vh;overflow:hidden;border-right:1px solid rgba(255,255,255,0.1);padding:20px 14px;background:rgba(4,6,8,0.72);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);}
       .dash-sidebar-link{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;font-family:'Space Grotesk',sans-serif;font-size:12px;color:#888;transition:all .15s;cursor:pointer;border-left:2px solid transparent;margin-bottom:2px;}
       .dash-sidebar-link:hover{background:rgba(255,255,255,0.04);color:white;}
-      .dash-sidebar-link.active{background:rgba(255,31,69,0.1);color:var(--primary);border-left-color:var(--primary);}
+      .dash-sidebar-link.active{background:linear-gradient(90deg,rgba(255,45,85,0.12),rgba(86,214,255,0.06));color:white;border-left-color:#56d6ff;}
       .dash-main{padding:24px 32px;}
-      .dash-topbar{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 24px;border-bottom:1px solid rgba(255,255,255,0.06);position:sticky;top:0;background:rgba(5,5,5,0.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);z-index:50;}
+      .dash-topbar{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 24px;border-bottom:1px solid rgba(255,255,255,0.1);position:sticky;top:0;background:rgba(3,4,5,0.88);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);z-index:50;}
       .dash-kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;}
       .dash-tab-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;}
       .dash-timeline{display:flex;flex-direction:column;gap:12px;position:relative;padding-left:18px;}
