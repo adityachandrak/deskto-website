@@ -88,15 +88,15 @@ export default function VideoScrollHomePage() {
           width:100%;
           height:100%;
           object-fit:cover;
-          filter:saturate(1.08) contrast(1.08) brightness(.86);
+          filter:saturate(1.18) contrast(1.1) brightness(1.04);
         }
         .video-home-bg::after{
           content:"";
           position:absolute;
           inset:0;
           background:
-            linear-gradient(90deg,rgba(3,4,5,.78) 0%,rgba(3,4,5,.47) 46%,rgba(3,4,5,.68) 100%),
-            linear-gradient(180deg,rgba(0,0,0,.40),rgba(0,0,0,.52));
+            linear-gradient(90deg,rgba(3,4,5,.64) 0%,rgba(3,4,5,.32) 46%,rgba(3,4,5,.54) 100%),
+            linear-gradient(180deg,rgba(0,0,0,.30),rgba(0,0,0,.40));
           pointer-events:none;
         }
         .video-home-scan{
@@ -428,7 +428,7 @@ export default function VideoScrollHomePage() {
             <div className="video-home-kicker"><MonitorCog size={14} /> Workbench services</div>
             <h2>Every Frame Needs Stable Hardware.</h2>
             <p>
-              The homepage now follows the same visual language as the video: dark glass, precise highlights, compact controls, and readable white typography over a 45% black overlay.
+              The homepage now follows the same visual language as the video: dark glass, precise highlights, compact controls, and readable white typography over a lighter cinematic overlay.
             </p>
             <div className="video-home-card-grid">
               {serviceCards.map(({ icon: Icon, title, text }) => (
@@ -477,7 +477,7 @@ export default function VideoScrollHomePage() {
               </div>
             </div>
             <aside className="video-home-final-card">
-              <div className="video-home-spec"><span>Overlay</span><strong>45% dark</strong></div>
+              <div className="video-home-spec"><span>Overlay</span><strong>Brighter dark</strong></div>
               <div className="video-home-spec"><span>Motion</span><strong>Scroll synced</strong></div>
               <div className="video-home-spec"><span>Frame</span><strong>GPU bench</strong></div>
               <div className="video-home-spec"><span>UI</span><strong>Glass + neon</strong></div>
