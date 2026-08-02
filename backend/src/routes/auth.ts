@@ -24,20 +24,6 @@ const LOCK_DURATION_MS = 10 * 60 * 1000;
 const DUMMY_PASSWORD_HASH = '$2a$12$C6UzMDM.H6dfI/f/IKcEeO6cLPB1QWnbmwWLo1YAwbY7g7X.Z3Kn.';
 
 const STRONG_PASSWORD = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
-const STAFF_ID = /^STF-\d{4,}$/i;
-const STAFF_DEPARTMENTS = ['Sales', 'Technical', 'Assembly', 'Support', 'Admin', 'Delivery'];
-
-function normalizeDepartment(value: unknown) {
-  const requested = String(value || '').trim();
-  if (STAFF_DEPARTMENTS.includes(requested)) return requested;
-  const lower = requested.toLowerCase();
-  if (lower.includes('deliver')) return 'Delivery';
-  if (lower.includes('assembl')) return 'Assembly';
-  if (lower.includes('sales')) return 'Sales';
-  if (lower.includes('admin')) return 'Admin';
-  if (lower.includes('repair') || lower.includes('tech')) return 'Technical';
-  return requested ? requested : 'Support';
-}
 
 function signTokens(user: { id: string; email: string; role: string }) {
   const accessToken = jwt.sign(
@@ -71,11 +57,9 @@ router.post('/register',
         return res.status(400).json({ errors: errors.array() });
       }
 
-      const { email, password, firstName, lastName, phone, role, adminCode, staffId, department } = req.body;
+      const { email, password, firstName, lastName, phone, role, adminCode } = req.body;
 
       let finalRole = 'customer';
-      let normalizedStaffId: string | undefined;
-      let normalizedDepartment: string | undefined;
       if (role === 'admin') {
         const requiredCode = process.env.ADMIN_SIGNUP_CODE;
         if (!requiredCode) {
@@ -86,28 +70,18 @@ router.post('/register',
         }
         finalRole = 'admin';
       } else if (role === 'staff') {
-        normalizedStaffId = String(staffId || '').trim().toUpperCase();
-        if (!STAFF_ID.test(normalizedStaffId)) {
-          return res.status(400).json({ error: 'Enter a valid staff ID, for example STF-1001' });
-        }
-        normalizedDepartment = normalizeDepartment(department);
-        if (!normalizedDepartment) {
-          return res.status(400).json({ error: 'Staff department is required' });
-        }
-        finalRole = 'staff';
+        // Staff accounts are created by an administrator (Admin Dashboard →
+        // Staff → Add Staff), never through public self-registration — see
+        // POST /admin/staff. This closes what was previously an
+        // unauthenticated path to a staff-level account with access to
+        // every customer's orders and contact details.
+        return res.status(400).json({ error: 'Staff accounts are created by an administrator. Ask DESKTO to set up your account.' });
       }
 
       // Check if user exists
       const existing = await query('SELECT id FROM users WHERE email = $1', [email]);
       if (existing.rows.length > 0) {
         return res.status(400).json({ error: 'Email already registered' });
-      }
-
-      if (finalRole === 'staff') {
-        const existingStaff = await query('SELECT user_id FROM staff_profiles WHERE employee_id = $1', [normalizedStaffId]);
-        if (existingStaff.rows.length > 0) {
-          return res.status(400).json({ error: 'Staff ID already registered' });
-        }
       }
 
       // Hash password
@@ -123,14 +97,6 @@ router.post('/register',
 
       const user = result.rows[0];
 
-      if (finalRole === 'staff') {
-        await query(
-          `INSERT INTO staff_profiles (user_id, department, employee_id, hire_date, specialization, is_active)
-           VALUES ($1, $2, $3, CURRENT_DATE, $4, TRUE)`,
-          [user.id, normalizedDepartment, normalizedStaffId, normalizedDepartment]
-        );
-      }
-
       const { accessToken, refreshToken } = signTokens(user);
       await storeRefreshToken(user.id, refreshToken);
 
@@ -142,8 +108,6 @@ router.post('/register',
           lastName: user.last_name,
           role: user.role,
           status: user.status,
-          staffId: normalizedStaffId,
-          department: normalizedDepartment,
           createdAt: user.created_at
         },
         accessToken,

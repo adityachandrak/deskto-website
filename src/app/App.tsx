@@ -2565,8 +2565,6 @@ type AuthUser = {
   phone: string;
   passwordHash: string;
   role: AuthRole;
-  staffId?: string;
-  department?: string;
   emailVerified: boolean;
   phoneVerified: boolean;
   status: "active" | "locked";
@@ -2631,11 +2629,14 @@ function AuthField({ label, type="text", value, onChange, placeholder }: { label
 type AuthMode = "sign-in" | "sign-up" | "forgot-password";
 type AuthRole = "customer" | "admin" | "staff";
 
+// "staff" is intentionally not offered here — staff accounts are created by
+// an administrator from the Admin Dashboard (Staff → Add Staff), never
+// through public self-registration. The backend rejects role:"staff" on
+// POST /auth/register regardless of what a direct API call sends.
 const signupRoleMeta = {
   customer: { label:"Customer", path:"/sign-up/customer", icon:UserPlus },
   admin: { label:"Admin", path:"/sign-up/admin", icon:ShieldCheck },
-  staff: { label:"Staff", path:"/sign-up/staff", icon:ClipboardCheck },
-} satisfies Record<AuthRole, { label:string; path:string; icon:typeof UserPlus }>;
+} satisfies Partial<Record<AuthRole, { label:string; path:string; icon:typeof UserPlus }>>;
 type SignupRole = keyof typeof signupRoleMeta;
 
 function AuthSection({ initialMode="sign-in", initialRole="customer", standalone=false }: { initialMode?: AuthMode; initialRole?: AuthRole; standalone?: boolean }) {
@@ -2647,7 +2648,7 @@ function AuthSection({ initialMode="sign-in", initialRole="customer", standalone
       return emptyAuthState;
     }
   });
-  const [signup,setSignup] = useState({ name:"", email:"", phone:"", password:"", confirm:"", terms:false, role:initialRole, adminCode:"", staffId:"", department:"" });
+  const [signup,setSignup] = useState({ name:"", email:"", phone:"", password:"", confirm:"", terms:false, role:initialRole, adminCode:"" });
   const [login,setLogin] = useState({ identifier:"", password:"", remember:true });
   const [message,setMessage] = useState("Ready to validate customer authentication.");
   const [mode,setMode] = useState<AuthMode>(initialMode);
@@ -2693,8 +2694,6 @@ function AuthSection({ initialMode="sign-in", initialRole="customer", standalone
     if (signup.password !== signup.confirm) return setMessage("Confirm password must match.");
     if (!signup.terms) return setMessage("Accept Terms and Privacy Policy.");
     if (signup.role === "admin" && !signup.adminCode.trim()) return setMessage("Enter the admin signup code.");
-    if (signup.role === "staff" && !/^STF-\d{4,}$/i.test(signup.staffId.trim())) return setMessage("Enter a valid Staff ID, for example STF-1001.");
-    if (signup.role === "staff" && !signup.department.trim()) return setMessage("Select or enter your staff department.");
 
     const name = signup.name.trim();
     const email = signup.email.trim().toLowerCase();
@@ -2711,8 +2710,6 @@ function AuthSection({ initialMode="sign-in", initialRole="customer", standalone
         phone,
         role: signup.role,
         adminCode: signup.role === "admin" ? signup.adminCode.trim() : undefined,
-        staffId: signup.role === "staff" ? signup.staffId.trim().toUpperCase() : undefined,
-        department: signup.role === "staff" ? signup.department.trim() : undefined,
       });
 
       const newUser: AuthUser = {
@@ -2727,8 +2724,6 @@ function AuthSection({ initialMode="sign-in", initialRole="customer", standalone
         emailVerified: false,
         phoneVerified: false,
         status: "active",
-        staffId: signup.role === "staff" ? signup.staffId.trim().toUpperCase() : undefined,
-        department: signup.role === "staff" ? signup.department.trim() : undefined,
         loginAttempts: 0,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -2801,7 +2796,7 @@ function AuthSection({ initialMode="sign-in", initialRole="customer", standalone
 
   const resetDemo = () => {
     setState(emptyAuthState);
-    setSignup({ name:"", email:"", phone:"", password:"", confirm:"", terms:false, role:initialRole, adminCode:"", staffId:"", department:"" });
+    setSignup({ name:"", email:"", phone:"", password:"", confirm:"", terms:false, role:initialRole, adminCode:"" });
     setLogin({ identifier:"", password:"", remember:true });
     setMessage("Demo state cleared.");
   };
@@ -2821,7 +2816,7 @@ function AuthSection({ initialMode="sign-in", initialRole="customer", standalone
             </a>
           </Reveal>
         )}
-        <SectionHeader eyebrow="Secure Account Access" title={mode === "sign-up" ? currentSignupRole.label : "Role"} accent={mode === "sign-up" ? "Sign Up" : "Authentication"} sub="Sign in or create an account to manage your orders, services, and dashboard." />
+        <SectionHeader eyebrow="Secure Account Access" title={mode === "sign-up" ? currentSignupRole.label : "Customer"} accent={mode === "sign-up" ? "Sign Up" : "Authentication"} sub="Sign in or create an account to manage your orders, services, and dashboard." />
         <Reveal>
           <div style={{ display:"flex",justifyContent:"center",gap:10,flexWrap:"wrap",marginBottom:22 }}>
             {[
@@ -2841,7 +2836,7 @@ function AuthSection({ initialMode="sign-in", initialRole="customer", standalone
             <div className="glass-card" style={{ borderRadius:14,padding:20 }}>
               <h3 style={{ fontFamily:"'Orbitron',sans-serif",fontSize:12,color:"white",letterSpacing:"1px",marginBottom:14,display:"flex",alignItems:"center",gap:8 }}><CurrentSignupIcon size={15} color="var(--primary)" /> {currentSignupRole.label.toUpperCase()} SIGN UP</h3>
               <div style={{ display:"flex",flexDirection:"column",gap:11 }}>
-                <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8 }}>
+                <div style={{ display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8 }}>
                   {(Object.keys(signupRoleMeta) as SignupRole[]).map(role => {
                     const meta = signupRoleMeta[role];
                     const Icon = meta.icon;
@@ -2858,12 +2853,6 @@ function AuthSection({ initialMode="sign-in", initialRole="customer", standalone
                 {signup.role === "admin" && (
                   <AuthField label="Admin Signup Code" value={signup.adminCode} onChange={v=>setSignup(p=>({...p,adminCode:v}))} placeholder="Enter admin signup code" />
                 )}
-                {signup.role === "staff" && (
-                  <>
-                    <AuthField label="Staff ID" value={signup.staffId} onChange={v=>setSignup(p=>({...p,staffId:v}))} placeholder="STF-1001" />
-                    <AuthField label="Department" value={signup.department} onChange={v=>setSignup(p=>({...p,department:v}))} placeholder="Technical, Support, Delivery..." />
-                  </>
-                )}
                 <AuthField label="Password" type="password" value={signup.password} onChange={v=>setSignup(p=>({...p,password:v}))} />
                 <AuthField label="Confirm Password" type="password" value={signup.confirm} onChange={v=>setSignup(p=>({...p,confirm:v}))} />
                 <label style={{ display:"flex",alignItems:"center",gap:9,fontFamily:"'Space Grotesk',sans-serif",fontSize:12,color:"#CFCFCF" }}>
@@ -2872,6 +2861,7 @@ function AuthSection({ initialMode="sign-in", initialRole="customer", standalone
                 <button className="glass-pill glass-pill-primary" onClick={runSignup}>Create {currentSignupRole.label} Account</button>
                 <div className="glass" style={{ borderRadius:10,padding:13,fontFamily:"'Space Grotesk',sans-serif",fontSize:12,color:"#FFC0C8",lineHeight:1.6 }}>{message}</div>
                 <button className="glass-pill glass-pill-outline" onClick={() => goMode("sign-in")} style={{ padding:"10px 13px",fontSize:9 }}>Already have an account</button>
+                <p style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:11,color:"#666",lineHeight:1.6,margin:0 }}>Joining the team? Staff accounts are set up by a DESKTO administrator — ask your manager to add you from the Admin Dashboard.</p>
               </div>
             </div>
           </Reveal>
@@ -2879,7 +2869,7 @@ function AuthSection({ initialMode="sign-in", initialRole="customer", standalone
           {mode === "sign-in" && (
           <Reveal delay={.08}>
             <div className="glass-card" style={{ borderRadius:14,padding:20 }}>
-              <h3 style={{ fontFamily:"'Orbitron',sans-serif",fontSize:12,color:"white",letterSpacing:"1px",marginBottom:14,display:"flex",alignItems:"center",gap:8 }}><LogIn size={15} color="var(--primary)" /> SIGN IN</h3>
+              <h3 style={{ fontFamily:"'Orbitron',sans-serif",fontSize:12,color:"white",letterSpacing:"1px",marginBottom:14,display:"flex",alignItems:"center",gap:8 }}><LogIn size={15} color="var(--primary)" /> CUSTOMER SIGN IN</h3>
               <div style={{ display:"flex",flexDirection:"column",gap:11 }}>
                 <AuthField label="Email or Mobile" value={login.identifier} onChange={v=>setLogin(p=>({...p,identifier:v}))} />
                 <AuthField label="Password" type="password" value={login.password} onChange={v=>setLogin(p=>({...p,password:v}))} />
@@ -3009,7 +2999,8 @@ export function ScrollToTop() {
 function getAuthRouteFromPath(pathname: string): { mode: AuthMode; role: AuthRole } | null {
   if (pathname === "/sign-up" || pathname === "/sign-up/customer") return { mode:"sign-up", role:"customer" };
   if (pathname === "/sign-up/admin") return { mode:"sign-up", role:"admin" };
-  if (pathname === "/sign-up/staff") return { mode:"sign-up", role:"staff" };
+  // /sign-up/staff intentionally does not route to a form — staff accounts
+  // are created by an administrator, not through public self-registration.
   if (pathname === "/sign-in" || pathname === "/auth") return { mode:"sign-in", role:"customer" };
   if (pathname === "/forgot-password") return { mode:"forgot-password", role:"customer" };
   return null;
