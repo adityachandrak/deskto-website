@@ -10,6 +10,8 @@ export interface User {
   lastName?: string;
   role: 'customer' | 'staff' | 'admin';
   status: string;
+  staffId?: string;
+  department?: string;
   emailVerified?: boolean;
   createdAt: string;
   updatedAt?: string;
