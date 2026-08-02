@@ -4,7 +4,7 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "build": "NODE_ENV=production vite build --mode production",
+    "build": "NODE_ENV=production vite build --mode production && node scripts/prepare-sites-build.mjs",
     "dev": "bash scripts/dev-all.sh",
     "dev:frontend": "vite",
     "dev:backend": "npm --prefix backend run dev",
